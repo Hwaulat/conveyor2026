@@ -3,7 +3,7 @@
 
 export type Role = "admin" | "manager" | "supervisor" | "operator" | "viewer";
 
-export type Area = { id: string; name: string; note?: string };
+export type Area = { id: string; name: string; note?: string | undefined };
 
 export type Conveyor = { id: string; areaId: string; name: string };
 
@@ -24,7 +24,7 @@ export type Category = {
   countsAsDowntime: boolean;
   active: boolean;
   custom: boolean;
-  createdBy?: string;
+  createdBy?: string | undefined;
 };
 
 export type LineStop = {
@@ -37,7 +37,7 @@ export type LineStop = {
   reportedBy: string;
   status: "open" | "closed";
   source: "form" | "plc"; // form = E-form entry, plc = detected without E-form
-  note?: string;
+  note?: string | undefined;
 };
 
 export type Shift = { id: string; name: string; startHour: number; startMinute: number };

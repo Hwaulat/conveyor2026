@@ -10,33 +10,146 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AndonRouteImport } from './routes/andon'
+import { Route as IpadRouteImport } from './routes/ipad'
+import { Route as WebRouteImport } from './routes/web'
+import { Route as WebIndexRouteImport } from './routes/web/index'
+import { Route as WebLogsRouteImport } from './routes/web/logs'
+import { Route as WebMasterDataRouteImport } from './routes/web/master-data'
+import { Route as WebProductionRouteImport } from './routes/web/production'
+import { Route as WebReportsRouteImport } from './routes/web/reports'
+import { Route as WebUsersRouteImport } from './routes/web/users'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AndonRoute = AndonRouteImport.update({
+  id: '/andon',
+  path: '/andon',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IpadRoute = IpadRouteImport.update({
+  id: '/ipad',
+  path: '/ipad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WebRoute = WebRouteImport.update({
+  id: '/web',
+  path: '/web',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WebIndexRoute = WebIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WebRoute,
+} as any)
+const WebLogsRoute = WebLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => WebRoute,
+} as any)
+const WebMasterDataRoute = WebMasterDataRouteImport.update({
+  id: '/master-data',
+  path: '/master-data',
+  getParentRoute: () => WebRoute,
+} as any)
+const WebProductionRoute = WebProductionRouteImport.update({
+  id: '/production',
+  path: '/production',
+  getParentRoute: () => WebRoute,
+} as any)
+const WebReportsRoute = WebReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => WebRoute,
+} as any)
+const WebUsersRoute = WebUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => WebRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/andon': typeof AndonRoute
+  '/ipad': typeof IpadRoute
+  '/web': typeof WebRouteWithChildren
+  '/web/logs': typeof WebLogsRoute
+  '/web/master-data': typeof WebMasterDataRoute
+  '/web/production': typeof WebProductionRoute
+  '/web/reports': typeof WebReportsRoute
+  '/web/users': typeof WebUsersRoute
+  '/web/': typeof WebIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/andon': typeof AndonRoute
+  '/ipad': typeof IpadRoute
+  '/web/logs': typeof WebLogsRoute
+  '/web/master-data': typeof WebMasterDataRoute
+  '/web/production': typeof WebProductionRoute
+  '/web/reports': typeof WebReportsRoute
+  '/web/users': typeof WebUsersRoute
+  '/web': typeof WebIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/andon': typeof AndonRoute
+  '/ipad': typeof IpadRoute
+  '/web': typeof WebRouteWithChildren
+  '/web/logs': typeof WebLogsRoute
+  '/web/master-data': typeof WebMasterDataRoute
+  '/web/production': typeof WebProductionRoute
+  '/web/reports': typeof WebReportsRoute
+  '/web/users': typeof WebUsersRoute
+  '/web/': typeof WebIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/andon'
+    | '/ipad'
+    | '/web'
+    | '/web/logs'
+    | '/web/master-data'
+    | '/web/production'
+    | '/web/reports'
+    | '/web/users'
+    | '/web/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/andon'
+    | '/ipad'
+    | '/web/logs'
+    | '/web/master-data'
+    | '/web/production'
+    | '/web/reports'
+    | '/web/users'
+    | '/web'
+  id:
+    | '__root__'
+    | '/'
+    | '/andon'
+    | '/ipad'
+    | '/web'
+    | '/web/logs'
+    | '/web/master-data'
+    | '/web/production'
+    | '/web/reports'
+    | '/web/users'
+    | '/web/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AndonRoute: typeof AndonRoute
+  IpadRoute: typeof IpadRoute
+  WebRoute: typeof WebRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +161,97 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/andon': {
+      id: '/andon'
+      path: '/andon'
+      fullPath: '/andon'
+      preLoaderRoute: typeof AndonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ipad': {
+      id: '/ipad'
+      path: '/ipad'
+      fullPath: '/ipad'
+      preLoaderRoute: typeof IpadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/web': {
+      id: '/web'
+      path: '/web'
+      fullPath: '/web'
+      preLoaderRoute: typeof WebRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/web/': {
+      id: '/web/'
+      path: '/'
+      fullPath: '/web/'
+      preLoaderRoute: typeof WebIndexRouteImport
+      parentRoute: typeof WebRoute
+    }
+    '/web/logs': {
+      id: '/web/logs'
+      path: '/logs'
+      fullPath: '/web/logs'
+      preLoaderRoute: typeof WebLogsRouteImport
+      parentRoute: typeof WebRoute
+    }
+    '/web/master-data': {
+      id: '/web/master-data'
+      path: '/master-data'
+      fullPath: '/web/master-data'
+      preLoaderRoute: typeof WebMasterDataRouteImport
+      parentRoute: typeof WebRoute
+    }
+    '/web/production': {
+      id: '/web/production'
+      path: '/production'
+      fullPath: '/web/production'
+      preLoaderRoute: typeof WebProductionRouteImport
+      parentRoute: typeof WebRoute
+    }
+    '/web/reports': {
+      id: '/web/reports'
+      path: '/reports'
+      fullPath: '/web/reports'
+      preLoaderRoute: typeof WebReportsRouteImport
+      parentRoute: typeof WebRoute
+    }
+    '/web/users': {
+      id: '/web/users'
+      path: '/users'
+      fullPath: '/web/users'
+      preLoaderRoute: typeof WebUsersRouteImport
+      parentRoute: typeof WebRoute
+    }
   }
 }
 
+interface WebRouteChildren {
+  WebLogsRoute: typeof WebLogsRoute
+  WebMasterDataRoute: typeof WebMasterDataRoute
+  WebProductionRoute: typeof WebProductionRoute
+  WebReportsRoute: typeof WebReportsRoute
+  WebUsersRoute: typeof WebUsersRoute
+  WebIndexRoute: typeof WebIndexRoute
+}
+
+const WebRouteChildren: WebRouteChildren = {
+  WebLogsRoute: WebLogsRoute,
+  WebMasterDataRoute: WebMasterDataRoute,
+  WebProductionRoute: WebProductionRoute,
+  WebReportsRoute: WebReportsRoute,
+  WebUsersRoute: WebUsersRoute,
+  WebIndexRoute: WebIndexRoute,
+}
+
+const WebRouteWithChildren = WebRoute._addFileChildren(WebRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AndonRoute: AndonRoute,
+  IpadRoute: IpadRoute,
+  WebRoute: WebRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
