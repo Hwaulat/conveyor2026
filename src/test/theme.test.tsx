@@ -59,3 +59,4 @@ describe("Theme Management", () => {
     expect(localStorage.getItem("jsgi.theme")).toBe("light");
   });
 });
+
