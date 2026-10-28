@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { I18nProvider } from "../lib/i18n";
+import { ThemeProvider } from "../lib/theme";
 import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
@@ -94,7 +95,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "JSGI — Conveyor Line-Stop, Andon & OEE" },
       { name: "description", content: "Line-Stop Monitoring, Andon TV & OEE System for JSGI Manufacturing" },
-      { name: "theme-color", content: "#000000" },
     ],
     links: [
       {
@@ -114,9 +114,14 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="id" className="dark">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("jsgi.theme");if(t==="light"||t==="dark"){document.documentElement.className=t;document.documentElement.style.colorScheme=t;}else{document.documentElement.className="dark";document.documentElement.style.colorScheme="dark";}}catch(e){}})()`,
+          }}
+        />
         <HeadContent />
       </head>
-      <body className="bg-background text-foreground min-h-screen antialiased selection:bg-white/20 selection:text-white">
+      <body className="bg-background text-foreground min-h-screen antialiased selection:bg-primary/20 selection:text-foreground">
         {children}
         <Scripts />
       </body>
@@ -129,10 +134,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <I18nProvider>
-        <Outlet />
-        <Toaster position="top-right" richColors theme="dark" />
-      </I18nProvider>
+      <ThemeProvider>
+        <I18nProvider>
+          <Outlet />
+          <Toaster position="top-right" richColors />
+        </I18nProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

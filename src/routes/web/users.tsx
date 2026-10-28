@@ -57,7 +57,7 @@ function UserManagementPage() {
       {/* Title & Action */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-display">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
             {t("users.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -67,7 +67,7 @@ function UserManagementPage() {
 
         <button
           onClick={() => setAddUserModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 font-mono text-xs font-semibold text-black hover:bg-white/90 shadow transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors"
         >
           <Plus className="h-4 w-4" />
           Tambah Pengguna
@@ -75,15 +75,15 @@ function UserManagementPage() {
       </div>
 
       {/* Users Table */}
-      <div className="rounded-xl border border-white/10 bg-[#0d0d10] overflow-hidden">
-        <div className="p-4 border-b border-white/10 flex items-center justify-between text-xs font-mono text-muted-foreground">
+      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
+        <div className="p-4 border-b border-border flex items-center justify-between text-xs font-mono text-muted-foreground">
           <span>{appState.users.length} Akun terdaftar</span>
-          <span className="text-amber-400/90">{t("users.auditNote")}</span>
+          <span className="text-amber-600 dark:text-amber-400 font-medium">{t("users.auditNote")}</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-sans">
-            <thead className="border-b border-white/10 bg-black/60 font-mono text-[10px] uppercase text-muted-foreground">
+            <thead className="border-b border-border bg-muted/60 font-mono text-[10px] uppercase text-muted-foreground">
               <tr>
                 <th className="py-3 px-4">{t("users.name")}</th>
                 <th className="py-3 px-4">{t("users.email")}</th>
@@ -92,29 +92,29 @@ function UserManagementPage() {
                 <th className="py-3 px-4 text-right">Ubah Peran</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {appState.users.map((u) => (
-                <tr key={u.id} className="hover:bg-white/[0.02]">
-                  <td className="py-3 px-4 font-medium text-white flex items-center gap-2.5">
-                    <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center font-mono text-xs font-bold text-white border border-white/10">
+                <tr key={u.id} className="hover:bg-muted/40 transition-colors">
+                  <td className="py-3 px-4 font-medium text-foreground flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center font-mono text-xs font-bold text-foreground border border-border">
                       {u.name.slice(0, 2).toUpperCase()}
                     </div>
                     <span>{u.name}</span>
                   </td>
                   <td className="py-3 px-4 font-mono text-muted-foreground">{u.email}</td>
-                  <td className="py-3 px-4 font-mono text-white font-bold">{u.badge}</td>
+                  <td className="py-3 px-4 font-mono text-foreground font-bold">{u.badge}</td>
                   <td className="py-3 px-4 font-mono">
                     <span
                       className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${
                         u.role === "admin"
-                          ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
+                          ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30"
                           : u.role === "manager"
-                          ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                          ? "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/30"
                           : u.role === "supervisor"
-                          ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30"
                           : u.role === "operator"
-                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                          : "bg-white/5 text-muted-foreground border-white/10"
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                          : "bg-muted text-muted-foreground border-border"
                       }`}
                     >
                       {u.role}
@@ -124,7 +124,7 @@ function UserManagementPage() {
                     <select
                       value={u.role}
                       onChange={(e) => handleRoleChange(u.id, e.target.value as Role)}
-                      className="rounded border border-white/10 bg-black px-2.5 py-1 text-xs text-white font-mono focus:outline-none focus:border-white/40"
+                      className="rounded border border-border bg-background px-2.5 py-1 text-xs text-foreground font-mono focus:outline-none focus:border-ring"
                     >
                       {ROLE_ORDER.map((r) => (
                         <option key={r} value={r}>
@@ -141,15 +141,15 @@ function UserManagementPage() {
       </div>
 
       {/* Audit Log Trail */}
-      <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-5 space-y-4">
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-xs">
         <div className="flex items-center gap-2">
           <History className="h-4 w-4 text-muted-foreground" />
-          <h3 className="font-display text-sm font-semibold text-white">
+          <h3 className="font-display text-sm font-semibold text-foreground">
             Riwayat Audit & Perubahan Sistem
           </h3>
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-black overflow-hidden divide-y divide-white/5 text-xs font-mono">
+        <div className="rounded-lg border border-border bg-muted/20 overflow-hidden divide-y divide-border text-xs font-mono">
           {appState.auditLogs.length === 0 ? (
             <div className="p-4 text-muted-foreground">Belum ada riwayat audit.</div>
           ) : (
@@ -157,8 +157,8 @@ function UserManagementPage() {
               <div key={log.id} className="p-3 flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-bold">{log.action}</span>
-                    <span className="text-white/20">•</span>
+                    <span className="text-foreground font-bold">{log.action}</span>
+                    <span className="text-muted-foreground/30">•</span>
                     <span className="text-muted-foreground">Oleh: {log.user}</span>
                   </div>
                   <p className="text-muted-foreground/80 font-sans text-[11px] leading-relaxed">
@@ -176,9 +176,9 @@ function UserManagementPage() {
 
       {/* Modal Add User */}
       {addUserModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl border border-white/20 bg-[#121215] p-6 shadow-2xl">
-            <h3 className="font-display text-base font-semibold text-white mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
+            <h3 className="font-display text-base font-semibold text-foreground mb-4">
               Tambah Pengguna Baru
             </h3>
 
@@ -190,7 +190,7 @@ function UserManagementPage() {
                   placeholder="Nama Lengkap"
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
-                  className="w-full rounded border border-white/10 bg-black p-2 text-white"
+                  className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
                 />
               </div>
 
@@ -201,7 +201,7 @@ function UserManagementPage() {
                   placeholder="nama@jsgi.co.id"
                   value={userEmail}
                   onChange={(e) => setUserEmail(e.target.value)}
-                  className="w-full rounded border border-white/10 bg-black p-2 text-white"
+                  className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
                 />
               </div>
 
@@ -212,7 +212,7 @@ function UserManagementPage() {
                   placeholder="Contoh: EMP-501"
                   value={userBadge}
                   onChange={(e) => setUserBadge(e.target.value)}
-                  className="w-full rounded border border-white/10 bg-black p-2 text-white"
+                  className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
                 />
               </div>
 
@@ -221,7 +221,7 @@ function UserManagementPage() {
                 <select
                   value={userRole}
                   onChange={(e) => setUserRole(e.target.value as Role)}
-                  className="w-full rounded border border-white/10 bg-black p-2 text-white"
+                  className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
                 >
                   {ROLE_ORDER.map((r) => (
                     <option key={r} value={r}>
@@ -232,16 +232,16 @@ function UserManagementPage() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-white/10">
+            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-border">
               <button
                 onClick={() => setAddUserModalOpen(false)}
-                className="px-4 py-2 rounded border border-white/10 font-mono text-xs text-muted-foreground hover:bg-white/5"
+                className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 Batal
               </button>
               <button
                 onClick={handleSaveUser}
-                className="px-4 py-2 rounded bg-white text-black font-semibold font-mono text-xs hover:bg-white/90"
+                className="px-4 py-2 rounded bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs transition-colors"
               >
                 Simpan Pengguna
               </button>
@@ -252,3 +252,4 @@ function UserManagementPage() {
     </div>
   );
 }
+

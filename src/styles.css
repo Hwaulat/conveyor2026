@@ -5,9 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design system — "Terminal Black" (x.ai inspired).
- * Pure black surfaces, hairline borders, white primary actions,
- * monospaced data. Status colors are the only chromatic accents.
+ * Design system — "Terminal Black" (x.ai inspired) with High-Contrast Dual Mode (Light & Dark).
+ * Status colors are the only chromatic accents.
  */
 
 @theme inline {
@@ -60,8 +59,50 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+/* Light Mode Defaults */
 :root {
   --radius: 0.375rem;
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.14 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.14 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.14 0 0);
+  --primary: oklch(0.14 0 0);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.94 0 0);
+  --secondary-foreground: oklch(0.14 0 0);
+  --muted: oklch(0.94 0 0);
+  --muted-foreground: oklch(0.48 0 0);
+  --accent: oklch(0.92 0 0);
+  --accent-foreground: oklch(0.14 0 0);
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.88 0 0);
+  --ring: oklch(0.14 0 0 / 25%);
+  --hairline: oklch(0 0 0 / 10%);
+  --chart-1: oklch(0.55 0.18 150);
+  --chart-2: oklch(0.58 0.22 27);
+  --chart-3: oklch(0.68 0.16 85);
+  --chart-4: oklch(0.55 0.15 250);
+  --chart-5: oklch(0.48 0 0);
+  --sidebar: oklch(0.965 0 0);
+  --sidebar-foreground: oklch(0.14 0 0);
+  --sidebar-primary: oklch(0.14 0 0);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.92 0 0);
+  --sidebar-accent-foreground: oklch(0.14 0 0);
+  --sidebar-border: oklch(0.88 0 0);
+  --sidebar-ring: oklch(0.14 0 0 / 25%);
+  --status-run: oklch(0.52 0.19 150);
+  --status-stop: oklch(0.58 0.23 27);
+  --status-warn: oklch(0.65 0.16 85);
+  --status-idle: oklch(0.5 0 0);
+}
+
+/* Dark Mode Defaults */
+.dark {
   --background: oklch(0.075 0 0);
   --foreground: oklch(0.965 0 0);
   --card: oklch(0.105 0 0);
@@ -101,36 +142,6 @@
   --status-idle: oklch(0.55 0 0);
 }
 
-.dark {
-  --background: oklch(0.075 0 0);
-  --foreground: oklch(0.965 0 0);
-  --card: oklch(0.105 0 0);
-  --card-foreground: oklch(0.965 0 0);
-  --popover: oklch(0.12 0 0);
-  --popover-foreground: oklch(0.965 0 0);
-  --primary: oklch(0.965 0 0);
-  --primary-foreground: oklch(0.09 0 0);
-  --secondary: oklch(0.17 0 0);
-  --secondary-foreground: oklch(0.965 0 0);
-  --muted: oklch(0.16 0 0);
-  --muted-foreground: oklch(0.64 0 0);
-  --accent: oklch(0.19 0 0);
-  --accent-foreground: oklch(0.965 0 0);
-  --destructive: oklch(0.62 0.21 27);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(1 0 0 / 32%);
-  --sidebar: oklch(0.075 0 0);
-  --sidebar-foreground: oklch(0.965 0 0);
-  --sidebar-primary: oklch(0.965 0 0);
-  --sidebar-primary-foreground: oklch(0.09 0 0);
-  --sidebar-accent: oklch(0.17 0 0);
-  --sidebar-accent-foreground: oklch(0.965 0 0);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(1 0 0 0 / 30%);
-}
-
 @layer base {
   * {
     border-color: var(--color-border);
@@ -138,7 +149,14 @@
 
   html {
     background-color: var(--color-background);
+  }
+
+  html.dark {
     color-scheme: dark;
+  }
+
+  html.light {
+    color-scheme: light;
   }
 
   body {

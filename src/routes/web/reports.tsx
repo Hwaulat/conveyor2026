@@ -89,7 +89,7 @@ function ReportsPage() {
   // Export 2: MTTR & MTBF Report
   const exportMttrReport = () => {
     const days = period === "today" ? 1 : period === "7d" ? 7 : 30;
-    const operatingMs = days * 16 * 3_600_000; // 2 shifts of 8 hours
+    const operatingMs = days * 16 * 3_600_000;
 
     const data: any[] = [];
     for (const station of appState.stations) {
@@ -187,7 +187,7 @@ function ReportsPage() {
       {/* Page Title & Period Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-display">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
             {t("rep.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -196,7 +196,7 @@ function ReportsPage() {
         </div>
 
         {/* Period Selector */}
-        <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-[#121215] p-1 font-mono text-xs">
+        <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card p-1 font-mono text-xs shadow-2xs">
           <Calendar className="h-3.5 w-3.5 text-muted-foreground ml-2" />
           <span className="text-muted-foreground pr-1">{t("rep.period")}:</span>
           {(
@@ -212,8 +212,8 @@ function ReportsPage() {
               onClick={() => setPeriod(p.id)}
               className={`px-3 py-1 rounded transition-colors ${
                 period === p.id
-                  ? "bg-white text-black font-semibold shadow-sm"
-                  : "text-muted-foreground hover:text-white hover:bg-white/5"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
               {p.label}
@@ -225,13 +225,13 @@ function ReportsPage() {
       {/* Reports Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Card 1: Stop Summary */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-6 flex flex-col justify-between hover:border-white/20 transition-colors">
+        <div className="rounded-xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/40 transition-colors shadow-xs">
           <div>
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 <Layers className="h-5 w-5" />
               </div>
-              <h3 className="font-display text-base font-semibold text-white">
+              <h3 className="font-display text-base font-semibold text-foreground">
                 {t("rep.stopSummary")}
               </h3>
             </div>
@@ -240,13 +240,13 @@ function ReportsPage() {
             </p>
           </div>
 
-          <div className="pt-6 mt-6 border-t border-white/10 flex items-center justify-between">
+          <div className="pt-6 mt-6 border-t border-border flex items-center justify-between">
             <span className="font-mono text-xs text-muted-foreground">
               {appState.stations.length} Stasiun terdaftar
             </span>
             <button
               onClick={exportStopSummary}
-              className="flex items-center gap-2 rounded-md bg-white px-3.5 py-2 font-mono text-xs font-semibold text-black hover:bg-white/90 shadow transition-colors"
+              className="flex items-center gap-2 rounded-md bg-primary px-3.5 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors"
             >
               <Download className="h-4 w-4" />
               {t("rep.exportExcel")}
@@ -255,13 +255,13 @@ function ReportsPage() {
         </div>
 
         {/* Card 2: MTTR / MTBF Report */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-6 flex flex-col justify-between hover:border-white/20 transition-colors">
+        <div className="rounded-xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/40 transition-colors shadow-xs">
           <div>
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+              <div className="p-2 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                 <TrendingDown className="h-5 w-5" />
               </div>
-              <h3 className="font-display text-base font-semibold text-white">
+              <h3 className="font-display text-base font-semibold text-foreground">
                 {t("rep.mttrReport")}
               </h3>
             </div>
@@ -270,13 +270,13 @@ function ReportsPage() {
             </p>
           </div>
 
-          <div className="pt-6 mt-6 border-t border-white/10 flex items-center justify-between">
+          <div className="pt-6 mt-6 border-t border-border flex items-center justify-between">
             <span className="font-mono text-xs text-muted-foreground">
               Formula Standar PRD 2.4
             </span>
             <button
               onClick={exportMttrReport}
-              className="flex items-center gap-2 rounded-md bg-white px-3.5 py-2 font-mono text-xs font-semibold text-black hover:bg-white/90 shadow transition-colors"
+              className="flex items-center gap-2 rounded-md bg-primary px-3.5 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors"
             >
               <Download className="h-4 w-4" />
               {t("rep.exportExcel")}
@@ -285,13 +285,13 @@ function ReportsPage() {
         </div>
 
         {/* Card 3: OEE Report */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-6 flex flex-col justify-between hover:border-white/20 transition-colors">
+        <div className="rounded-xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/40 transition-colors shadow-xs">
           <div>
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
                 <Activity className="h-5 w-5" />
               </div>
-              <h3 className="font-display text-base font-semibold text-white">
+              <h3 className="font-display text-base font-semibold text-foreground">
                 {t("rep.oeeReport")}
               </h3>
             </div>
@@ -300,13 +300,13 @@ function ReportsPage() {
             </p>
           </div>
 
-          <div className="pt-6 mt-6 border-t border-white/10 flex items-center justify-between">
+          <div className="pt-6 mt-6 border-t border-border flex items-center justify-between">
             <span className="font-mono text-xs text-muted-foreground">
               {appState.productionRecords.length} Catatan produksi
             </span>
             <button
               onClick={exportOeeReport}
-              className="flex items-center gap-2 rounded-md bg-white px-3.5 py-2 font-mono text-xs font-semibold text-black hover:bg-white/90 shadow transition-colors"
+              className="flex items-center gap-2 rounded-md bg-primary px-3.5 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors"
             >
               <Download className="h-4 w-4" />
               {t("rep.exportExcel")}
@@ -315,13 +315,13 @@ function ReportsPage() {
         </div>
 
         {/* Card 4: Stop Log Detail */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-6 flex flex-col justify-between hover:border-white/20 transition-colors">
+        <div className="rounded-xl border border-border bg-card p-6 flex flex-col justify-between hover:border-primary/40 transition-colors shadow-xs">
           <div>
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
                 <FileSpreadsheet className="h-5 w-5" />
               </div>
-              <h3 className="font-display text-base font-semibold text-white">
+              <h3 className="font-display text-base font-semibold text-foreground">
                 {t("rep.logDetail")}
               </h3>
             </div>
@@ -330,13 +330,13 @@ function ReportsPage() {
             </p>
           </div>
 
-          <div className="pt-6 mt-6 border-t border-white/10 flex items-center justify-between">
+          <div className="pt-6 mt-6 border-t border-border flex items-center justify-between">
             <span className="font-mono text-xs text-muted-foreground">
               {filteredStops.length} Baris pada periode
             </span>
             <button
               onClick={exportLogDetail}
-              className="flex items-center gap-2 rounded-md bg-white px-3.5 py-2 font-mono text-xs font-semibold text-black hover:bg-white/90 shadow transition-colors"
+              className="flex items-center gap-2 rounded-md bg-primary px-3.5 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors"
             >
               <Download className="h-4 w-4" />
               {t("rep.exportExcel")}

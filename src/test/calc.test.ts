@@ -287,3 +287,4 @@ describe("Calculation Formulas (PRD Section 2.4)", () => {
     expect(fmtDuration(3665_000)).toBe("1h 01m");
   });
 });
+

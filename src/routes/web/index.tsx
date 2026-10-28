@@ -27,6 +27,7 @@ import {
   Legend,
 } from "recharts";
 import { useI18n } from "../../lib/i18n";
+import { useTheme } from "../../lib/theme";
 import { useAppStore, store } from "../../lib/store";
 import {
   mttrMs,
@@ -54,9 +55,12 @@ type Granularity = "day" | "week" | "month";
 
 function DashboardPage() {
   const { t } = useI18n();
+  const { theme } = useTheme();
   const appState = useAppStore();
   const [granularity, setGranularity] = useState<Granularity>("day");
   const nowMs = Date.now();
+
+  const isDark = theme === "dark";
 
   // Filter stops by granularity period
   const periodStartMs = useMemo(() => {
@@ -91,7 +95,6 @@ function DashboardPage() {
 
   // MTBF in ms
   const currentMtbfMs = useMemo(() => {
-    // Operating time = total planned runtime across the stations or calculated
     const totalPlannedMs = (granularity === "day" ? 1 : granularity === "week" ? 7 : 30) * 16 * 3_600_000;
     const opTime = operatingTimeMs(totalPlannedMs, filteredStops, appState.categories, nowMs);
     return mtbfMs(filteredStops, appState.categories, opTime);
@@ -169,7 +172,6 @@ function DashboardPage() {
     let totalOee = 0;
 
     for (const rec of recentRecords) {
-      // Find downtime on that date
       const recDateStart = Date.parse(`${rec.date}T00:00:00+07:00`);
       const recDateEnd = recDateStart + 86_400_000;
       const dayStops = appState.stops.filter((s) => s.startMs >= recDateStart && s.startMs < recDateEnd);
@@ -201,12 +203,19 @@ function DashboardPage() {
     }
   };
 
+  const chartTooltipStyle = isDark
+    ? { backgroundColor: "#09090b", border: "1px solid #27272a", borderRadius: "8px", color: "#ffffff" }
+    : { backgroundColor: "#ffffff", border: "1px solid #e4e4e7", borderRadius: "8px", color: "#18181b", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" };
+
+  const chartGridStroke = isDark ? "#222" : "#e5e7eb";
+  const chartAxisStroke = isDark ? "#666" : "#71717a";
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Top Banner: Title & Granularity Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-display">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
             {t("dash.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -215,7 +224,7 @@ function DashboardPage() {
         </div>
 
         {/* Granularity Selector */}
-        <div className="flex items-center gap-1.5 self-start sm:self-auto rounded-lg border border-white/10 bg-[#121215] p-1 font-mono text-xs">
+        <div className="flex items-center gap-1.5 self-start sm:self-auto rounded-lg border border-border bg-card p-1 font-mono text-xs shadow-2xs">
           <span className="text-muted-foreground px-2">{t("dash.granularity")}:</span>
           {(["day", "week", "month"] as Granularity[]).map((g) => (
             <button
@@ -223,8 +232,8 @@ function DashboardPage() {
               onClick={() => setGranularity(g)}
               className={`px-3 py-1 rounded transition-colors ${
                 granularity === g
-                  ? "bg-white text-black font-semibold shadow-sm"
-                  : "text-muted-foreground hover:text-white hover:bg-white/5"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
               {g === "day" ? t("dash.gran.day") : g === "week" ? t("dash.gran.week") : t("dash.gran.month")}
@@ -234,11 +243,11 @@ function DashboardPage() {
       </div>
 
       {/* Live Station Telemetry Strip */}
-      <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-4">
+      <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-mono text-xs uppercase tracking-wider text-white font-semibold">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-mono text-xs uppercase tracking-wider text-foreground font-bold">
               {t("dash.liveNow")}
             </span>
             <span className="text-xs text-muted-foreground hidden sm:inline">
@@ -247,9 +256,9 @@ function DashboardPage() {
           </div>
           <span className="font-mono text-xs text-muted-foreground">
             {stoppedStations.length > 0 ? (
-              <span className="text-red-400 font-bold">{stoppedStations.length} BERHENTI</span>
+              <span className="text-red-600 dark:text-red-400 font-bold">{stoppedStations.length} BERHENTI</span>
             ) : (
-              <span className="text-emerald-400 font-medium">SEMUA RUNNING</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">SEMUA RUNNING</span>
             )}
           </span>
         </div>
@@ -265,16 +274,16 @@ function DashboardPage() {
               <button
                 key={station.id}
                 onClick={() => handleStationClick(station.id)}
-                className={`relative flex flex-col justify-between p-3 rounded-lg border text-left transition-all hover:scale-[1.02] cursor-pointer ${
+                className={`relative flex flex-col justify-between p-3 rounded-lg border text-left transition-all hover:scale-[1.02] cursor-pointer shadow-2xs ${
                   isStopped
-                    ? "border-red-500/50 bg-red-950/20 text-white shadow-lg shadow-red-950/30 ring-1 ring-red-500/30"
+                    ? "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400 ring-1 ring-red-500/40"
                     : isNoSignal
-                    ? "border-amber-500/30 bg-amber-950/20 text-white"
-                    : "border-white/10 bg-white/[0.02] hover:border-white/20 text-white"
+                    ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    : "border-border bg-muted/20 hover:border-primary/30 text-foreground"
                 }`}
               >
                 <div className="flex items-start justify-between gap-1 mb-2">
-                  <span className="font-mono text-[11px] font-bold tracking-tight text-white truncate">
+                  <span className="font-mono text-[11px] font-bold tracking-tight text-foreground truncate">
                     {station.name.split(" ")[0]}
                   </span>
                   <span
@@ -293,7 +302,7 @@ function DashboardPage() {
                     <span className="text-muted-foreground">Status:</span>
                     <span
                       className={`font-bold uppercase ${
-                        isStopped ? "text-red-400" : isNoSignal ? "text-amber-400" : "text-emerald-400"
+                        isStopped ? "text-red-600 dark:text-red-400" : isNoSignal ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
                       }`}
                     >
                       {isStopped ? "STOP" : isNoSignal ? "NO SIG" : "RUN"}
@@ -302,13 +311,13 @@ function DashboardPage() {
 
                   <div className="flex items-center justify-between text-[10px] font-mono">
                     <span className="text-muted-foreground">Speed:</span>
-                    <span className="text-white">
+                    <span className="text-foreground font-semibold">
                       {isStopped ? "0.00" : live ? live.speed.toFixed(2) : "0.00"} {station.speedUnit}
                     </span>
                   </div>
 
                   {isStopped && (
-                    <div className="pt-1 mt-1 border-t border-red-500/20 text-[10px] font-mono text-red-400 font-bold flex items-center justify-between">
+                    <div className="pt-1 mt-1 border-t border-red-500/20 text-[10px] font-mono text-red-600 dark:text-red-400 font-bold flex items-center justify-between">
                       <span>Downtime:</span>
                       <span>{fmtDuration(stoppedDuration)}</span>
                     </div>
@@ -323,13 +332,13 @@ function DashboardPage() {
       {/* 6 Metric KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* 1. Stops Today */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-4 flex flex-col justify-between">
+        <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="font-mono text-[11px] uppercase tracking-wider">{t("dash.stopsToday")}</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.stopsToday")}</span>
             <AlertOctagon className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="mt-2">
-            <span className="font-mono text-3xl font-bold text-white tracking-tight">
+            <span className="font-mono text-3xl font-bold text-foreground tracking-tight">
               {stopsToday.length}
             </span>
             <span className="text-xs text-muted-foreground ml-1">kali</span>
@@ -340,13 +349,13 @@ function DashboardPage() {
         </div>
 
         {/* 2. Total Downtime Today */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-4 flex flex-col justify-between">
+        <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="font-mono text-[11px] uppercase tracking-wider">{t("dash.downtimeToday")}</span>
-            <Clock className="h-4 w-4 text-amber-400" />
+            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.downtimeToday")}</span>
+            <Clock className="h-4 w-4 text-amber-500" />
           </div>
           <div className="mt-2">
-            <span className="font-mono text-2xl font-bold text-amber-400 tracking-tight">
+            <span className="font-mono text-2xl font-bold text-amber-600 dark:text-amber-400 tracking-tight">
               {fmtDuration(totalDowntimeTodayMs)}
             </span>
           </div>
@@ -356,13 +365,13 @@ function DashboardPage() {
         </div>
 
         {/* 3. Average Stop Duration */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-4 flex flex-col justify-between">
+        <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="font-mono text-[11px] uppercase tracking-wider">{t("dash.avgStop")}</span>
-            <Activity className="h-4 w-4 text-cyan-400" />
+            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.avgStop")}</span>
+            <Activity className="h-4 w-4 text-cyan-500" />
           </div>
           <div className="mt-2">
-            <span className="font-mono text-2xl font-bold text-white tracking-tight">
+            <span className="font-mono text-2xl font-bold text-foreground tracking-tight">
               {averageStopTodayMs ? fmtDuration(averageStopTodayMs) : "0s"}
             </span>
           </div>
@@ -372,13 +381,13 @@ function DashboardPage() {
         </div>
 
         {/* 4. MTTR */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-4 flex flex-col justify-between">
+        <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="font-mono text-[11px] uppercase tracking-wider">{t("dash.mttr")}</span>
-            <TrendingDown className="h-4 w-4 text-rose-400" />
+            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.mttr")}</span>
+            <TrendingDown className="h-4 w-4 text-rose-500" />
           </div>
           <div className="mt-2">
-            <span className="font-mono text-2xl font-bold text-rose-400 tracking-tight">
+            <span className="font-mono text-2xl font-bold text-rose-600 dark:text-rose-400 tracking-tight">
               {currentMttrMs ? `${Math.round(currentMttrMs / 60_000)}m` : "—"}
             </span>
           </div>
@@ -388,13 +397,13 @@ function DashboardPage() {
         </div>
 
         {/* 5. MTBF */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-4 flex flex-col justify-between">
+        <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="font-mono text-[11px] uppercase tracking-wider">{t("dash.mtbf")}</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.mtbf")}</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2">
-            <span className="font-mono text-2xl font-bold text-emerald-400 tracking-tight">
+            <span className="font-mono text-2xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
               {currentMtbfMs ? `${(currentMtbfMs / 3_600_000).toFixed(1)}h` : "—"}
             </span>
           </div>
@@ -405,18 +414,18 @@ function DashboardPage() {
 
         {/* 6. Stations Stopped Currently */}
         <div
-          className={`rounded-xl border p-4 flex flex-col justify-between transition-colors ${
+          className={`rounded-xl border p-4 flex flex-col justify-between transition-colors shadow-xs ${
             stoppedStations.length > 0
-              ? "border-red-500/40 bg-red-950/20"
-              : "border-white/10 bg-[#0d0d10]"
+              ? "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400"
+              : "border-border bg-card"
           }`}
         >
           <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="font-mono text-[11px] uppercase tracking-wider">{t("dash.stationsStopped")}</span>
-            <AlertTriangle className={`h-4 w-4 ${stoppedStations.length > 0 ? "text-red-400" : "text-muted-foreground"}`} />
+            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.stationsStopped")}</span>
+            <AlertTriangle className={`h-4 w-4 ${stoppedStations.length > 0 ? "text-red-500" : "text-muted-foreground"}`} />
           </div>
           <div className="mt-2">
-            <span className={`font-mono text-3xl font-bold tracking-tight ${stoppedStations.length > 0 ? "text-red-400" : "text-emerald-400"}`}>
+            <span className={`font-mono text-3xl font-bold tracking-tight ${stoppedStations.length > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
               {stoppedStations.length}
             </span>
             <span className="text-xs text-muted-foreground ml-1">/ {appState.stations.length}</span>
@@ -430,10 +439,10 @@ function DashboardPage() {
       {/* Charts Grid: MTTR/MTBF Trend & Frequency */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart 1: MTTR & MTBF Trend */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-5 flex flex-col">
+        <div className="rounded-xl border border-border bg-card p-5 flex flex-col shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-display text-sm font-semibold text-white">
+              <h3 className="font-display text-sm font-semibold text-foreground">
                 Tren MTTR & MTBF (7 Hari Terakhir)
               </h3>
               <p className="text-xs text-muted-foreground">
@@ -444,12 +453,12 @@ function DashboardPage() {
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                <XAxis dataKey="date" stroke="#666" fontSize={11} tickLine={false} />
-                <YAxis stroke="#666" fontSize={11} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
+                <XAxis dataKey="date" stroke={chartAxisStroke} fontSize={11} tickLine={false} />
+                <YAxis stroke={chartAxisStroke} fontSize={11} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "#000", border: "1px solid #333", borderRadius: "6px" }}
-                  labelStyle={{ color: "#fff", fontWeight: "bold" }}
+                  contentStyle={chartTooltipStyle}
+                  labelStyle={{ fontWeight: "bold" }}
                 />
                 <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
                 <Line
@@ -474,10 +483,10 @@ function DashboardPage() {
         </div>
 
         {/* Chart 2: Stop Frequency by Station */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-5 flex flex-col">
+        <div className="rounded-xl border border-border bg-card p-5 flex flex-col shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-display text-sm font-semibold text-white">
+              <h3 className="font-display text-sm font-semibold text-foreground">
                 {t("dash.frequency")}
               </h3>
               <p className="text-xs text-muted-foreground">
@@ -488,15 +497,15 @@ function DashboardPage() {
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stationFrequencyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                <XAxis dataKey="name" stroke="#666" fontSize={11} tickLine={false} />
-                <YAxis stroke="#666" fontSize={11} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
+                <XAxis dataKey="name" stroke={chartAxisStroke} fontSize={11} tickLine={false} />
+                <YAxis stroke={chartAxisStroke} fontSize={11} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "#000", border: "1px solid #333", borderRadius: "6px" }}
-                  labelStyle={{ color: "#fff", fontWeight: "bold" }}
+                  contentStyle={chartTooltipStyle}
+                  labelStyle={{ fontWeight: "bold" }}
                   formatter={(val, name, item) => [`${val} kali (${item.payload.durationMin} min)`, "Frekuensi"]}
                 />
-                <Bar dataKey="count" fill="#fff" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="count" fill="currentColor" radius={[4, 4, 0, 0]}>
                   {stationFrequencyData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
@@ -513,10 +522,10 @@ function DashboardPage() {
       {/* Row 2: Pareto Downtime by Category & OEE Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Pareto Downtime by Category (2 cols on LG) */}
-        <div className="lg:col-span-2 rounded-xl border border-white/10 bg-[#0d0d10] p-5 flex flex-col">
+        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5 flex flex-col shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-display text-sm font-semibold text-white">
+              <h3 className="font-display text-sm font-semibold text-foreground">
                 {t("dash.pareto")}
               </h3>
               <p className="text-xs text-muted-foreground">
@@ -536,12 +545,12 @@ function DashboardPage() {
                   layout="vertical"
                   margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                  <XAxis type="number" stroke="#666" fontSize={11} tickLine={false} unit="m" />
-                  <YAxis type="category" dataKey="name" stroke="#888" fontSize={11} tickLine={false} width={130} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
+                  <XAxis type="number" stroke={chartAxisStroke} fontSize={11} tickLine={false} unit="m" />
+                  <YAxis type="category" dataKey="name" stroke={chartAxisStroke} fontSize={11} tickLine={false} width={130} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: "#000", border: "1px solid #333", borderRadius: "6px" }}
-                    labelStyle={{ color: "#fff", fontWeight: "bold" }}
+                    contentStyle={chartTooltipStyle}
+                    labelStyle={{ fontWeight: "bold" }}
                     formatter={(val, name, item) => [
                       `${val} menit (${item.payload.count}× kejadian, kumulatif: ${item.payload.cumulativePct}%)`,
                       "Durasi",
@@ -555,10 +564,10 @@ function DashboardPage() {
         </div>
 
         {/* OEE Overview Card (1 col on LG) */}
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-5 flex flex-col justify-between">
+        <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between shadow-xs">
           <div>
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-sm font-semibold text-white">
+              <h3 className="font-display text-sm font-semibold text-foreground">
                 {t("dash.oee")} — Overall Equipment Effectiveness
               </h3>
             </div>
@@ -567,12 +576,12 @@ function DashboardPage() {
             </p>
 
             {/* Big OEE Number */}
-            <div className="my-5 p-4 rounded-lg border border-white/10 bg-white/[0.02] flex items-center justify-between">
+            <div className="my-5 p-4 rounded-lg border border-border bg-muted/30 flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-mono uppercase text-muted-foreground block">
+                <span className="text-[11px] font-mono uppercase text-muted-foreground block font-bold">
                   Overall OEE Score
                 </span>
-                <span className="text-4xl font-bold font-mono tracking-tight text-white">
+                <span className="text-4xl font-bold font-mono tracking-tight text-foreground">
                   {(oeeSummary.oee * 100).toFixed(1)}%
                 </span>
               </div>
@@ -580,10 +589,10 @@ function DashboardPage() {
                 <span
                   className={`inline-flex px-2 py-1 rounded text-xs font-mono font-bold ${
                     oeeSummary.oee >= 0.85
-                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                      ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                       : oeeSummary.oee >= 0.7
-                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                      : "bg-red-500/20 text-red-400 border border-red-500/30"
+                      ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                      : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
                   }`}
                 >
                   {oeeSummary.oee >= 0.85 ? "World Class" : oeeSummary.oee >= 0.7 ? "Moderate" : "Needs Action"}
@@ -600,11 +609,11 @@ function DashboardPage() {
               <div>
                 <div className="flex justify-between text-xs font-mono mb-1">
                   <span className="text-muted-foreground">{t("dash.availability")} (A):</span>
-                  <span className="text-white font-bold">{(oeeSummary.availability * 100).toFixed(1)}%</span>
+                  <span className="text-foreground font-bold">{(oeeSummary.availability * 100).toFixed(1)}%</span>
                 </div>
-                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <div
-                    className="h-full bg-emerald-400 rounded-full"
+                    className="h-full bg-emerald-500 rounded-full"
                     style={{ width: `${Math.min(100, oeeSummary.availability * 100)}%` }}
                   />
                 </div>
@@ -614,11 +623,11 @@ function DashboardPage() {
               <div>
                 <div className="flex justify-between text-xs font-mono mb-1">
                   <span className="text-muted-foreground">{t("dash.performance")} (P):</span>
-                  <span className="text-white font-bold">{(oeeSummary.performance * 100).toFixed(1)}%</span>
+                  <span className="text-foreground font-bold">{(oeeSummary.performance * 100).toFixed(1)}%</span>
                 </div>
-                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <div
-                    className="h-full bg-cyan-400 rounded-full"
+                    className="h-full bg-cyan-500 rounded-full"
                     style={{ width: `${Math.min(100, oeeSummary.performance * 100)}%` }}
                   />
                 </div>
@@ -628,11 +637,11 @@ function DashboardPage() {
               <div>
                 <div className="flex justify-between text-xs font-mono mb-1">
                   <span className="text-muted-foreground">{t("dash.quality")} (Q):</span>
-                  <span className="text-white font-bold">{(oeeSummary.quality * 100).toFixed(1)}%</span>
+                  <span className="text-foreground font-bold">{(oeeSummary.quality * 100).toFixed(1)}%</span>
                 </div>
-                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <div
-                    className="h-full bg-purple-400 rounded-full"
+                    className="h-full bg-purple-500 rounded-full"
                     style={{ width: `${Math.min(100, oeeSummary.quality * 100)}%` }}
                   />
                 </div>
@@ -640,11 +649,11 @@ function DashboardPage() {
             </div>
           </div>
 
-          <div className="pt-4 mt-4 border-t border-white/10 flex justify-between items-center text-xs">
+          <div className="pt-4 mt-4 border-t border-border flex justify-between items-center text-xs">
             <span className="text-muted-foreground font-mono">Rumus: A × P × Q</span>
             <a
               href="/web/production"
-              className="text-white hover:underline font-medium inline-flex items-center gap-1 font-mono text-[11px]"
+              className="text-foreground hover:underline font-medium inline-flex items-center gap-1 font-mono text-[11px]"
             >
               Kelola Produksi <ArrowUpRight className="h-3 w-3" />
             </a>

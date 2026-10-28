@@ -11,18 +11,16 @@ import {
   Tablet,
   Play,
   Square,
-  RefreshCw,
   Globe,
+  Sun,
+  Moon,
   Menu,
   X,
   Clock,
-  ShieldCheck,
-  ChevronRight,
   ExternalLink,
-  Activity,
-  Layers,
 } from "lucide-react";
 import { useI18n } from "../lib/i18n";
+import { useTheme } from "../lib/theme";
 import { useAppStore, store } from "../lib/store";
 import { fmtTime, fmtDateHuman, shiftOf } from "../lib/format";
 import { toast } from "sonner";
@@ -53,6 +51,7 @@ interface NavGroup {
 
 function WebLayout() {
   const { t, lang, setLang } = useI18n();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const appState = useAppStore();
   const [nowMs, setNowMs] = useState(Date.now());
@@ -68,7 +67,6 @@ function WebLayout() {
 
   const currentShift = shiftOf(nowMs, appState.shifts);
   const stoppedStationsCount = Object.values(appState.stationLive).filter((s) => s.state === "stopped").length;
-  const runningStationsCount = Object.values(appState.stationLive).filter((s) => s.state === "running").length;
 
   const navGroups: NavGroup[] = [
     {
@@ -80,7 +78,7 @@ function WebLayout() {
           exact: true,
           icon: LayoutDashboard,
           badge: stoppedStationsCount > 0 ? `${stoppedStationsCount} STOP` : undefined,
-          badgeVariant: "destructive" as const,
+          badgeVariant: "destructive",
         },
         {
           label: t("nav.logs"),
@@ -160,17 +158,17 @@ function WebLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-black text-foreground antialiased">
+    <div className="flex min-h-screen bg-background text-foreground antialiased transition-colors">
       {/* Sidebar Desktop */}
-      <aside className="hidden lg:flex w-64 flex-col border-r border-white/10 bg-[#09090b] sticky top-0 h-screen select-none">
+      <aside className="hidden lg:flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground sticky top-0 h-screen select-none">
         {/* Brand */}
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
+        <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-5">
           <Link to="/web" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded border border-white/20 bg-white/5 font-mono text-sm font-bold tracking-wider text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded border border-sidebar-border bg-sidebar-accent font-mono text-sm font-bold tracking-wider text-sidebar-foreground">
               JS
             </div>
             <div className="flex flex-col">
-              <span className="font-display text-sm font-semibold tracking-wide text-white">
+              <span className="font-display text-sm font-semibold tracking-wide text-sidebar-foreground">
                 JSGI MONITOR
               </span>
               <span className="font-mono text-[10px] text-muted-foreground">
@@ -178,7 +176,7 @@ function WebLayout() {
               </span>
             </div>
           </Link>
-          <span className="inline-flex items-center rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-emerald-400">
+          <span className="inline-flex items-center rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
             v2.6
           </span>
         </div>
@@ -187,7 +185,7 @@ function WebLayout() {
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
           {navGroups.map((group) => (
             <div key={group.label} className="space-y-1">
-              <p className="px-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/80">
+              <p className="px-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/80 font-bold">
                 {group.label}
               </p>
               <div className="space-y-0.5 pt-1">
@@ -200,12 +198,12 @@ function WebLayout() {
                       to={item.to}
                       className={`group flex items-center justify-between rounded-md px-2.5 py-2 text-xs font-medium transition-colors ${
                         active
-                          ? "bg-white text-black font-semibold shadow-sm"
-                          : "text-muted-foreground hover:bg-white/5 hover:text-white"
+                          ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Icon className={`h-4 w-4 shrink-0 ${active ? "text-black" : "text-muted-foreground group-hover:text-white"}`} />
+                        <Icon className={`h-4 w-4 shrink-0 ${active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-sidebar-accent-foreground"}`} />
                         <span>{item.label}</span>
                       </div>
                       {item.badge && (
@@ -213,11 +211,11 @@ function WebLayout() {
                           className={`font-mono text-[9px] px-1.5 py-0.5 rounded ${
                             item.badgeVariant === "destructive"
                               ? active
-                                ? "bg-red-600 text-white font-bold"
-                                : "bg-red-500/20 text-red-400 border border-red-500/30"
+                                ? "bg-destructive text-destructive-foreground font-bold"
+                                : "bg-destructive/15 text-destructive border border-destructive/30"
                               : active
-                              ? "bg-black/10 text-black font-medium"
-                              : "bg-white/5 text-muted-foreground border border-white/10"
+                              ? "bg-primary-foreground/20 text-primary-foreground font-medium"
+                              : "bg-muted text-muted-foreground border border-border"
                           }`}
                         >
                           {item.badge}
@@ -231,8 +229,8 @@ function WebLayout() {
           ))}
 
           {/* Quick Dedicated External Routes Launchers */}
-          <div className="pt-2 border-t border-white/10 space-y-2">
-            <p className="px-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/80">
+          <div className="pt-2 border-t border-sidebar-border space-y-2">
+            <p className="px-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/80 font-bold">
               Dedicated Displays
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -240,10 +238,10 @@ function WebLayout() {
                 to="/andon"
                 target="_blank"
                 rel="noreferrer"
-                className="group flex flex-col items-center justify-center rounded border border-white/10 bg-white/[0.02] p-2.5 text-center transition-colors hover:border-white/30 hover:bg-white/[0.05]"
+                className="group flex flex-col items-center justify-center rounded-lg border border-sidebar-border bg-card p-2.5 text-center transition-all hover:border-primary/30 hover:bg-muted/50 shadow-xs"
               >
-                <Tv className="h-4 w-4 text-emerald-400 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-medium text-white flex items-center gap-1">
+                <Tv className="h-4 w-4 text-emerald-500 mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
                   Andon TV <ExternalLink className="h-2.5 w-2.5 text-muted-foreground" />
                 </span>
                 <span className="text-[9px] font-mono text-muted-foreground">Fullscreen</span>
@@ -253,10 +251,10 @@ function WebLayout() {
                 to="/ipad"
                 target="_blank"
                 rel="noreferrer"
-                className="group flex flex-col items-center justify-center rounded border border-white/10 bg-white/[0.02] p-2.5 text-center transition-colors hover:border-white/30 hover:bg-white/[0.05]"
+                className="group flex flex-col items-center justify-center rounded-lg border border-sidebar-border bg-card p-2.5 text-center transition-all hover:border-primary/30 hover:bg-muted/50 shadow-xs"
               >
-                <Tablet className="h-4 w-4 text-cyan-400 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-medium text-white flex items-center gap-1">
+                <Tablet className="h-4 w-4 text-cyan-500 mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
                   E-form <ExternalLink className="h-2.5 w-2.5 text-muted-foreground" />
                 </span>
                 <span className="text-[9px] font-mono text-muted-foreground">Tablet Mode</span>
@@ -266,16 +264,16 @@ function WebLayout() {
         </div>
 
         {/* Sidebar Footer — Simulation Controls */}
-        <div className="border-t border-white/10 p-3 bg-black/40 space-y-2">
+        <div className="border-t border-sidebar-border p-3 bg-muted/20 space-y-2">
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1.5 font-mono">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Simulasi PLC Live
             </span>
             <button
               onClick={handleResetData}
               title="Reset data demo ke awal"
-              className="text-muted-foreground hover:text-white p-1 rounded hover:bg-white/10 transition-colors"
+              className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors"
             >
               <RotateCcwIcon className="h-3.5 w-3.5" />
             </button>
@@ -283,14 +281,14 @@ function WebLayout() {
           <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={handleSimulateRandomStop}
-              className="flex items-center justify-center gap-1 rounded border border-red-500/30 bg-red-950/20 px-2 py-1.5 font-mono text-[10px] text-red-300 hover:bg-red-900/40 transition-colors"
+              className="flex items-center justify-center gap-1 rounded border border-red-500/30 bg-red-500/10 px-2 py-1.5 font-mono text-[10px] text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors"
             >
               <Square className="h-3 w-3 fill-current" />
               Sim Stop
             </button>
             <button
               onClick={handleResumeAll}
-              className="flex items-center justify-center gap-1 rounded border border-emerald-500/30 bg-emerald-950/20 px-2 py-1.5 font-mono text-[10px] text-emerald-300 hover:bg-emerald-900/40 transition-colors"
+              className="flex items-center justify-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 font-mono text-[10px] text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
             >
               <Play className="h-3 w-3 fill-current" />
               Resume All
@@ -302,12 +300,12 @@ function WebLayout() {
       {/* Main Container */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Top Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-black/90 px-4 md:px-6 backdrop-blur">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/90 px-4 md:px-6 backdrop-blur">
           {/* Left: Mobile Toggle & Breadcrumb / Status */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-1.5 rounded text-muted-foreground hover:bg-white/10 hover:text-white"
+              className="lg:hidden p-1.5 rounded text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -315,25 +313,25 @@ function WebLayout() {
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                 </span>
-                <span className="font-mono text-xs font-medium text-emerald-400 hidden sm:inline">
+                <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 hidden sm:inline">
                   {t("header.online")}
                 </span>
               </div>
-              <span className="text-white/20 hidden sm:inline">•</span>
-              <span className="inline-flex items-center rounded border border-white/10 bg-white/5 px-2 py-0.5 font-mono text-xs text-white">
+              <span className="text-muted-foreground/40 hidden sm:inline">•</span>
+              <span className="inline-flex items-center rounded border border-border bg-muted/50 px-2 py-0.5 font-mono text-xs text-foreground">
                 {currentShift.name}
               </span>
             </div>
           </div>
 
-          {/* Right: Clock WIB, Language Switch, User Profile */}
-          <div className="flex items-center gap-3 md:gap-4">
+          {/* Right: Clock WIB, Theme Switch, Language Switch, User Profile */}
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Live Clock WIB */}
-            <div className="hidden sm:flex flex-col items-end border-r border-white/10 pr-3">
-              <div className="flex items-center gap-1.5 font-mono text-sm font-semibold tracking-wider text-white">
+            <div className="hidden sm:flex flex-col items-end border-r border-border pr-3">
+              <div className="flex items-center gap-1.5 font-mono text-sm font-semibold tracking-wider text-foreground">
                 <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>{fmtTime(nowMs)}</span>
                 <span className="text-[10px] text-muted-foreground font-normal">WIB</span>
@@ -343,10 +341,29 @@ function WebLayout() {
               </span>
             </div>
 
+            {/* Theme Switcher Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-1.5 rounded border border-border bg-card px-2.5 py-1.5 font-mono text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
+              title={theme === "dark" ? "Ganti ke Mode Terang (Light Mode)" : "Ganti ke Mode Gelap (Dark Mode)"}
+            >
+              {theme === "dark" ? (
+                <>
+                  <Sun className="h-3.5 w-3.5 text-amber-400" />
+                  <span className="font-semibold uppercase hidden md:inline">{t("header.themeLight")}</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="h-3.5 w-3.5 text-indigo-500" />
+                  <span className="font-semibold uppercase hidden md:inline">{t("header.themeDark")}</span>
+                </>
+              )}
+            </button>
+
             {/* Language Switcher */}
             <button
               onClick={() => setLang(lang === "id" ? "en" : "id")}
-              className="flex items-center gap-1.5 rounded border border-white/10 bg-white/5 px-2.5 py-1.5 font-mono text-xs text-white hover:bg-white/10 transition-colors"
+              className="flex items-center gap-1.5 rounded border border-border bg-card px-2.5 py-1.5 font-mono text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
               title="Ganti Bahasa / Switch Language"
             >
               <Globe className="h-3.5 w-3.5 text-muted-foreground" />
@@ -355,11 +372,11 @@ function WebLayout() {
 
             {/* User Profile */}
             <div className="flex items-center gap-2 pl-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 font-mono text-xs font-semibold text-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted font-mono text-xs font-semibold text-foreground">
                 SA
               </div>
               <div className="hidden md:flex flex-col text-left">
-                <span className="text-xs font-medium text-white leading-tight">
+                <span className="text-xs font-medium text-foreground leading-tight">
                   {t("header.superAdmin")}
                 </span>
                 <span className="font-mono text-[10px] text-muted-foreground">
@@ -372,10 +389,10 @@ function WebLayout() {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-b border-white/10 bg-[#09090b] px-4 py-4 space-y-4">
+          <div className="lg:hidden border-b border-border bg-card px-4 py-4 space-y-4">
             {navGroups.map((group) => (
               <div key={group.label} className="space-y-1">
-                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
                   {group.label}
                 </p>
                 <div className="grid grid-cols-2 gap-1 pt-1">
@@ -387,7 +404,7 @@ function WebLayout() {
                         to={item.to}
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center gap-2 rounded px-2.5 py-2 text-xs font-medium ${
-                          active ? "bg-white text-black font-semibold" : "text-muted-foreground hover:bg-white/5 hover:text-white"
+                          active ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
                       >
                         <item.icon className="h-4 w-4" />
@@ -398,18 +415,18 @@ function WebLayout() {
                 </div>
               </div>
             ))}
-            <div className="flex gap-2 pt-2 border-t border-white/10">
+            <div className="flex gap-2 pt-2 border-t border-border">
               <Link
                 to="/andon"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex-1 text-center py-2 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono"
+                className="flex-1 text-center py-2 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-bold"
               >
                 Buka Andon (TV)
               </Link>
               <Link
                 to="/ipad"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex-1 text-center py-2 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono"
+                className="flex-1 text-center py-2 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 text-xs font-mono font-bold"
               >
                 Buka Tablet (E-form)
               </Link>

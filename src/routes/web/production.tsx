@@ -107,7 +107,7 @@ function ProductionPage() {
         const parsed: ParsedRow[] = [];
 
         rawJson.forEach((row, idx) => {
-          const rowNum = idx + 2; // header is row 1
+          const rowNum = idx + 2;
           const rawDate = String(row["Date"] || row["Tanggal"] || "").trim();
           const rawShift = String(row["Shift"] || "").trim().toLowerCase();
           const rawArea = String(row["Area"] || "").trim().toLowerCase();
@@ -116,17 +116,14 @@ function ProductionPage() {
           const goodCount = Number(row["GoodCount"] || row["GoodProduksi"] || 0);
           const idealCycleSec = Number(row["IdealCycleSec"] || row["IdealCycle"] || 18);
 
-          // Validation
           let errorReason: string | undefined;
           let status: "valid" | "updated" | "rejected" = "valid";
 
-          // Date format YYYY-MM-DD
           if (!/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
             errorReason = t("prod.error.date");
             status = "rejected";
           }
 
-          // Match Shift
           const matchedShift = appState.shifts.find(
             (s) => s.id.toLowerCase() === rawShift || s.name.toLowerCase().includes(rawShift)
           );
@@ -135,7 +132,6 @@ function ProductionPage() {
             status = "rejected";
           }
 
-          // Match Area
           const matchedArea = appState.areas.find(
             (a) => a.id.toLowerCase() === rawArea || a.name.toLowerCase().includes(rawArea)
           );
@@ -155,7 +151,6 @@ function ProductionPage() {
             status = "rejected";
           }
 
-          // Check if existing record will be updated
           if (status === "valid" && matchedShift && matchedArea) {
             const exists = appState.productionRecords.some(
               (r) => r.date === rawDate && r.shiftId === matchedShift.id && r.areaId === matchedArea.id
@@ -239,7 +234,6 @@ function ProductionPage() {
     setManualModalOpen(false);
   };
 
-  // Production records sorted by date desc
   const sortedRecords = useMemo(() => {
     return [...appState.productionRecords].sort((a, b) => b.date.localeCompare(a.date));
   }, [appState.productionRecords]);
@@ -249,7 +243,7 @@ function ProductionPage() {
       {/* Page Title & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-display">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
             {t("prod.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -260,7 +254,7 @@ function ProductionPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleDownloadTemplate}
-            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white hover:bg-white/10 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 font-mono text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
           >
             <Download className="h-4 w-4 text-muted-foreground" />
             {t("prod.downloadTemplate")}
@@ -268,7 +262,7 @@ function ProductionPage() {
 
           <button
             onClick={() => setManualModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 font-mono text-xs font-semibold text-black hover:bg-white/90 shadow transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow transition-colors"
           >
             <Plus className="h-4 w-4" />
             Input Manual
@@ -277,10 +271,10 @@ function ProductionPage() {
       </div>
 
       {/* Upload Zone */}
-      <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-6">
-        <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/15 rounded-lg p-8 text-center bg-white/[0.01] hover:border-white/30 transition-colors">
+      <div className="rounded-xl border border-border bg-card p-6 shadow-xs">
+        <div className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg p-8 text-center bg-muted/20 hover:border-primary/40 transition-colors">
           <FileSpreadsheet className="h-10 w-10 text-muted-foreground mb-3" />
-          <h3 className="font-display text-sm font-semibold text-white">
+          <h3 className="font-display text-sm font-semibold text-foreground">
             {t("prod.upload")} (.xlsx, .xls, .csv)
           </h3>
           <p className="text-xs text-muted-foreground max-w-md mt-1 mb-4">
@@ -297,7 +291,7 @@ function ProductionPage() {
           />
           <label
             htmlFor="excel-file-input"
-            className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-4 py-2 font-mono text-xs text-white hover:bg-white/20 transition-colors"
+            className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 font-mono text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
           >
             <Upload className="h-4 w-4" />
             {fileName ? `File terpilih: ${fileName}` : "Pilih Berkas Excel"}
@@ -306,39 +300,39 @@ function ProductionPage() {
 
         {/* Upload Preview Table */}
         {previewRows && (
-          <div className="mt-6 border-t border-white/10 pt-5 space-y-4">
+          <div className="mt-6 border-t border-border pt-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-display text-sm font-semibold text-white">
+                <h4 className="font-display text-sm font-semibold text-foreground">
                   {t("prod.preview")} — {fileName}
                 </h4>
                 <div className="flex items-center gap-3 font-mono text-xs mt-1">
-                  <span className="text-emerald-400 font-bold">{validCount} Valid</span>
-                  <span className="text-white/20">•</span>
-                  <span className="text-red-400 font-bold">{rejectedCount} Ditolak</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">{validCount} Valid</span>
+                  <span className="text-muted-foreground/40">•</span>
+                  <span className="text-red-600 dark:text-red-400 font-bold">{rejectedCount} Ditolak</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPreviewRows(null)}
-                  className="px-3 py-1.5 rounded border border-white/10 text-xs font-mono text-muted-foreground hover:bg-white/5"
+                  className="px-3 py-1.5 rounded border border-border text-xs font-mono text-muted-foreground hover:bg-muted"
                 >
                   Batal
                 </button>
                 <button
                   onClick={handleCommitPreview}
                   disabled={validCount === 0}
-                  className="px-4 py-1.5 rounded bg-emerald-500 text-black font-semibold text-xs font-mono hover:bg-emerald-400 disabled:opacity-40 transition-colors shadow"
+                  className="px-4 py-1.5 rounded bg-emerald-600 text-white font-semibold text-xs font-mono hover:bg-emerald-500 disabled:opacity-40 transition-colors shadow-2xs"
                 >
                   {t("prod.commit", { valid: validCount })}
                 </button>
               </div>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-black overflow-x-auto max-h-72">
+            <div className="rounded-lg border border-border bg-card overflow-x-auto max-h-72">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="border-b border-white/10 bg-white/5 text-[10px] uppercase text-muted-foreground sticky top-0">
+                <thead className="border-b border-border bg-muted/40 text-[10px] uppercase text-muted-foreground sticky top-0">
                   <tr>
                     <th className="py-2 px-3">{t("prod.rowNumber")}</th>
                     <th className="py-2 px-3">Status</th>
@@ -351,32 +345,32 @@ function ProductionPage() {
                     <th className="py-2 px-3">Catatan / Error</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-border/60">
                   {previewRows.map((r) => (
-                    <tr key={r.rowNum} className={r.status === "rejected" ? "bg-red-950/20" : ""}>
+                    <tr key={r.rowNum} className={r.status === "rejected" ? "bg-red-500/10" : ""}>
                       <td className="py-2 px-3 text-muted-foreground">#{r.rowNum}</td>
                       <td className="py-2 px-3">
                         {r.status === "valid" ? (
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
                             VALID
                           </span>
                         ) : r.status === "updated" ? (
-                          <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 text-[10px] font-bold">
+                          <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-[10px] font-bold">
                             UPDATE
                           </span>
                         ) : (
-                          <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px] font-bold">
+                          <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-600 dark:text-red-400 text-[10px] font-bold">
                             REJECT
                           </span>
                         )}
                       </td>
-                      <td className="py-2 px-3 text-white">{r.date}</td>
+                      <td className="py-2 px-3 text-foreground font-semibold">{r.date}</td>
                       <td className="py-2 px-3 text-muted-foreground">{r.shiftName}</td>
                       <td className="py-2 px-3 text-muted-foreground">{r.areaName}</td>
-                      <td className="py-2 px-3 text-white">{r.plannedMin} min</td>
-                      <td className="py-2 px-3 text-white">{r.totalCount}</td>
-                      <td className="py-2 px-3 text-white">{r.goodCount}</td>
-                      <td className="py-2 px-3 text-red-400 font-sans text-[11px]">{r.errorReason ?? "—"}</td>
+                      <td className="py-2 px-3 text-foreground">{r.plannedMin} min</td>
+                      <td className="py-2 px-3 text-foreground">{r.totalCount}</td>
+                      <td className="py-2 px-3 text-foreground">{r.goodCount}</td>
+                      <td className="py-2 px-3 text-red-600 dark:text-red-400 font-sans text-[11px]">{r.errorReason ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -387,9 +381,9 @@ function ProductionPage() {
       </div>
 
       {/* Production Records & OEE Calculation Table */}
-      <div className="rounded-xl border border-white/10 bg-[#0d0d10] p-5 space-y-4">
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-xs">
         <div>
-          <h3 className="font-display text-sm font-semibold text-white">
+          <h3 className="font-display text-sm font-semibold text-foreground">
             {t("prod.oeeResults")} & Data Produksi
           </h3>
           <p className="text-xs text-muted-foreground">
@@ -397,9 +391,9 @@ function ProductionPage() {
           </p>
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-black overflow-x-auto">
+        <div className="rounded-lg border border-border bg-card overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
-            <thead className="border-b border-white/10 bg-white/5 text-[10px] uppercase text-muted-foreground">
+            <thead className="border-b border-border bg-muted/40 text-[10px] uppercase text-muted-foreground">
               <tr>
                 <th className="py-3 px-3">{t("common.date")}</th>
                 <th className="py-3 px-3">Shift & Area</th>
@@ -409,10 +403,10 @@ function ProductionPage() {
                 <th className="py-3 px-3">Avail. (A)</th>
                 <th className="py-3 px-3">Perf. (P)</th>
                 <th className="py-3 px-3">Qual. (Q)</th>
-                <th className="py-3 px-3 font-bold text-white">OEE Final</th>
+                <th className="py-3 px-3 font-bold text-foreground">OEE Final</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border/60">
               {sortedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-muted-foreground">
@@ -424,7 +418,6 @@ function ProductionPage() {
                   const shift = appState.shifts.find((s) => s.id === rec.shiftId);
                   const area = appState.areas.find((a) => a.id === rec.areaId);
 
-                  // Calculate stop downtime for this record date
                   const recDateStart = Date.parse(`${rec.date}T00:00:00+07:00`);
                   const recDateEnd = recDateStart + 86_400_000;
                   const stopsOnDate = appState.stops.filter((s) => s.startMs >= recDateStart && s.startMs < recDateEnd);
@@ -433,36 +426,36 @@ function ProductionPage() {
                   const oee = computeOee(rec, dtMs);
 
                   return (
-                    <tr key={rec.id} className="hover:bg-white/[0.02]">
-                      <td className="py-3 px-3 text-white font-bold">{rec.date}</td>
+                    <tr key={rec.id} className="hover:bg-muted/30">
+                      <td className="py-3 px-3 text-foreground font-bold">{rec.date}</td>
                       <td className="py-3 px-3 text-muted-foreground">
-                        <div className="text-white">{shift?.name ?? rec.shiftId}</div>
+                        <div className="text-foreground font-medium">{shift?.name ?? rec.shiftId}</div>
                         <div className="text-[10px]">{area?.name ?? rec.areaId}</div>
                       </td>
                       <td className="py-3 px-3 text-muted-foreground">{rec.plannedMin} min</td>
-                      <td className="py-3 px-3 text-amber-400">
+                      <td className="py-3 px-3 text-amber-600 dark:text-amber-400 font-semibold">
                         {Math.round(dtMs / 60_000)} min ({stopsOnDate.length} stops)
                       </td>
-                      <td className="py-3 px-3 text-white">
+                      <td className="py-3 px-3 text-foreground">
                         {rec.goodCount} / {rec.totalCount} pcs
                       </td>
-                      <td className="py-3 px-3 text-emerald-400 font-bold">
+                      <td className="py-3 px-3 text-emerald-600 dark:text-emerald-400 font-bold">
                         {(oee.availability * 100).toFixed(1)}%
                       </td>
-                      <td className="py-3 px-3 text-cyan-400 font-bold">
+                      <td className="py-3 px-3 text-cyan-600 dark:text-cyan-400 font-bold">
                         {(oee.performance * 100).toFixed(1)}%
                       </td>
-                      <td className="py-3 px-3 text-purple-400 font-bold">
+                      <td className="py-3 px-3 text-purple-600 dark:text-purple-400 font-bold">
                         {(oee.quality * 100).toFixed(1)}%
                       </td>
                       <td className="py-3 px-3">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded font-bold text-xs ${
                             oee.oee >= 0.85
-                              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                              ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                               : oee.oee >= 0.7
-                              ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                              : "bg-red-500/20 text-red-400 border border-red-500/30"
+                              ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                              : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
                           }`}
                         >
                           {(oee.oee * 100).toFixed(1)}%
@@ -479,9 +472,9 @@ function ProductionPage() {
 
       {/* Manual Input Dialog */}
       {manualModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl border border-white/20 bg-[#121215] p-6 shadow-2xl">
-            <h3 className="font-display text-base font-semibold text-white mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
+            <h3 className="font-display text-base font-semibold text-foreground mb-4">
               Input Data Produksi Manual
             </h3>
 
@@ -492,7 +485,7 @@ function ProductionPage() {
                   type="date"
                   value={formDate}
                   onChange={(e) => setFormDate(e.target.value)}
-                  className="w-full rounded border border-white/10 bg-black p-2 text-white"
+                  className="w-full rounded border border-input bg-background p-2 text-foreground"
                 />
               </div>
 
@@ -502,7 +495,7 @@ function ProductionPage() {
                   <select
                     value={formShiftId}
                     onChange={(e) => setFormShiftId(e.target.value)}
-                    className="w-full rounded border border-white/10 bg-black p-2 text-white"
+                    className="w-full rounded border border-input bg-background p-2 text-foreground"
                   >
                     {appState.shifts.map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
@@ -514,7 +507,7 @@ function ProductionPage() {
                   <select
                     value={formAreaId}
                     onChange={(e) => setFormAreaId(e.target.value)}
-                    className="w-full rounded border border-white/10 bg-black p-2 text-white"
+                    className="w-full rounded border border-input bg-background p-2 text-foreground"
                   >
                     {appState.areas.map((a) => (
                       <option key={a.id} value={a.id}>{a.name}</option>
@@ -530,7 +523,7 @@ function ProductionPage() {
                     type="number"
                     value={formPlannedMin}
                     onChange={(e) => setFormPlannedMin(+e.target.value)}
-                    className="w-full rounded border border-white/10 bg-black p-2 text-white"
+                    className="w-full rounded border border-input bg-background p-2 text-foreground"
                   />
                 </div>
                 <div>
@@ -539,7 +532,7 @@ function ProductionPage() {
                     type="number"
                     value={formIdealSec}
                     onChange={(e) => setFormIdealSec(+e.target.value)}
-                    className="w-full rounded border border-white/10 bg-black p-2 text-white"
+                    className="w-full rounded border border-input bg-background p-2 text-foreground"
                   />
                 </div>
               </div>
@@ -551,7 +544,7 @@ function ProductionPage() {
                     type="number"
                     value={formTotalCount}
                     onChange={(e) => setFormTotalCount(+e.target.value)}
-                    className="w-full rounded border border-white/10 bg-black p-2 text-white"
+                    className="w-full rounded border border-input bg-background p-2 text-foreground"
                   />
                 </div>
                 <div>
@@ -560,22 +553,22 @@ function ProductionPage() {
                     type="number"
                     value={formGoodCount}
                     onChange={(e) => setFormGoodCount(+e.target.value)}
-                    className="w-full rounded border border-white/10 bg-black p-2 text-white"
+                    className="w-full rounded border border-input bg-background p-2 text-foreground"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-white/10">
+            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-border">
               <button
                 onClick={() => setManualModalOpen(false)}
-                className="px-4 py-2 rounded border border-white/10 font-mono text-xs text-muted-foreground hover:bg-white/5"
+                className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
               >
                 Batal
               </button>
               <button
                 onClick={handleManualSubmit}
-                className="px-4 py-2 rounded bg-white text-black font-semibold font-mono text-xs hover:bg-white/90"
+                className="px-4 py-2 rounded bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs"
               >
                 Simpan Record
               </button>

@@ -104,12 +104,10 @@ function LogHistoryPage() {
     return result;
   }, [appState.stops, selectedStation, selectedCategory, selectedStatus, searchQuery, appState.categories, appState.stations]);
 
-  // Unrecorded stops (Source PLC)
   const unrecordedStops = useMemo(() => {
     return appState.stops.filter((s) => s.source === "plc");
   }, [appState.stops]);
 
-  // Station Summary Data
   const stationSummary = useMemo(() => {
     return appState.stations.map((station) => {
       const stStops = appState.stops.filter((s) => s.stationId === station.id);
@@ -162,7 +160,7 @@ function LogHistoryPage() {
         endMs,
         reportedBy: corrReportedBy.trim() || correctingStop.reportedBy,
         note: corrNote.trim() || undefined,
-        source: "form", // converted/verified
+        source: "form",
       },
       corrReason,
       "Super Admin"
@@ -193,7 +191,7 @@ function LogHistoryPage() {
       {/* Page Title & View Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-display">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
             {t("logs.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -202,11 +200,11 @@ function LogHistoryPage() {
         </div>
 
         {/* View Toggle */}
-        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-[#121215] p-1 font-mono text-xs">
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 font-mono text-xs shadow-2xs">
           <button
             onClick={() => setViewMode("list")}
             className={`px-3 py-1.5 rounded transition-colors ${
-              viewMode === "list" ? "bg-white text-black font-semibold shadow-sm" : "text-muted-foreground hover:text-white"
+              viewMode === "list" ? "bg-primary text-primary-foreground font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t("logs.listView")}
@@ -214,7 +212,7 @@ function LogHistoryPage() {
           <button
             onClick={() => setViewMode("summary")}
             className={`px-3 py-1.5 rounded transition-colors ${
-              viewMode === "summary" ? "bg-white text-black font-semibold shadow-sm" : "text-muted-foreground hover:text-white"
+              viewMode === "summary" ? "bg-primary text-primary-foreground font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t("logs.summaryView")}
@@ -224,37 +222,37 @@ function LogHistoryPage() {
 
       {/* Unrecorded PLC Stops Alert Banner */}
       {unrecordedStops.length > 0 && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4">
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
           <div className="flex items-start gap-3">
-            <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+            <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h4 className="text-sm font-semibold text-amber-300">
+                <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300">
                   {t("logs.unrecorded")} ({unrecordedStops.length} Kejadian)
                 </h4>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
                   Perlu Verifikasi
                 </span>
               </div>
-              <p className="text-xs text-amber-200/80 mt-1">
+              <p className="text-xs text-amber-700/80 dark:text-amber-200/80 mt-1">
                 {t("logs.unrecordedHint")}
               </p>
 
               {/* Unrecorded list inline */}
-              <div className="mt-3 divide-y divide-amber-500/10 rounded-lg border border-amber-500/20 bg-black/40">
+              <div className="mt-3 divide-y divide-border rounded-lg border border-border bg-card">
                 {unrecordedStops.map((s) => {
                   const st = appState.stations.find((x) => x.id === s.stationId);
                   return (
                     <div key={s.id} className="flex items-center justify-between p-2.5 text-xs">
                       <div className="flex items-center gap-2 font-mono">
-                        <span className="text-white font-bold">{st?.name ?? s.stationId}</span>
+                        <span className="text-foreground font-bold">{st?.name ?? s.stationId}</span>
                         <span className="text-muted-foreground">•</span>
-                        <span className="text-amber-300">{fmtDateTime(s.startMs)}</span>
+                        <span className="text-amber-600 dark:text-amber-400">{fmtDateTime(s.startMs)}</span>
                         <span className="text-muted-foreground">({fmtDuration(stopDurationMs(s, nowMs))})</span>
                       </div>
                       <button
                         onClick={() => handleOpenCorrectModal(s)}
-                        className="rounded border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 font-mono text-[11px] text-amber-300 hover:bg-amber-400/20 transition-colors"
+                        className="rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 font-mono text-[11px] text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-colors font-bold"
                       >
                         {t("logs.correct")} / Catat Form
                       </button>
@@ -268,7 +266,7 @@ function LogHistoryPage() {
       )}
 
       {/* Filter Toolbar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 rounded-xl border border-white/10 bg-[#0d0d10] p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 rounded-xl border border-border bg-card p-4 shadow-xs">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -277,7 +275,7 @@ function LogHistoryPage() {
             placeholder="Cari operator, catatan…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-md border border-white/10 bg-black pl-9 pr-3 py-1.5 text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-white/40 font-mono"
+            className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary font-mono"
           />
         </div>
 
@@ -286,7 +284,7 @@ function LogHistoryPage() {
           <select
             value={selectedStation}
             onChange={(e) => setSelectedStation(e.target.value)}
-            className="w-full rounded-md border border-white/10 bg-black px-3 py-1.5 text-xs text-white focus:outline-none focus:border-white/40 font-mono"
+            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
           >
             <option value="all">Semua Stasiun</option>
             {appState.stations.map((st) => (
@@ -302,7 +300,7 @@ function LogHistoryPage() {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full rounded-md border border-white/10 bg-black px-3 py-1.5 text-xs text-white focus:outline-none focus:border-white/40 font-mono"
+            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
           >
             <option value="all">Semua Kategori</option>
             {appState.categories.map((c) => (
@@ -318,7 +316,7 @@ function LogHistoryPage() {
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full rounded-md border border-white/10 bg-black px-3 py-1.5 text-xs text-white focus:outline-none focus:border-white/40 font-mono"
+            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
           >
             <option value="all">Semua Status</option>
             <option value="open">Sedang Berhenti (OPEN)</option>
@@ -336,7 +334,7 @@ function LogHistoryPage() {
               setSelectedStatus("all");
               setSearchQuery("");
             }}
-            className="text-xs font-mono text-muted-foreground hover:text-white px-3 py-1.5 rounded hover:bg-white/5 transition-colors"
+            className="text-xs font-mono text-muted-foreground hover:text-foreground px-3 py-1.5 rounded hover:bg-muted transition-colors"
           >
             Reset Filter
           </button>
@@ -346,10 +344,10 @@ function LogHistoryPage() {
       {/* Main View Content */}
       {viewMode === "list" ? (
         /* LIST VIEW TABLE */
-        <div className="rounded-xl border border-white/10 bg-[#0d0d10] overflow-hidden">
+        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-white/10 bg-black/60 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
+              <thead className="border-b border-border bg-muted/40 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
                 <tr>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Stasiun</th>
@@ -361,7 +359,7 @@ function LogHistoryPage() {
                   <th className="py-3 px-4 text-right">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 font-sans">
+              <tbody className="divide-y divide-border/60 font-sans">
                 {filteredStops.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-8 text-center text-muted-foreground font-mono">
@@ -376,23 +374,23 @@ function LogHistoryPage() {
                     const duration = stopDurationMs(stop, nowMs);
 
                     return (
-                      <tr key={stop.id} className="hover:bg-white/[0.02] transition-colors">
+                      <tr key={stop.id} className="hover:bg-muted/30 transition-colors">
                         {/* Status */}
                         <td className="py-3 px-4 font-mono">
                           {isOpen ? (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold border border-red-500/30 text-[10px]">
-                              <span className="h-1.5 w-1.5 rounded-full bg-red-400 animate-ping" />
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/20 text-red-600 dark:text-red-400 font-bold border border-red-500/30 text-[10px]">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-ping" />
                               OPEN
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-white/5 text-muted-foreground border border-white/10 text-[10px]">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border text-[10px]">
                               CLOSED
                             </span>
                           )}
                         </td>
 
                         {/* Stasiun */}
-                        <td className="py-3 px-4 font-mono font-medium text-white">
+                        <td className="py-3 px-4 font-mono font-medium text-foreground">
                           <div>{st?.name ?? stop.stationId}</div>
                           {stop.note && (
                             <div className="text-[11px] text-muted-foreground font-sans line-clamp-1 mt-0.5">
@@ -403,15 +401,15 @@ function LogHistoryPage() {
 
                         {/* Kategori */}
                         <td className="py-3 px-4">
-                          <div className="text-white font-medium">{cat?.name ?? stop.categoryId}</div>
+                          <div className="text-foreground font-medium">{cat?.name ?? stop.categoryId}</div>
                           <div className="flex gap-1 mt-0.5">
                             {cat?.countsAsBreakdown && (
-                              <span className="font-mono text-[9px] px-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                              <span className="font-mono text-[9px] px-1 rounded bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold">
                                 Breakdown
                               </span>
                             )}
                             {cat?.custom && (
-                              <span className="font-mono text-[9px] px-1 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                              <span className="font-mono text-[9px] px-1 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-bold">
                                 Custom
                               </span>
                             )}
@@ -420,13 +418,13 @@ function LogHistoryPage() {
 
                         {/* Waktu */}
                         <td className="py-3 px-4 font-mono text-muted-foreground">
-                          <div className="text-white">{fmtDateTime(stop.startMs)}</div>
+                          <div className="text-foreground font-semibold">{fmtDateTime(stop.startMs)}</div>
                           <div>{stop.endMs ? fmtTime(stop.endMs) : "— masih jalan —"}</div>
                         </td>
 
                         {/* Durasi */}
                         <td className="py-3 px-4 font-mono">
-                          <span className={isOpen ? "text-red-400 font-bold" : "text-white"}>
+                          <span className={isOpen ? "text-red-600 dark:text-red-400 font-bold" : "text-foreground font-semibold"}>
                             {fmtDuration(duration)}
                           </span>
                         </td>
@@ -434,11 +432,11 @@ function LogHistoryPage() {
                         {/* Sumber */}
                         <td className="py-3 px-4 font-mono text-[10px]">
                           {stop.source === "plc" ? (
-                            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold">
                               PLC
                             </span>
                           ) : (
-                            <span className="px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground border border-white/10">
+                            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
                               E-form
                             </span>
                           )}
@@ -455,14 +453,14 @@ function LogHistoryPage() {
                             {isOpen && (
                               <button
                                 onClick={() => handleCloseStop(stop)}
-                                className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors"
+                                className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors shadow-2xs"
                               >
                                 Tutup
                               </button>
                             )}
                             <button
                               onClick={() => handleOpenCorrectModal(stop)}
-                              className="px-2 py-1 rounded border border-white/10 bg-white/5 text-white hover:bg-white/10 transition-colors"
+                              className="px-2.5 py-1 rounded border border-border bg-card text-foreground hover:bg-muted transition-colors shadow-2xs"
                             >
                               Koreksi
                             </button>
@@ -471,7 +469,7 @@ function LogHistoryPage() {
                                 setVoidingStop(stop);
                                 setVoidReason("");
                               }}
-                              className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-950/20 transition-colors"
+                              className="p-1.5 rounded text-muted-foreground hover:text-red-600 hover:bg-red-500/10 transition-colors"
                               title="Batalkan (Void)"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -494,11 +492,11 @@ function LogHistoryPage() {
             return (
               <div
                 key={item.station.id}
-                className="rounded-xl border border-white/10 bg-[#0d0d10] overflow-hidden transition-colors"
+                className="rounded-xl border border-border bg-card overflow-hidden transition-colors shadow-xs"
               >
                 <div
                   onClick={() => setExpandedStationId(isExpanded ? null : item.station.id)}
-                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.02]"
+                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30"
                 >
                   <div className="flex items-center gap-3">
                     {isExpanded ? (
@@ -507,7 +505,7 @@ function LogHistoryPage() {
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     )}
                     <div>
-                      <h4 className="font-mono text-sm font-bold text-white">{item.station.name}</h4>
+                      <h4 className="font-mono text-sm font-bold text-foreground">{item.station.name}</h4>
                       <p className="text-xs text-muted-foreground font-sans">
                         Urutan #{item.station.sequence} • Threshold {item.station.runningThreshold} {item.station.speedUnit}
                       </p>
@@ -517,41 +515,41 @@ function LogHistoryPage() {
                   <div className="flex items-center gap-6 font-mono text-xs">
                     <div className="text-right">
                       <span className="text-muted-foreground block text-[10px] uppercase">Frekuensi</span>
-                      <span className="text-white font-bold">{item.count}× kejadian</span>
+                      <span className="text-foreground font-bold">{item.count}× kejadian</span>
                     </div>
                     <div className="text-right">
                       <span className="text-muted-foreground block text-[10px] uppercase">Total Durasi</span>
-                      <span className="text-amber-400 font-bold">{fmtDuration(item.totalDuration)}</span>
+                      <span className="text-amber-600 dark:text-amber-400 font-bold">{fmtDuration(item.totalDuration)}</span>
                     </div>
                     <div className="text-right hidden sm:block">
                       <span className="text-muted-foreground block text-[10px] uppercase">Rata-rata</span>
-                      <span className="text-white">{fmtDuration(item.avgDuration)}</span>
+                      <span className="text-foreground">{fmtDuration(item.avgDuration)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Expanded Occurrences List */}
                 {isExpanded && (
-                  <div className="border-t border-white/10 bg-black/40 p-4">
+                  <div className="border-t border-border bg-muted/20 p-4">
                     <h5 className="font-mono text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                       Rincian Kejadian ({item.stops.length})
                     </h5>
                     {item.stops.length === 0 ? (
                       <p className="text-xs text-muted-foreground font-mono">Belum ada catatan stop untuk stasiun ini.</p>
                     ) : (
-                      <div className="divide-y divide-white/5">
+                      <div className="divide-y divide-border/60">
                         {item.stops.map((s) => {
                           const cat = appState.categories.find((c) => c.id === s.categoryId);
                           return (
                             <div key={s.id} className="py-2.5 flex items-center justify-between text-xs">
                               <div className="space-y-0.5">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-bold text-white font-sans">{cat?.name ?? s.categoryId}</span>
+                                  <span className="font-bold text-foreground font-sans">{cat?.name ?? s.categoryId}</span>
                                   {s.status === "open" && (
-                                    <span className="font-mono text-[9px] px-1 rounded bg-red-500/20 text-red-400">OPEN</span>
+                                    <span className="font-mono text-[9px] px-1 rounded bg-red-500/20 text-red-600 dark:text-red-400 font-bold">OPEN</span>
                                   )}
                                   {s.source === "plc" && (
-                                    <span className="font-mono text-[9px] px-1 rounded bg-amber-500/20 text-amber-300">PLC</span>
+                                    <span className="font-mono text-[9px] px-1 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold">PLC</span>
                                   )}
                                 </div>
                                 <div className="font-mono text-[11px] text-muted-foreground">
@@ -559,10 +557,10 @@ function LogHistoryPage() {
                                 </div>
                               </div>
                               <div className="flex items-center gap-3 font-mono">
-                                <span className="font-bold text-white">{fmtDuration(stopDurationMs(s, nowMs))}</span>
+                                <span className="font-bold text-foreground">{fmtDuration(stopDurationMs(s, nowMs))}</span>
                                 <button
                                   onClick={() => handleOpenCorrectModal(s)}
-                                  className="text-xs text-muted-foreground hover:text-white underline"
+                                  className="text-xs text-muted-foreground hover:text-foreground underline"
                                 >
                                   Koreksi
                                 </button>
@@ -582,11 +580,11 @@ function LogHistoryPage() {
 
       {/* MODAL KOREKSI (Audit trail mandatory reason) */}
       {correctingStop && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-xl border border-white/20 bg-[#121215] p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
               <div>
-                <h3 className="font-display text-base font-semibold text-white">
+                <h3 className="font-display text-base font-semibold text-foreground">
                   Koreksi Line Stop #{correctingStop.id}
                 </h3>
                 <p className="text-xs text-muted-foreground font-mono">
@@ -595,7 +593,7 @@ function LogHistoryPage() {
               </div>
               <button
                 onClick={() => setCorrectingStop(null)}
-                className="text-muted-foreground hover:text-white p-1"
+                className="text-muted-foreground hover:text-foreground p-1"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -610,7 +608,7 @@ function LogHistoryPage() {
                 <select
                   value={corrCategoryId}
                   onChange={(e) => setCorrCategoryId(e.target.value)}
-                  className="w-full rounded border border-white/10 bg-black p-2 text-white focus:outline-none focus:border-white/40 font-mono"
+                  className="w-full rounded border border-input bg-background p-2 text-foreground focus:outline-none focus:border-primary font-mono"
                 >
                   {appState.categories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -630,7 +628,7 @@ function LogHistoryPage() {
                     type="datetime-local"
                     value={corrStartVal}
                     onChange={(e) => setCorrStartVal(e.target.value)}
-                    className="w-full rounded border border-white/10 bg-black p-2 text-white font-mono focus:outline-none focus:border-white/40"
+                    className="w-full rounded border border-input bg-background p-2 text-foreground font-mono focus:outline-none focus:border-primary"
                   />
                 </div>
                 <div>
@@ -641,7 +639,7 @@ function LogHistoryPage() {
                     type="datetime-local"
                     value={corrEndVal}
                     onChange={(e) => setCorrEndVal(e.target.value)}
-                    className="w-full rounded border border-white/10 bg-black p-2 text-white font-mono focus:outline-none focus:border-white/40"
+                    className="w-full rounded border border-input bg-background p-2 text-foreground font-mono focus:outline-none focus:border-primary"
                   />
                 </div>
               </div>
@@ -655,7 +653,7 @@ function LogHistoryPage() {
                   type="text"
                   value={corrReportedBy}
                   onChange={(e) => setCorrReportedBy(e.target.value)}
-                  className="w-full rounded border border-white/10 bg-black p-2 text-white font-mono focus:outline-none focus:border-white/40"
+                  className="w-full rounded border border-input bg-background p-2 text-foreground font-mono focus:outline-none focus:border-primary"
                 />
               </div>
 
@@ -668,13 +666,13 @@ function LogHistoryPage() {
                   value={corrNote}
                   onChange={(e) => setCorrNote(e.target.value)}
                   rows={2}
-                  className="w-full rounded border border-white/10 bg-black p-2 text-white focus:outline-none focus:border-white/40"
+                  className="w-full rounded border border-input bg-background p-2 text-foreground focus:outline-none focus:border-primary"
                 />
               </div>
 
               {/* Mandatory Reason */}
-              <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-3">
-                <label className="block font-mono text-[11px] font-bold text-amber-300 mb-1">
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                <label className="block font-mono text-[11px] font-bold text-amber-700 dark:text-amber-300 mb-1">
                   * Alasan Koreksi (Wajib untuk Audit Trail):
                 </label>
                 <input
@@ -682,21 +680,21 @@ function LogHistoryPage() {
                   placeholder="Contoh: Salah pilih kategori saat emergency stop"
                   value={corrReason}
                   onChange={(e) => setCorrReason(e.target.value)}
-                  className="w-full rounded border border-amber-500/40 bg-black p-2 text-white font-mono focus:outline-none focus:border-amber-400"
+                  className="w-full rounded border border-amber-500/40 bg-background p-2 text-foreground font-mono focus:outline-none focus:border-amber-500"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-white/10">
+            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-border">
               <button
                 onClick={() => setCorrectingStop(null)}
-                className="px-4 py-2 rounded border border-white/10 font-mono text-xs text-muted-foreground hover:bg-white/5"
+                className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
               >
                 Batal
               </button>
               <button
                 onClick={handleSaveCorrection}
-                className="px-4 py-2 rounded bg-white text-black font-semibold font-mono text-xs hover:bg-white/90 shadow"
+                className="px-4 py-2 rounded bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-xs"
               >
                 Simpan Perubahan
               </button>
@@ -707,9 +705,9 @@ function LogHistoryPage() {
 
       {/* MODAL VOID / BATALKAN */}
       {voidingStop && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl border border-red-500/40 bg-[#121215] p-6 shadow-2xl">
-            <h3 className="font-display text-base font-semibold text-red-400 mb-1">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-xl border border-red-500/40 bg-card p-6 shadow-2xl">
+            <h3 className="font-display text-base font-semibold text-red-600 dark:text-red-400 mb-1">
               Batalkan (Void) Stop #{voidingStop.id}?
             </h3>
             <p className="text-xs text-muted-foreground mb-4">
@@ -717,7 +715,7 @@ function LogHistoryPage() {
             </p>
 
             <div className="mb-4">
-              <label className="block font-mono text-[11px] font-bold text-white mb-1">
+              <label className="block font-mono text-[11px] font-bold text-foreground mb-1">
                 * Alasan Pembatalan:
               </label>
               <input
@@ -725,20 +723,20 @@ function LogHistoryPage() {
                 placeholder="Contoh: Entry ganda tidak sengaja"
                 value={voidReason}
                 onChange={(e) => setVoidReason(e.target.value)}
-                className="w-full rounded border border-red-500/40 bg-black p-2 text-xs text-white font-mono focus:outline-none focus:border-red-400"
+                className="w-full rounded border border-input bg-background p-2 text-xs text-foreground font-mono focus:outline-none focus:border-red-500"
               />
             </div>
 
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setVoidingStop(null)}
-                className="px-3 py-1.5 rounded border border-white/10 font-mono text-xs text-muted-foreground hover:bg-white/5"
+                className="px-3 py-1.5 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
               >
                 Batal
               </button>
               <button
                 onClick={handleConfirmVoid}
-                className="px-3 py-1.5 rounded bg-red-600 text-white font-semibold font-mono text-xs hover:bg-red-500"
+                className="px-3 py-1.5 rounded bg-red-600 text-white font-semibold font-mono text-xs hover:bg-red-500 shadow-xs"
               >
                 Konfirmasi Void
               </button>
