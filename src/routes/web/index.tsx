@@ -12,6 +12,7 @@ import {
   BarChart2,
   Layers,
   ArrowUpRight,
+  X,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -58,11 +59,17 @@ function DashboardPage() {
   const { theme } = useTheme();
   const appState = useAppStore();
   const [granularity, setGranularity] = useState<Granularity>("day");
+  const [selectedStationId, setSelectedStationId] = useState<string>("all");
   const nowMs = Date.now();
 
   const isDark = theme === "dark";
 
-  // Filter stops by granularity period
+  // Find selected station details if not "all"
+  const selectedStation = useMemo(() => {
+    return selectedStationId === "all" ? null : appState.stations.find((s) => s.id === selectedStationId) ?? null;
+  }, [selectedStationId, appState.stations]);
+
+  // Filter stops by granularity period AND station filter
   const periodStartMs = useMemo(() => {
     if (granularity === "day") return dayStartMs(nowMs);
     if (granularity === "week") return nowMs - 7 * 86_400_000;
@@ -70,14 +77,22 @@ function DashboardPage() {
   }, [granularity, nowMs]);
 
   const filteredStops = useMemo(() => {
-    return appState.stops.filter((s) => s.startMs >= periodStartMs);
-  }, [appState.stops, periodStartMs]);
+    return appState.stops.filter((s) => {
+      const matchPeriod = s.startMs >= periodStartMs;
+      const matchStation = selectedStationId === "all" ? true : s.stationId === selectedStationId;
+      return matchPeriod && matchStation;
+    });
+  }, [appState.stops, periodStartMs, selectedStationId]);
 
-  // Stops today specifically for the today KPI card
+  // Stops today specifically for the today KPI card (with station filter)
   const todayStartMs = dayStartMs(nowMs);
   const stopsToday = useMemo(() => {
-    return appState.stops.filter((s) => s.startMs >= todayStartMs);
-  }, [appState.stops, todayStartMs]);
+    return appState.stops.filter((s) => {
+      const matchToday = s.startMs >= todayStartMs;
+      const matchStation = selectedStationId === "all" ? true : s.stationId === selectedStationId;
+      return matchToday && matchStation;
+    });
+  }, [appState.stops, todayStartMs, selectedStationId]);
 
   // Calculate KPIs
   const totalDowntimeTodayMs = useMemo(() => {
@@ -101,12 +116,24 @@ function DashboardPage() {
   }, [filteredStops, appState.categories, granularity, nowMs]);
 
   const stoppedStations = useMemo(() => {
-    return appState.stations.filter((s) => appState.stationLive[s.id]?.state === "stopped");
-  }, [appState.stations, appState.stationLive]);
+    const stationsToCheck = selectedStationId === "all"
+      ? appState.stations
+      : appState.stations.filter((s) => s.id === selectedStationId);
+    return stationsToCheck.filter((s) => appState.stationLive[s.id]?.state === "stopped");
+  }, [appState.stations, appState.stationLive, selectedStationId]);
+
+  const liveStationStatus = useMemo(() => {
+    if (selectedStationId === "all") return null;
+    return appState.stationLive[selectedStationId] ?? null;
+  }, [selectedStationId, appState.stationLive]);
 
   // Stop Frequency by Station Data for chart
   const stationFrequencyData = useMemo(() => {
-    return appState.stations.map((st) => {
+    const stations = selectedStationId === "all"
+      ? appState.stations
+      : appState.stations.filter((st) => st.id === selectedStationId);
+
+    return stations.map((st) => {
       const count = filteredStops.filter((s) => s.stationId === st.id).length;
       const totalDuration = filteredStops
         .filter((s) => s.stationId === st.id)
@@ -118,7 +145,7 @@ function DashboardPage() {
         durationMin: Math.round(totalDuration / 60_000),
       };
     });
-  }, [appState.stations, filteredStops, nowMs]);
+  }, [appState.stations, filteredStops, nowMs, selectedStationId]);
 
   // Pareto Downtime by Category
   const paretoData = useMemo(() => {
@@ -139,14 +166,18 @@ function DashboardPage() {
     });
   }, [filteredStops, appState.categories, nowMs]);
 
-  // MTTR & MTBF Trend Data (7 recent days)
+  // MTTR & MTBF Trend Data (7 recent days) with station filter
   const trendData = useMemo(() => {
     const days = 7;
     const result = [];
     for (let i = days - 1; i >= 0; i--) {
       const dStart = dayStartMs(nowMs - i * 86_400_000);
       const dEnd = dStart + 86_400_000;
-      const dStops = appState.stops.filter((s) => s.startMs >= dStart && s.startMs < dEnd);
+      const dStops = appState.stops.filter((s) => {
+        const matchTime = s.startMs >= dStart && s.startMs < dEnd;
+        const matchStation = selectedStationId === "all" ? true : s.stationId === selectedStationId;
+        return matchTime && matchStation;
+      });
       const mttr = mttrMs(dStops, appState.categories);
       const op = operatingTimeMs(16 * 3_600_000, dStops, appState.categories, dEnd);
       const mtbf = mtbfMs(dStops, appState.categories, op);
@@ -158,14 +189,18 @@ function DashboardPage() {
       });
     }
     return result;
-  }, [appState.stops, appState.categories, nowMs]);
+  }, [appState.stops, appState.categories, nowMs, selectedStationId]);
 
-  // OEE Calculation from recent production records
+  // OEE Calculation from recent production records (affected by station filter)
   const oeeSummary = useMemo(() => {
     if (appState.productionRecords.length === 0) {
       return { availability: 0.88, performance: 0.85, quality: 0.98, oee: 0.73 };
     }
-    const recentRecords = appState.productionRecords.slice(-7);
+    const recordsToUse = selectedStation
+      ? appState.productionRecords.filter((r) => r.areaId === selectedStation.areaId)
+      : appState.productionRecords;
+
+    const recentRecords = (recordsToUse.length > 0 ? recordsToUse : appState.productionRecords).slice(-7);
     let totalAvail = 0;
     let totalPerf = 0;
     let totalQual = 0;
@@ -174,7 +209,11 @@ function DashboardPage() {
     for (const rec of recentRecords) {
       const recDateStart = Date.parse(`${rec.date}T00:00:00+07:00`);
       const recDateEnd = recDateStart + 86_400_000;
-      const dayStops = appState.stops.filter((s) => s.startMs >= recDateStart && s.startMs < recDateEnd);
+      const dayStops = appState.stops.filter((s) => {
+        const matchDate = s.startMs >= recDateStart && s.startMs < recDateEnd;
+        const matchStation = selectedStationId === "all" ? true : s.stationId === selectedStationId;
+        return matchDate && matchStation;
+      });
       const dt = dayStops.reduce((sum, s) => sum + stopDurationMs(s, recDateEnd), 0);
       const calc = computeOee(rec, dt);
       totalAvail += calc.availability;
@@ -190,7 +229,7 @@ function DashboardPage() {
       quality: totalQual / n,
       oee: totalOee / n,
     };
-  }, [appState.productionRecords, appState.stops]);
+  }, [appState.productionRecords, appState.stops, selectedStation, selectedStationId]);
 
   const handleStationClick = (stId: string) => {
     const live = appState.stationLive[stId];
@@ -212,33 +251,72 @@ function DashboardPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Top Banner: Title & Granularity Filter */}
+      {/* Top Banner: Title & Granularity / Station Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
-            {t("dash.title")}
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
+              {t("dash.title")}
+            </h1>
+            {selectedStation && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-mono text-xs font-semibold text-primary">
+                <span>{selectedStation.name}</span>
+                <button
+                  onClick={() => setSelectedStationId("all")}
+                  className="rounded-full hover:bg-primary/20 p-0.5 transition-colors"
+                  title="Hapus filter stasiun"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {t("dash.subtitle")}
+            {selectedStation
+              ? `Menampilkan analisis kinerja & metrik untuk stasiun ${selectedStation.name} (${selectedStation.id})`
+              : t("dash.subtitle")}
           </p>
         </div>
 
-        {/* Granularity Selector */}
-        <div className="flex items-center gap-1.5 self-start sm:self-auto rounded-lg border border-border bg-card p-1 font-mono text-xs shadow-2xs">
-          <span className="text-muted-foreground px-2">{t("dash.granularity")}:</span>
-          {(["day", "week", "month"] as Granularity[]).map((g) => (
-            <button
-              key={g}
-              onClick={() => setGranularity(g)}
-              className={`px-3 py-1 rounded transition-colors ${
-                granularity === g
-                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
+        {/* Filter Controls Row: Station Filter (Left) + Granularity (Right) */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          {/* Station Filter (posisi di samping kiri tablist per day, week, month) */}
+          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 font-mono text-xs shadow-2xs">
+            <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="text-muted-foreground whitespace-nowrap">{t("dash.stationFilter")}:</span>
+            <select
+              value={selectedStationId}
+              onChange={(e) => setSelectedStationId(e.target.value)}
+              className="bg-transparent text-foreground font-semibold font-mono focus:outline-none cursor-pointer pr-1 text-xs"
             >
-              {g === "day" ? t("dash.gran.day") : g === "week" ? t("dash.gran.week") : t("dash.gran.month")}
-            </button>
-          ))}
+              <option value="all" className="bg-card text-foreground">
+                {t("dash.allStations")} ({appState.stations.length})
+              </option>
+              {appState.stations.map((st) => (
+                <option key={st.id} value={st.id} className="bg-card text-foreground">
+                  {st.name} ({st.id})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Granularity Selector */}
+          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card p-1 font-mono text-xs shadow-2xs">
+            <span className="text-muted-foreground px-2">{t("dash.granularity")}:</span>
+            {(["day", "week", "month"] as Granularity[]).map((g) => (
+              <button
+                key={g}
+                onClick={() => setGranularity(g)}
+                className={`px-3 py-1 rounded transition-colors ${
+                  granularity === g
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                {g === "day" ? t("dash.gran.day") : g === "week" ? t("dash.gran.week") : t("dash.gran.month")}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -248,7 +326,7 @@ function DashboardPage() {
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="font-mono text-xs uppercase tracking-wider text-foreground font-bold">
-              {t("dash.liveNow")}
+              {selectedStation ? `Telemetri Live (${selectedStation.name})` : t("dash.liveNow")}
             </span>
             <span className="text-xs text-muted-foreground hidden sm:inline">
               (Klik stasiun untuk simulasi stop/resume)
@@ -268,6 +346,7 @@ function DashboardPage() {
             const live = appState.stationLive[station.id];
             const isStopped = live?.state === "stopped";
             const isNoSignal = live?.state === "nosignal";
+            const isStationFiltered = selectedStationId === station.id;
             const stoppedDuration = isStopped && live?.stoppedSinceMs ? nowMs - live.stoppedSinceMs : 0;
 
             return (
@@ -275,17 +354,24 @@ function DashboardPage() {
                 key={station.id}
                 onClick={() => handleStationClick(station.id)}
                 className={`relative flex flex-col justify-between p-3 rounded-lg border text-left transition-all hover:scale-[1.02] cursor-pointer shadow-2xs ${
-                  isStopped
+                  isStationFiltered
+                    ? "ring-2 ring-primary border-primary bg-primary/5 dark:bg-primary/10"
+                    : isStopped
                     ? "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400 ring-1 ring-red-500/40"
                     : isNoSignal
                     ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
                     : "border-border bg-muted/20 hover:border-primary/30 text-foreground"
-                }`}
+                } ${selectedStationId !== "all" && !isStationFiltered ? "opacity-65 hover:opacity-100" : ""}`}
               >
                 <div className="flex items-start justify-between gap-1 mb-2">
-                  <span className="font-mono text-[11px] font-bold tracking-tight text-foreground truncate">
-                    {station.name.split(" ")[0]}
-                  </span>
+                  <div className="truncate">
+                    <span className="font-mono text-[11px] font-bold tracking-tight text-foreground block truncate">
+                      {station.name.split(" ")[0]}
+                    </span>
+                    {isStationFiltered && (
+                      <span className="text-[9px] font-mono text-primary font-bold">● FILTER</span>
+                    )}
+                  </div>
                   <span
                     className={`h-2 w-2 rounded-full shrink-0 ${
                       isStopped
@@ -412,7 +498,7 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* 6. Stations Stopped Currently */}
+        {/* 6. Stations Stopped Currently / Status of Selected Station */}
         <div
           className={`rounded-xl border p-4 flex flex-col justify-between transition-colors shadow-xs ${
             stoppedStations.length > 0
@@ -421,17 +507,37 @@ function DashboardPage() {
           }`}
         >
           <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.stationsStopped")}</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">
+              {selectedStation ? `Status ${selectedStation.name.split(" ")[0]}` : t("dash.stationsStopped")}
+            </span>
             <AlertTriangle className={`h-4 w-4 ${stoppedStations.length > 0 ? "text-red-500" : "text-muted-foreground"}`} />
           </div>
           <div className="mt-2">
-            <span className={`font-mono text-3xl font-bold tracking-tight ${stoppedStations.length > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-              {stoppedStations.length}
-            </span>
-            <span className="text-xs text-muted-foreground ml-1">/ {appState.stations.length}</span>
+            {selectedStation ? (
+              <span className={`font-mono text-2xl font-bold tracking-tight uppercase ${
+                liveStationStatus?.state === "stopped"
+                  ? "text-red-600 dark:text-red-400"
+                  : liveStationStatus?.state === "nosignal"
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-emerald-600 dark:text-emerald-400"
+              }`}>
+                {liveStationStatus?.state === "stopped" ? "STOP" : liveStationStatus?.state === "nosignal" ? "NO SIG" : "RUNNING"}
+              </span>
+            ) : (
+              <>
+                <span className={`font-mono text-3xl font-bold tracking-tight ${stoppedStations.length > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                  {stoppedStations.length}
+                </span>
+                <span className="text-xs text-muted-foreground ml-1">/ {appState.stations.length}</span>
+              </>
+            )}
           </div>
-          <div className="text-[10px] font-mono text-muted-foreground mt-1">
-            {stoppedStations.length > 0 ? "Perlu tindakan segera" : "Semua stasiun aktif"}
+          <div className="text-[10px] font-mono text-muted-foreground mt-1 truncate">
+            {selectedStation
+              ? `Speed: ${liveStationStatus ? liveStationStatus.speed.toFixed(2) : "0.00"} ${selectedStation.speedUnit}`
+              : stoppedStations.length > 0
+              ? "Perlu tindakan segera"
+              : "Semua stasiun aktif"}
           </div>
         </div>
       </div>
@@ -443,7 +549,7 @@ function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-display text-sm font-semibold text-foreground">
-                Tren MTTR & MTBF (7 Hari Terakhir)
+                Tren MTTR & MTBF (7 Hari Terakhir) {selectedStation ? `— ${selectedStation.name}` : ""}
               </h3>
               <p className="text-xs text-muted-foreground">
                 MTTR (Menit) vs MTBF (Jam operasional antar breakdown)
@@ -487,10 +593,10 @@ function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-display text-sm font-semibold text-foreground">
-                {t("dash.frequency")}
+                {selectedStation ? `Kejadian Line-Stop: ${selectedStation.name}` : t("dash.frequency")}
               </h3>
               <p className="text-xs text-muted-foreground">
-                Jumlah kejadian line-stop per stasiun
+                {selectedStation ? "Frekuensi dan durasi stasiun terpilih" : "Jumlah kejadian line-stop per stasiun"}
               </p>
             </div>
           </div>
@@ -526,7 +632,7 @@ function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-display text-sm font-semibold text-foreground">
-                {t("dash.pareto")}
+                {selectedStation ? `Pareto Kategori: ${selectedStation.name}` : t("dash.pareto")}
               </h3>
               <p className="text-xs text-muted-foreground">
                 Kategori penyebab stop terlama (prinsip Pareto 80/20)
@@ -568,11 +674,11 @@ function DashboardPage() {
           <div>
             <div className="flex items-center justify-between">
               <h3 className="font-display text-sm font-semibold text-foreground">
-                {t("dash.oee")} — Overall Equipment Effectiveness
+                {selectedStation ? `OEE Area — ${selectedStation.name}` : `${t("dash.oee")} — Overall Equipment Effectiveness`}
               </h3>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {t("dash.oeeNote")}
+              {selectedStation ? `Estimasi efektivitas area ${selectedStation.areaId}` : t("dash.oeeNote")}
             </p>
 
             {/* Big OEE Number */}
