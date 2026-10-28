@@ -99,6 +99,7 @@ export function fromLocalInputValue(value: string): number {
   const m = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
   if (!m) return NaN;
   const [, y, mo, d, h, mi] = m;
+  if (!y || !mo || !d || !h || !mi) return NaN;
   // WIB is UTC+7, no DST.
   return Date.UTC(+y, +mo - 1, +d, +h - 7, +mi);
 }
@@ -118,11 +119,14 @@ export function shiftOf(ms: number, shifts: Shift[]): Shift {
   const get = (t: string) => +(parts.find((p) => p.type === t)?.value ?? "0");
   const minutes = get("hour") * 60 + get("minute");
   const sorted = [...shifts].sort((a, b) => a.startHour * 60 + a.startMinute - (b.startHour * 60 + b.startMinute));
-  let current = sorted[sorted.length - 1];
+  if (sorted.length === 0) {
+    return { id: "shift-default", name: "Shift 1", startHour: 7, startMinute: 0 };
+  }
+  let current: Shift | undefined = sorted[sorted.length - 1];
   for (const s of sorted) {
     if (s.startHour * 60 + s.startMinute <= minutes) current = s;
   }
-  return current;
+  return current ?? sorted[0]!;
 }
 
 export function sortStops(stops: LineStop[]): LineStop[] {
