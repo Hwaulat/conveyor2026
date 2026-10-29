@@ -39,6 +39,7 @@ import {
   stopDurationMs,
 } from "../../lib/calc";
 import { fmtDuration, fmtMinutes, dayStartMs } from "../../lib/format";
+import { DateRangePicker } from "../../components/DateRangePicker";
 
 export const Route = createFileRoute("/web/")({
   head: () => ({
@@ -455,47 +456,22 @@ function DashboardPage() {
             </select>
           </div>
 
-          {/* 3. Date Range Selector (menggantikan tablist hari, minggu, bulan) */}
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5 font-mono text-xs shadow-2xs">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5 shrink-0" />
-              <span className="whitespace-nowrap">Periode:</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  setDatePreset("custom");
-                }}
-                className="bg-background/80 border border-border rounded px-2 py-0.5 text-foreground font-mono text-xs focus:outline-none focus:border-ring cursor-pointer"
-              />
-              <span className="text-muted-foreground font-bold">s/d</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setDatePreset("custom");
-                }}
-                className="bg-background/80 border border-border rounded px-2 py-0.5 text-foreground font-mono text-xs focus:outline-none focus:border-ring cursor-pointer"
-              />
-            </div>
-
-            {/* Quick Presets Dropdown */}
-            <select
-              value={datePreset}
-              onChange={(e) => handlePresetChange(e.target.value as any)}
-              className="bg-muted/60 border border-border text-foreground font-mono text-[11px] font-semibold rounded px-2 py-0.5 focus:outline-none cursor-pointer ml-1"
-            >
-              <option value="today">Hari Ini</option>
-              <option value="7d">7 Hari Terakhir</option>
-              <option value="30d">30 Hari Terakhir</option>
-              <option value="thisMonth">Bulan Ini</option>
-              <option value="custom">Kustom</option>
-            </select>
-          </div>
+          {/* 3. Date Range Selector (Gaya pill sesuai referensi visual: [Kalender] DD/MM/YYYY - DD/MM/YYYY [x]) */}
+          <DateRangePicker
+            startDate={startDate}
+            endDate={endDate}
+            onChange={(start, end) => {
+              setStartDate(start);
+              setEndDate(end);
+            }}
+            onReset={() => {
+              const now = new Date();
+              const todayStr = now.toISOString().slice(0, 10);
+              const past = new Date(Date.now() - 6 * 86_400_000);
+              setStartDate(past.toISOString().slice(0, 10));
+              setEndDate(todayStr);
+            }}
+          />
         </div>
       </div>
 
