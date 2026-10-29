@@ -55,6 +55,8 @@
   --color-status-warn: var(--status-warn);
   --color-status-idle: var(--status-idle);
   --color-hairline: var(--hairline);
+  --color-neutral-3: #ffffff;
+  --color-neutral-9: #64748b;
   --font-display: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;

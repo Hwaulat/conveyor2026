@@ -20,6 +20,7 @@ import { useI18n } from "../../lib/i18n";
 import { useAppStore, store } from "../../lib/store";
 import type { Station, Category } from "../../lib/types";
 import { toast } from "sonner";
+import { SelectInput } from "../../components/ui/select-input";
 
 export const Route = createFileRoute("/web/master-data")({
   head: () => ({
@@ -472,20 +473,20 @@ function MasterDataPage() {
 
               <div className="flex flex-wrap items-center gap-2.5">
                 {/* Area Filter */}
-                <div className="flex items-center gap-1.5 text-xs font-mono">
-                  <span className="text-muted-foreground hidden sm:inline">Area:</span>
-                  <select
+                <div className="w-48 sm:w-56">
+                  <SelectInput
+                    hideClear
                     value={selectedAreaFilter}
-                    onChange={(e) => setSelectedAreaFilter(e.target.value)}
-                    className="h-9 px-3 rounded-lg border border-border bg-background text-foreground text-xs font-mono focus:outline-none focus:border-ring"
-                  >
-                    <option value="all">Semua Area ({appState.areas.length})</option>
-                    {appState.areas.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setSelectedAreaFilter(val ?? "all")}
+                    datalist={[
+                      { value: "all", label: `Semua Area (${appState.areas.length})` },
+                      ...appState.areas.map((a) => ({
+                        value: a.id,
+                        label: a.name,
+                      })),
+                    ]}
+                    placeholder="Pilih Area"
+                  />
                 </div>
 
                 {/* Search Bar */}
@@ -707,17 +708,18 @@ function MasterDataPage() {
 
               <div className="flex flex-wrap items-center gap-2.5">
                 {/* Breakdown Filter */}
-                <div className="flex items-center gap-1.5 text-xs font-mono">
-                  <span className="text-muted-foreground hidden sm:inline">Filter:</span>
-                  <select
+                <div className="w-56 sm:w-64">
+                  <SelectInput
+                    hideClear
                     value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value as any)}
-                    className="h-9 px-3 rounded-lg border border-border bg-background text-foreground text-xs font-mono focus:outline-none focus:border-ring"
-                  >
-                    <option value="all">Semua Kategori</option>
-                    <option value="breakdown">Hanya Breakdown (MTTR/MTBF)</option>
-                    <option value="non-breakdown">Hanya Non-Breakdown</option>
-                  </select>
+                    onChange={(val) => setCategoryFilter((val as any) ?? "all")}
+                    datalist={[
+                      { value: "all", label: "Semua Kategori" },
+                      { value: "breakdown", label: "Hanya Breakdown (MTTR/MTBF)" },
+                      { value: "non-breakdown", label: "Hanya Non-Breakdown" },
+                    ]}
+                    placeholder="Filter Kategori"
+                  />
                 </div>
 
                 {/* Search Bar */}
@@ -1044,29 +1046,31 @@ function MasterDataPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-muted-foreground mb-1">Nama Area:</label>
-                  <select
+                  <SelectInput
+                    label="Nama Area:"
                     value={editAreaId}
-                    onChange={(e) => setEditAreaId(e.target.value)}
-                    className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
-                  >
-                    {appState.areas.map((a) => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEditAreaId(val ?? "")}
+                    datalist={appState.areas.map((a) => ({
+                      value: a.id,
+                      label: a.name,
+                    }))}
+                    hideClear
+                    placeholder="Pilih Area"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-muted-foreground mb-1">Nama Konveyor:</label>
-                  <select
+                  <SelectInput
+                    label="Nama Konveyor:"
                     value={editConveyorId}
-                    onChange={(e) => setEditConveyorId(e.target.value)}
-                    className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
-                  >
-                    {appState.conveyors.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEditConveyorId(val ?? "")}
+                    datalist={appState.conveyors.map((c) => ({
+                      value: c.id,
+                      label: c.name,
+                    }))}
+                    hideClear
+                    placeholder="Pilih Konveyor"
+                  />
                 </div>
               </div>
 

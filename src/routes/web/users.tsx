@@ -6,6 +6,7 @@ import { useAppStore, store } from "../../lib/store";
 import { ROLE_ORDER, type Role, type UserRow } from "../../lib/types";
 import { fmtDateTime } from "../../lib/format";
 import { toast } from "sonner";
+import { SelectInput } from "../../components/ui/select-input";
 
 export const Route = createFileRoute("/web/users")({
   head: () => ({
@@ -121,17 +122,20 @@ function UserManagementPage() {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <select
-                      value={u.role}
-                      onChange={(e) => handleRoleChange(u.id, e.target.value as Role)}
-                      className="rounded border border-border bg-background px-2.5 py-1 text-xs text-foreground font-mono focus:outline-none focus:border-ring"
-                    >
-                      {ROLE_ORDER.map((r) => (
-                        <option key={r} value={r}>
-                          {t(`role.${r}` as any)}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="inline-block w-40 text-left">
+                      <SelectInput
+                        hideClear
+                        value={u.role}
+                        onChange={(val) => {
+                          if (val) handleRoleChange(u.id, val as Role);
+                        }}
+                        datalist={ROLE_ORDER.map((r) => ({
+                          value: r,
+                          label: t(`role.${r}` as any),
+                        }))}
+                        placeholder="Pilih Role"
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -217,18 +221,19 @@ function UserManagementPage() {
               </div>
 
               <div>
-                <label className="block text-muted-foreground mb-1">{t("users.role")}:</label>
-                <select
+                <SelectInput
+                  label={t("users.role")}
                   value={userRole}
-                  onChange={(e) => setUserRole(e.target.value as Role)}
-                  className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
-                >
-                  {ROLE_ORDER.map((r) => (
-                    <option key={r} value={r}>
-                      {t(`role.${r}` as any)}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => {
+                    if (val) setUserRole(val as Role);
+                  }}
+                  datalist={ROLE_ORDER.map((r) => ({
+                    value: r,
+                    label: t(`role.${r}` as any),
+                  }))}
+                  hideClear
+                  placeholder="Pilih Role"
+                />
               </div>
             </div>
 

@@ -31,6 +31,7 @@ import {
 } from "../../lib/format";
 import { stopDurationMs } from "../../lib/calc";
 import { toast } from "sonner";
+import { SelectInput } from "../../components/ui/select-input";
 
 export const Route = createFileRoute("/web/logs")({
   head: () => ({
@@ -266,63 +267,67 @@ function LogHistoryPage() {
       )}
 
       {/* Filter Toolbar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 rounded-xl border border-border bg-card p-4 shadow-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 rounded-xl border border-border bg-card p-4 shadow-xs items-center">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Cari operator, catatan…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary font-mono"
+            className="w-full h-[40px] rounded-lg border border-gray-200 dark:border-gray-700 bg-neutral-3 dark:bg-gray-800 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary font-sans"
           />
         </div>
 
         {/* Station Filter */}
         <div>
-          <select
+          <SelectInput
+            hideClear
             value={selectedStation}
-            onChange={(e) => setSelectedStation(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
-          >
-            <option value="all">Semua Stasiun</option>
-            {appState.stations.map((st) => (
-              <option key={st.id} value={st.id}>
-                {st.name}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setSelectedStation(val ?? "all")}
+            datalist={[
+              { value: "all", label: "Semua Stasiun" },
+              ...appState.stations.map((st) => ({
+                value: st.id,
+                label: st.name,
+              })),
+            ]}
+            placeholder="Pilih Stasiun"
+          />
         </div>
 
         {/* Category Filter */}
         <div>
-          <select
+          <SelectInput
+            hideClear
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
-          >
-            <option value="all">Semua Kategori</option>
-            {appState.categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} {c.countsAsBreakdown ? "(Breakdown)" : ""}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setSelectedCategory(val ?? "all")}
+            datalist={[
+              { value: "all", label: "Semua Kategori" },
+              ...appState.categories.map((c) => ({
+                value: c.id,
+                label: `${c.name}${c.countsAsBreakdown ? " (Breakdown)" : ""}`,
+              })),
+            ]}
+            placeholder="Pilih Kategori"
+          />
         </div>
 
         {/* Status Filter */}
         <div>
-          <select
+          <SelectInput
+            hideClear
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
-          >
-            <option value="all">Semua Status</option>
-            <option value="open">Sedang Berhenti (OPEN)</option>
-            <option value="closed">Selesai (CLOSED)</option>
-            <option value="unrecorded">Stop PLC (Unrecorded)</option>
-          </select>
+            onChange={(val) => setSelectedStatus(val ?? "all")}
+            datalist={[
+              { value: "all", label: "All Status" },
+              { value: "open", label: "Sedang Berhenti (OPEN)" },
+              { value: "closed", label: "Selesai (CLOSED)" },
+              { value: "unrecorded", label: "Stop PLC (Unrecorded)" },
+            ]}
+            placeholder="Pilih Status"
+          />
         </div>
 
         {/* Reset Filters */}
@@ -334,7 +339,7 @@ function LogHistoryPage() {
               setSelectedStatus("all");
               setSearchQuery("");
             }}
-            className="text-xs font-mono text-muted-foreground hover:text-foreground px-3 py-1.5 rounded hover:bg-muted transition-colors"
+            className="text-xs font-mono text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors w-full sm:w-auto text-center"
           >
             Reset Filter
           </button>
@@ -602,20 +607,17 @@ function LogHistoryPage() {
             <div className="space-y-4 text-xs font-sans">
               {/* Category */}
               <div>
-                <label className="block font-mono text-[11px] text-muted-foreground mb-1">
-                  Kategori Stop:
-                </label>
-                <select
+                <SelectInput
+                  label="Kategori Stop:"
                   value={corrCategoryId}
-                  onChange={(e) => setCorrCategoryId(e.target.value)}
-                  className="w-full rounded border border-input bg-background p-2 text-foreground focus:outline-none focus:border-primary font-mono"
-                >
-                  {appState.categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.countsAsBreakdown ? "(Breakdown)" : ""}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setCorrCategoryId(val ?? "")}
+                  datalist={appState.categories.map((c) => ({
+                    value: c.id,
+                    label: `${c.name}${c.countsAsBreakdown ? " (Breakdown)" : ""}`,
+                  }))}
+                  hideClear
+                  placeholder="Pilih Kategori Stop"
+                />
               </div>
 
               {/* Start & End Time */}

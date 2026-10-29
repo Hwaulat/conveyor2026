@@ -40,6 +40,7 @@ import {
 } from "../../lib/calc";
 import { fmtDuration, fmtMinutes, dayStartMs } from "../../lib/format";
 import { DateRangePicker } from "../../components/DateRangePicker";
+import { SelectInput } from "../../components/ui/select-input";
 
 export const Route = createFileRoute("/web/")({
   head: () => ({
@@ -417,43 +418,34 @@ function DashboardPage() {
         {/* Filter Controls Row: Area Filter (Left) + Station Filter + Date Range Filter */}
         <div className="flex flex-wrap items-center gap-2.5 self-start xl:self-auto">
           {/* 1. Area Filter (di samping kiri filter station) */}
-          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 font-mono text-xs shadow-2xs">
-            <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="text-muted-foreground whitespace-nowrap">Area:</span>
-            <select
+          <div className="w-44 sm:w-52">
+            <SelectInput
+              hideClear
+              datalist={[
+                { value: "all", label: `Semua Area (${appState.areas.length})` },
+                ...appState.areas.map((a) => ({ value: a.id, label: a.name })),
+              ]}
               value={selectedAreaId}
-              onChange={(e) => handleAreaChange(e.target.value)}
-              className="bg-transparent text-foreground font-semibold font-mono focus:outline-none cursor-pointer pr-1 text-xs"
-            >
-              <option value="all" className="bg-card text-foreground">
-                Semua Area ({appState.areas.length})
-              </option>
-              {appState.areas.map((a) => (
-                <option key={a.id} value={a.id} className="bg-card text-foreground">
-                  {a.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => handleAreaChange(val ?? "all")}
+              placeholder="Pilih Area"
+            />
           </div>
 
           {/* 2. Station Filter (opsi stasiun mengikuti area yang dipilih) */}
-          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 font-mono text-xs shadow-2xs">
-            <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="text-muted-foreground whitespace-nowrap">{t("dash.stationFilter")}:</span>
-            <select
+          <div className="w-48 sm:w-56">
+            <SelectInput
+              hideClear
+              datalist={[
+                { value: "all", label: `${t("dash.allStations")} (${availableStations.length})` },
+                ...availableStations.map((st) => ({
+                  value: st.id,
+                  label: `${st.name} (${st.code || st.id})`,
+                })),
+              ]}
               value={selectedStationId}
-              onChange={(e) => setSelectedStationId(e.target.value)}
-              className="bg-transparent text-foreground font-semibold font-mono focus:outline-none cursor-pointer pr-1 text-xs"
-            >
-              <option value="all" className="bg-card text-foreground">
-                {t("dash.allStations")} ({availableStations.length})
-              </option>
-              {availableStations.map((st) => (
-                <option key={st.id} value={st.id} className="bg-card text-foreground">
-                  {st.name} ({st.code || st.id})
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedStationId(val ?? "all")}
+              placeholder={t("dash.stationFilter")}
+            />
           </div>
 
           {/* 3. Date Range Selector (Gaya pill sesuai referensi visual: [Kalender] DD/MM/YYYY - DD/MM/YYYY [x]) */}

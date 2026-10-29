@@ -19,6 +19,7 @@ import { useAppStore, store } from "../../lib/store";
 import type { ProductionRecord } from "../../lib/types";
 import { computeOee, stopDurationMs, neutralizeExcelCell } from "../../lib/calc";
 import { toast } from "sonner";
+import { SelectInput } from "../../components/ui/select-input";
 
 export const Route = createFileRoute("/web/production")({
   head: () => ({
@@ -491,28 +492,30 @@ function ProductionPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-muted-foreground mb-1">Shift:</label>
-                  <select
+                  <SelectInput
+                    label="Shift:"
                     value={formShiftId}
-                    onChange={(e) => setFormShiftId(e.target.value)}
-                    className="w-full rounded border border-input bg-background p-2 text-foreground"
-                  >
-                    {appState.shifts.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormShiftId(val ?? "")}
+                    datalist={appState.shifts.map((s) => ({
+                      value: s.id,
+                      label: s.name,
+                    }))}
+                    hideClear
+                    placeholder="Pilih Shift"
+                  />
                 </div>
                 <div>
-                  <label className="block text-muted-foreground mb-1">Area:</label>
-                  <select
+                  <SelectInput
+                    label="Area:"
                     value={formAreaId}
-                    onChange={(e) => setFormAreaId(e.target.value)}
-                    className="w-full rounded border border-input bg-background p-2 text-foreground"
-                  >
-                    {appState.areas.map((a) => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormAreaId(val ?? "")}
+                    datalist={appState.areas.map((a) => ({
+                      value: a.id,
+                      label: a.name,
+                    }))}
+                    hideClear
+                    placeholder="Pilih Area"
+                  />
                 </div>
               </div>
 
