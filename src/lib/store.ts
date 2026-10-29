@@ -34,7 +34,7 @@ export interface AppState {
   simulating: boolean;
 }
 
-const STORAGE_KEY = "jsgi_conveyor_state_v1";
+const STORAGE_KEY = "krm_conveyor_state_v3";
 
 // Default Seed Data based on PRD & PT. Krama Yudha Ratu Motor Indonesia Factory Model
 export function createSeedData(): AppState {
@@ -64,15 +64,42 @@ export function createSeedData(): AppState {
   ];
 
   const categories: Category[] = [
-    { id: "cat-1", name: "Emergency Stop (E-Stop)", countsAsBreakdown: true, countsAsDowntime: true, active: true, custom: false },
-    { id: "cat-2", name: "Mechanical Jam / Sensor Block", countsAsBreakdown: true, countsAsDowntime: true, active: true, custom: false },
-    { id: "cat-3", name: "Motor Overload / Electrical Fault", countsAsBreakdown: true, countsAsDowntime: true, active: true, custom: false },
-    { id: "cat-4", name: "Material Starvation / Shortage", countsAsBreakdown: false, countsAsDowntime: true, active: true, custom: false },
-    { id: "cat-5", name: "Tool Change / Die Replacement", countsAsBreakdown: false, countsAsDowntime: true, active: true, custom: false },
-    { id: "cat-6", name: "Quality Check Hold", countsAsBreakdown: false, countsAsDowntime: true, active: true, custom: false },
-    { id: "cat-7", name: "Planned Maintenance", countsAsBreakdown: false, countsAsDowntime: false, active: true, custom: false },
-    { id: "cat-8", name: "Operator Break / Handover", countsAsBreakdown: false, countsAsDowntime: false, active: true, custom: false },
-    { id: "cat-9", name: "Misaligned Guide Rail", countsAsBreakdown: false, countsAsDowntime: true, active: true, custom: true, createdBy: "Rian Hidayat" },
+    {
+      id: "cat-1",
+      code: "CAT-PROC",
+      name: "Process",
+      countsAsBreakdown: false,
+      countsAsDowntime: true,
+      active: true,
+      custom: false,
+    },
+    {
+      id: "cat-2",
+      code: "CAT-BRK",
+      name: "Breakdown",
+      countsAsBreakdown: true, // Used for MTTR & MTBF calculation
+      countsAsDowntime: true,
+      active: true,
+      custom: false,
+    },
+    {
+      id: "cat-3",
+      code: "CAT-MAINT",
+      name: "Maintenance",
+      countsAsBreakdown: false,
+      countsAsDowntime: true,
+      active: true,
+      custom: false,
+    },
+    {
+      id: "cat-4",
+      code: "CAT-PART",
+      name: "Part Issue",
+      countsAsBreakdown: false,
+      countsAsDowntime: true,
+      active: true,
+      custom: false,
+    },
   ];
 
   const shifts: Shift[] = [
@@ -118,7 +145,7 @@ export function createSeedData(): AppState {
       stationId: "st-1",
       startMs: now - 2 * hourMs,
       endMs: now - 2 * hourMs + 18 * minMs,
-      categoryId: "cat-1",
+      categoryId: "cat-2", // Breakdown
       reportedBy: "Agus Pratama",
       status: "closed",
       source: "form",
@@ -131,7 +158,7 @@ export function createSeedData(): AppState {
       stationId: "st-4",
       startMs: now - 3 * hourMs - 45 * minMs,
       endMs: now - 3 * hourMs - 22 * minMs,
-      categoryId: "cat-2",
+      categoryId: "cat-2", // Breakdown
       reportedBy: "System (PLC Detector)",
       status: "closed",
       source: "plc",
@@ -144,7 +171,7 @@ export function createSeedData(): AppState {
       stationId: "st-5",
       startMs: now - 4 * hourMs,
       endMs: now - 4 * hourMs + 12 * minMs,
-      categoryId: "cat-6",
+      categoryId: "cat-1", // Process
       reportedBy: "Dewi Lestari",
       status: "closed",
       source: "form",
@@ -157,7 +184,7 @@ export function createSeedData(): AppState {
       stationId: "st-3",
       startMs: now - dayMs - 5 * hourMs,
       endMs: now - dayMs - 5 * hourMs + 35 * minMs,
-      categoryId: "cat-3",
+      categoryId: "cat-2", // Breakdown
       reportedBy: "Budi Santoso",
       status: "closed",
       source: "form",
@@ -169,7 +196,7 @@ export function createSeedData(): AppState {
       stationId: "st-1",
       startMs: now - dayMs - 8 * hourMs,
       endMs: now - dayMs - 8 * hourMs + 45 * minMs,
-      categoryId: "cat-5",
+      categoryId: "cat-3", // Maintenance
       reportedBy: "Rian Hidayat",
       status: "closed",
       source: "form",
@@ -182,7 +209,7 @@ export function createSeedData(): AppState {
       stationId: "st-2",
       startMs: now - 2 * dayMs - 3 * hourMs,
       endMs: now - 2 * dayMs - 3 * hourMs + 28 * minMs,
-      categoryId: "cat-2",
+      categoryId: "cat-2", // Breakdown
       reportedBy: "Agus Pratama",
       status: "closed",
       source: "form",
@@ -194,7 +221,7 @@ export function createSeedData(): AppState {
       stationId: "st-4",
       startMs: now - 2 * dayMs - 6 * hourMs,
       endMs: now - 2 * dayMs - 6 * hourMs + 15 * minMs,
-      categoryId: "cat-4",
+      categoryId: "cat-4", // Part Issue
       reportedBy: "Rian Hidayat",
       status: "closed",
       source: "form",
@@ -207,7 +234,7 @@ export function createSeedData(): AppState {
       stationId: "st-6",
       startMs: now - 3 * dayMs - 4 * hourMs,
       endMs: now - 3 * dayMs - 4 * hourMs + 20 * minMs,
-      categoryId: "cat-9",
+      categoryId: "cat-3", // Maintenance
       reportedBy: "Rian Hidayat",
       status: "closed",
       source: "form",
@@ -220,7 +247,7 @@ export function createSeedData(): AppState {
       stationId: "st-1",
       startMs: now - 4 * dayMs - 7 * hourMs,
       endMs: now - 4 * dayMs - 7 * hourMs + 22 * minMs,
-      categoryId: "cat-1",
+      categoryId: "cat-2", // Breakdown
       reportedBy: "Agus Pratama",
       status: "closed",
       source: "form",
@@ -233,7 +260,7 @@ export function createSeedData(): AppState {
       stationId: "st-3",
       startMs: now - 5 * dayMs - 2 * hourMs,
       endMs: now - 5 * dayMs - 2 * hourMs + 8 * minMs,
-      categoryId: "cat-2",
+      categoryId: "cat-2", // Breakdown
       reportedBy: "System (PLC Detector)",
       status: "closed",
       source: "plc",
@@ -370,6 +397,12 @@ let currentState: AppState = (() => {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed.stations && parsed.stops) {
+        if (Array.isArray(parsed.categories)) {
+          parsed.categories = parsed.categories.map((c: any) => ({
+            ...c,
+            code: c.code || `CAT-${c.name.slice(0, 4).toUpperCase().replace(/\s/g, "")}`,
+          }));
+        }
         return parsed as AppState;
       }
     }
@@ -543,10 +576,10 @@ export const store = {
   },
 
   // Category Actions
-  addCategory: (cat: Omit<Category, "id">): Category => {
+  addCategory: (cat: Omit<Category, "id"> & { id?: string }): Category => {
     const newCat: Category = {
       ...cat,
-      id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+      id: cat.id || `cat-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
     };
     currentState = {
       ...currentState,
@@ -560,6 +593,14 @@ export const store = {
     currentState = {
       ...currentState,
       categories: currentState.categories.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+    };
+    emitChange();
+  },
+
+  deleteCategory: (id: string) => {
+    currentState = {
+      ...currentState,
+      categories: currentState.categories.filter((c) => c.id !== id),
     };
     emitChange();
   },

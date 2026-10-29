@@ -20,6 +20,7 @@ export type Station = {
 
 export type Category = {
   id: string;
+  code?: string | undefined;
   name: string;
   countsAsBreakdown: boolean;
   countsAsDowntime: boolean;
