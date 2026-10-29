@@ -5,7 +5,7 @@ Rute terpisah: `/web` (desktop), `/andon` (TV), `/ipad` (tablet E-form). Desain:
 
 - [x] Fondasi: design system, i18n, tipe data, kalkulasi (MTTR/MTBF/OEE), data seed + simulasi live
 - [x] Shell /web: sidebar (grup ala referensi) + header (jam, tanggal, bahasa, profil)
-- [x] `/web` Dashboard: kartu ringkasan, grafik MTTR/MTBF, frekuensi, Pareto kategori, OEE
+- [x] `/web` Dashboard: kartu ringkasan, grafik trend speed by minute, grafik MTTR/MTBF, frekuensi, Pareto kategori, OEE
 - [x] `/web` Log History: filter, ringkasan per stasiun, detail per kejadian, unrecorded stops, koreksi
 - [x] `/web` Production (OEE): template Excel, upload + preview baris, hasil OEE
 - [x] `/web` Reports: ekspor Excel (netralisasi formula injection)
