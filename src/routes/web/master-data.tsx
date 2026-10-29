@@ -21,6 +21,8 @@ import { useAppStore, store } from "../../lib/store";
 import type { Station, Category } from "../../lib/types";
 import { toast } from "sonner";
 import { SelectInput } from "../../components/ui/select-input";
+import { TablePagination } from "../../components/TablePagination";
+import { Eye, ArrowUpDown } from "lucide-react";
 
 export const Route = createFileRoute("/web/master-data")({
   head: () => ({
@@ -50,6 +52,9 @@ function MasterDataPage() {
   // ==========================================
   const [stationSearchQuery, setStationSearchQuery] = useState("");
   const [selectedAreaFilter, setSelectedAreaFilter] = useState("all");
+  const [stationPage, setStationPage] = useState(1);
+  const [stationPageSize, setStationPageSize] = useState(10);
+  const [viewingStation, setViewingStation] = useState<Station | null>(null);
 
   // Modal: Batch Add Stations under Area & Conveyor
   const [batchModalOpen, setBatchModalOpen] = useState(false);
@@ -94,6 +99,11 @@ function MasterDataPage() {
       return matchArea && matchSearch;
     });
   }, [appState.stations, appState.areas, appState.conveyors, selectedAreaFilter, stationSearchQuery]);
+
+  const paginatedStations = useMemo(() => {
+    const start = (stationPage - 1) * stationPageSize;
+    return filteredStations.slice(start, start + stationPageSize);
+  }, [filteredStations, stationPage, stationPageSize]);
 
   // Batch Add Station Handlers
   const handleOpenBatchModal = () => {
@@ -215,6 +225,8 @@ function MasterDataPage() {
   // ==========================================
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | "breakdown" | "non-breakdown">("all");
+  const [categoryPage, setCategoryPage] = useState(1);
+  const [categoryPageSize, setCategoryPageSize] = useState(10);
 
   // Modal: Add Category
   const [addCatModalOpen, setAddCatModalOpen] = useState(false);
@@ -252,6 +264,11 @@ function MasterDataPage() {
       return codeMatch || nameMatch || idMatch;
     });
   }, [appState.categories, categoryFilter, categorySearchQuery]);
+
+  const paginatedCategories = useMemo(() => {
+    const start = (categoryPage - 1) * categoryPageSize;
+    return filteredCategories.slice(start, start + categoryPageSize);
+  }, [filteredCategories, categoryPage, categoryPageSize]);
 
   // Open Add Category Modal
   const handleOpenAddCategory = () => {
@@ -513,30 +530,59 @@ function MasterDataPage() {
 
             {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono border-collapse">
+              <table className="w-full text-left text-xs font-sans border-collapse">
                 <thead>
-                  <tr className="border-b border-border bg-muted/40 text-muted-foreground uppercase tracking-wider text-[11px]">
-                    <th className="py-3 px-4 font-semibold w-12 text-center">#</th>
-                    <th className="py-3 px-4 font-semibold w-28">Kode</th>
-                    <th className="py-3 px-4 font-semibold">Nama Stasiun</th>
-                    <th className="py-3 px-4 font-semibold">Nama Area</th>
-                    <th className="py-3 px-4 font-semibold">Nama Konveyor</th>
-                    <th className="py-3 px-4 font-semibold text-right">Threshold</th>
-                    <th className="py-3 px-4 font-semibold text-center w-28">Status Live</th>
-                    <th className="py-3 px-4 font-semibold text-center w-24">Aksi</th>
+                  <tr className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
+                    <th className="py-3.5 px-4 w-28 whitespace-nowrap">ACTION</th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        KODE STASIUN
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        NAMA STASIUN
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        NAMA AREA
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        KONVEYOR
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
+                    <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        THRESHOLD
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
+                    <th className="py-3.5 px-4 text-center w-28 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        STATUS LIVE
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
-                  {filteredStations.length === 0 ? (
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+                  {paginatedStations.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                      <td colSpan={7} className="py-12 text-center text-muted-foreground font-mono">
                         <Layers className="h-8 w-8 mx-auto mb-2 opacity-30" />
                         <p className="font-medium text-sm">Tidak ada data stasiun ditemukan</p>
                         <p className="text-xs mt-1">Coba sesuaikan kata kunci pencarian atau filter area Anda.</p>
                       </td>
                     </tr>
                   ) : (
-                    filteredStations.map((st, idx) => {
+                    paginatedStations.map((st) => {
                       const area = appState.areas.find((a) => a.id === st.areaId);
                       const cv = appState.conveyors.find((c) => c.id === st.conveyorId);
                       const live = appState.stationLive[st.id];
@@ -544,40 +590,83 @@ function MasterDataPage() {
                       const stationCode = st.code || st.name.split(" ")[0] || `ST-${st.sequence}`;
 
                       return (
-                        <tr key={st.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="py-3 px-4 text-center text-muted-foreground">
-                            {idx + 1}
+                        <tr key={st.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                          {/* Action Column on Left (Sesuai Referensi Visual) */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              {/* View Button [ 👁 ] */}
+                              <button
+                                type="button"
+                                onClick={() => setViewingStation(st)}
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
+                                title="Lihat Detail Stasiun"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </button>
+
+                              {/* Edit Button [ ✏ ] */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditStation(st)}
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
+                                title="Ubah Stasiun"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+
+                              {/* Delete Button [ 🗑 ] */}
+                              <button
+                                type="button"
+                                onClick={() => setDeleteStationTarget(st)}
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-red-600 hover:border-red-400 dark:hover:text-red-400 shadow-2xs transition-colors"
+                                title="Hapus Stasiun"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <span className="inline-block px-2 py-0.5 rounded font-bold bg-muted text-foreground border border-border">
+
+                          {/* Kode Stasiun */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <span className="inline-block px-2.5 py-0.5 rounded font-mono font-bold bg-muted text-foreground border border-border text-xs">
                               {stationCode}
                             </span>
                           </td>
-                          <td className="py-3 px-4">
-                            <div className="font-semibold text-foreground text-sm">
+
+                          {/* Nama Stasiun */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <div className="font-semibold text-foreground text-[13px]">
                               {st.name}
                             </div>
-                            <span className="text-[10px] text-muted-foreground block">
+                            <span className="text-[10px] text-muted-foreground block font-mono">
                               ID: {st.id} • Urutan: {st.sequence}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-foreground font-medium">
+
+                          {/* Nama Area */}
+                          <td className="py-3.5 px-4 text-foreground font-medium whitespace-nowrap">
                             {area?.name ?? st.areaId}
                           </td>
-                          <td className="py-3 px-4 text-muted-foreground">
+
+                          {/* Nama Konveyor */}
+                          <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
                             <span className="inline-flex items-center gap-1.5">
-                              <Workflow className="h-3 w-3 text-cyan-500" />
+                              <Workflow className="h-3.5 w-3.5 text-cyan-500" />
                               {cv?.name ?? st.conveyorId}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-right">
-                            <span className="text-foreground font-semibold">
+
+                          {/* Threshold */}
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            <span className="text-foreground font-semibold font-mono">
                               {st.runningThreshold} {st.speedUnit}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-center">
+
+                          {/* Status Live */}
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
                             <span
-                              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                                 isRunning
                                   ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                                   : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 animate-pulse"
@@ -591,24 +680,6 @@ function MasterDataPage() {
                               {isRunning ? "RUNNING" : "STOPPED"}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => handleOpenEditStation(st)}
-                                className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                title="Ubah Stasiun"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setDeleteStationTarget(st)}
-                                className="p-1.5 rounded text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                                title="Hapus Stasiun"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
                         </tr>
                       );
                     })
@@ -616,6 +687,15 @@ function MasterDataPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            <TablePagination
+              page={stationPage}
+              pageSize={stationPageSize}
+              totalItems={filteredStations.length}
+              onPageChange={setStationPage}
+              onPageSizeChange={setStationPageSize}
+            />
           </div>
         </div>
       )}
@@ -746,49 +826,100 @@ function MasterDataPage() {
 
             {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono border-collapse">
+              <table className="w-full text-left text-xs font-sans border-collapse">
                 <thead>
-                  <tr className="border-b border-border bg-muted/40 text-muted-foreground uppercase tracking-wider text-[11px]">
-                    <th className="py-3 px-4 font-semibold w-12 text-center">#</th>
-                    <th className="py-3 px-4 font-semibold w-36">Kode Kategori</th>
-                    <th className="py-3 px-4 font-semibold">Nama Kategori</th>
-                    <th className="py-3 px-4 font-semibold">Perhitungan MTTR & MTBF</th>
-                    <th className="py-3 px-4 font-semibold text-center w-32">Downtime</th>
-                    <th className="py-3 px-4 font-semibold text-center w-28">Status</th>
-                    <th className="py-3 px-4 font-semibold text-center w-24">Aksi</th>
+                  <tr className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
+                    <th className="py-3.5 px-4 w-24 whitespace-nowrap">ACTION</th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        KODE KATEGORI
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        NAMA KATEGORI
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        PERHITUNGAN MTTR & MTBF
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
+                    <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        DOWNTIME
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
+                    <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        STATUS
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
-                  {filteredCategories.length === 0 ? (
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+                  {paginatedCategories.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                      <td colSpan={6} className="py-12 text-center text-muted-foreground font-mono">
                         <Tag className="h-8 w-8 mx-auto mb-2 opacity-30" />
                         <p className="font-medium text-sm">Tidak ada kategori ditemukan</p>
                         <p className="text-xs mt-1">Gunakan tombol &quot;Tambah Kategori&quot; untuk menambahkan kategori stop baru.</p>
                       </td>
                     </tr>
                   ) : (
-                    filteredCategories.map((cat, idx) => {
+                    paginatedCategories.map((cat) => {
                       const catCode = cat.code || `CAT-${cat.name.slice(0, 4).toUpperCase().replace(/\s/g, "")}`;
                       return (
-                        <tr key={cat.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="py-3 px-4 text-center text-muted-foreground">
-                            {idx + 1}
+                        <tr key={cat.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                          {/* Action Column on Left */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              {/* Edit Button [ ✏ ] */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditCategory(cat)}
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
+                                title="Ubah Kategori"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+
+                              {/* Delete Button [ 🗑 ] */}
+                              <button
+                                type="button"
+                                onClick={() => setDeleteCatTarget(cat)}
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-red-600 hover:border-red-400 dark:hover:text-red-400 shadow-2xs transition-colors"
+                                title="Hapus Kategori"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <span className="inline-block px-2.5 py-1 rounded font-bold bg-muted text-foreground border border-border">
+
+                          {/* Kode Kategori */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <span className="inline-block px-2.5 py-1 rounded font-mono font-bold bg-muted text-foreground border border-border text-xs">
                               {catCode}
                             </span>
                           </td>
-                          <td className="py-3 px-4">
-                            <div className="font-semibold text-foreground text-sm">
+
+                          {/* Nama Kategori */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <div className="font-semibold text-foreground text-[13px]">
                               {cat.name}
                             </div>
-                            <span className="text-[10px] text-muted-foreground block">
+                            <span className="text-[10px] text-muted-foreground block font-mono">
                               ID: {cat.id}
                             </span>
                           </td>
-                          <td className="py-3 px-4">
+
+                          {/* MTTR / MTBF Breakdown */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
                             {cat.countsAsBreakdown ? (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
                                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
@@ -801,7 +932,9 @@ function MasterDataPage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-center">
+
+                          {/* Downtime */}
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
                             {cat.countsAsDowntime ? (
                               <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                                 Kurangi Run Time
@@ -812,9 +945,11 @@ function MasterDataPage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-center">
+
+                          {/* Status */}
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
                             <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                                 cat.active
                                   ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                                   : "bg-muted text-muted-foreground border border-border"
@@ -828,24 +963,6 @@ function MasterDataPage() {
                               {cat.active ? "AKTIF" : "NONAKTIF"}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => handleOpenEditCategory(cat)}
-                                className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                title="Ubah Kategori"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setDeleteCatTarget(cat)}
-                                className="p-1.5 rounded text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                                title="Hapus Kategori"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
                         </tr>
                       );
                     })
@@ -853,6 +970,15 @@ function MasterDataPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            <TablePagination
+              page={categoryPage}
+              pageSize={categoryPageSize}
+              totalItems={filteredCategories.length}
+              onPageChange={setCategoryPage}
+              onPageSizeChange={setCategoryPageSize}
+            />
           </div>
         </div>
       )}
@@ -1410,6 +1536,74 @@ function MasterDataPage() {
                 className="px-4 py-2 rounded bg-rose-600 text-white font-semibold font-mono text-xs hover:bg-rose-500 shadow-2xs"
               >
                 Ya, Hapus Kategori
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: View Detail Stasiun [ 👁 ] */}
+      {viewingStation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl space-y-4 font-sans text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+                  <Eye className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground">Detail Data Stasiun</h3>
+                  <p className="text-[11px] text-muted-foreground font-mono">ID: {viewingStation.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingStation(null)}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Kode Stasiun</span>
+                <span className="text-foreground font-bold text-xs">{viewingStation.code || viewingStation.id}</span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Nama Stasiun</span>
+                <span className="text-foreground font-bold text-xs">{viewingStation.name}</span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Area</span>
+                <span className="text-foreground font-semibold">
+                  {appState.areas.find((a) => a.id === viewingStation.areaId)?.name ?? viewingStation.areaId}
+                </span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Konveyor</span>
+                <span className="text-foreground font-semibold">
+                  {appState.conveyors.find((c) => c.id === viewingStation.conveyorId)?.name ?? viewingStation.conveyorId}
+                </span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Ambang Kecepatan</span>
+                <span className="text-foreground font-bold text-xs">
+                  {viewingStation.runningThreshold} {viewingStation.speedUnit}
+                </span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Urutan Konveyor</span>
+                <span className="text-foreground font-semibold">#{viewingStation.sequence}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setViewingStation(null)}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors shadow-2xs"
+              >
+                Tutup
               </button>
             </div>
           </div>

@@ -15,7 +15,7 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+  <thead ref={ref} className={cn("bg-slate-50/80 dark:bg-zinc-800/60 border-b border-border [&_tr]:border-b", className)} {...props} />
 ));
 TableHeader.displayName = "TableHeader";
 
@@ -23,7 +23,7 @@ const TableBody = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <tbody ref={ref} className={cn("[&_tr:last-child]:border-0", className)} {...props} />
+  <tbody ref={ref} className={cn("[&_tr:last-child]:border-0 divide-y divide-slate-100 dark:divide-zinc-800/60", className)} {...props} />
 ));
 TableBody.displayName = "TableBody";
 
@@ -44,7 +44,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
     <tr
       ref={ref}
       className={cn(
-        "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+        "border-b border-slate-100 dark:border-zinc-800/60 transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 data-[state=selected]:bg-muted",
         className,
       )}
       {...props}
@@ -60,7 +60,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+      "h-11 px-4 text-left align-middle font-semibold text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 [&:has([role=checkbox])]:pr-0",
       className,
     )}
     {...props}
@@ -75,7 +75,7 @@ const TableCell = React.forwardRef<
   <td
     ref={ref}
     className={cn(
-      "p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+      "px-4 py-3.5 align-middle text-[13px] text-slate-700 dark:text-zinc-200 [&:has([role=checkbox])]:pr-0",
       className,
     )}
     {...props}

@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Users, Shield, Plus, Key, History, Check } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Users, Shield, Plus, Key, History, Check, Eye, ArrowUpDown, Pencil, X } from "lucide-react";
 import { useI18n } from "../../lib/i18n";
 import { useAppStore, store } from "../../lib/store";
 import { ROLE_ORDER, type Role, type UserRow } from "../../lib/types";
 import { fmtDateTime } from "../../lib/format";
 import { toast } from "sonner";
 import { SelectInput } from "../../components/ui/select-input";
+import { TablePagination } from "../../components/TablePagination";
 
 export const Route = createFileRoute("/web/users")({
   head: () => ({
@@ -27,6 +28,14 @@ function UserManagementPage() {
   const [userEmail, setUserEmail] = useState("");
   const [userBadge, setUserBadge] = useState("");
   const [userRole, setUserRole] = useState<Role>("operator");
+  const [userPage, setUserPage] = useState(1);
+  const [userPageSize, setUserPageSize] = useState(10);
+  const [viewingUser, setViewingUser] = useState<UserRow | null>(null);
+
+  const paginatedUsers = useMemo(() => {
+    const s = (userPage - 1) * userPageSize;
+    return appState.users.slice(s, s + userPageSize);
+  }, [appState.users, userPage, userPageSize]);
 
   const handleRoleChange = (userId: string, newRole: Role) => {
     const user = appState.users.find((u) => u.id === userId);
@@ -84,29 +93,65 @@ function UserManagementPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-sans">
-            <thead className="border-b border-border bg-muted/60 font-mono text-[10px] uppercase text-muted-foreground">
+            <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-4">{t("users.name")}</th>
-                <th className="py-3 px-4">{t("users.email")}</th>
-                <th className="py-3 px-4">{t("users.badge")}</th>
-                <th className="py-3 px-4">{t("users.role")}</th>
-                <th className="py-3 px-4 text-right">Ubah Peran</th>
+                <th className="py-3.5 px-4 w-20 whitespace-nowrap">ACTION</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    {t("users.name")} <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                  </span>
+                </th>
+                <th className="py-3.5 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    {t("users.email")} <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                  </span>
+                </th>
+                <th className="py-3.5 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    {t("users.badge")} <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                  </span>
+                </th>
+                <th className="py-3.5 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    {t("users.role")} <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                  </span>
+                </th>
+                <th className="py-3.5 px-4 text-right whitespace-nowrap">Ubah Peran</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {appState.users.map((u) => (
-                <tr key={u.id} className="hover:bg-muted/40 transition-colors">
-                  <td className="py-3 px-4 font-medium text-foreground flex items-center gap-2.5">
+            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+              {paginatedUsers.map((u) => (
+                <tr key={u.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                  {/* Action on Left */}
+                  <td className="py-3.5 px-4 whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => setViewingUser(u)}
+                      className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
+                      title="Lihat Detail Pengguna"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
+
+                  {/* Name */}
+                  <td className="py-3.5 px-4 font-medium text-foreground flex items-center gap-2.5 whitespace-nowrap">
                     <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center font-mono text-xs font-bold text-foreground border border-border">
                       {u.name.slice(0, 2).toUpperCase()}
                     </div>
                     <span>{u.name}</span>
                   </td>
-                  <td className="py-3 px-4 font-mono text-muted-foreground">{u.email}</td>
-                  <td className="py-3 px-4 font-mono text-foreground font-bold">{u.badge}</td>
-                  <td className="py-3 px-4 font-mono">
+
+                  {/* Email */}
+                  <td className="py-3.5 px-4 font-mono text-muted-foreground whitespace-nowrap">{u.email}</td>
+
+                  {/* Badge */}
+                  <td className="py-3.5 px-4 font-mono text-foreground font-bold whitespace-nowrap">{u.badge}</td>
+
+                  {/* Role */}
+                  <td className="py-3.5 px-4 font-mono whitespace-nowrap">
                     <span
-                      className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${
+                      className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold border uppercase ${
                         u.role === "admin"
                           ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30"
                           : u.role === "manager"
@@ -121,7 +166,9 @@ function UserManagementPage() {
                       {u.role}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-right">
+
+                  {/* Ubah Peran SelectInput */}
+                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
                     <div className="inline-block w-40 text-left">
                       <SelectInput
                         hideClear
@@ -142,6 +189,15 @@ function UserManagementPage() {
             </tbody>
           </table>
         </div>
+
+        {/* User Pagination */}
+        <TablePagination
+          page={userPage}
+          pageSize={userPageSize}
+          totalItems={appState.users.length}
+          onPageChange={setUserPage}
+          onPageSizeChange={setUserPageSize}
+        />
       </div>
 
       {/* Audit Log Trail */}
@@ -249,6 +305,64 @@ function UserManagementPage() {
                 className="px-4 py-2 rounded bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs transition-colors"
               >
                 Simpan Pengguna
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: View User Detail [ 👁 ] */}
+      {viewingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl space-y-4 font-sans text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+                  <Eye className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground">Detail Data Pengguna</h3>
+                  <p className="text-[11px] text-muted-foreground font-mono">ID: {viewingUser.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingUser(null)}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 font-mono text-[11px]">
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold border border-primary/20">
+                  {viewingUser.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <span className="text-foreground font-bold text-sm block">{viewingUser.name}</span>
+                  <span className="text-muted-foreground text-xs">{viewingUser.email}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Nomor Badge</span>
+                  <span className="text-foreground font-bold text-xs">{viewingUser.badge}</span>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Role Sistem</span>
+                  <span className="text-foreground font-bold text-xs uppercase">{viewingUser.role}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setViewingUser(null)}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors shadow-2xs"
+              >
+                Tutup
               </button>
             </div>
           </div>

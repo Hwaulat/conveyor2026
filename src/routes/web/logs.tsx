@@ -32,6 +32,8 @@ import {
 import { stopDurationMs } from "../../lib/calc";
 import { toast } from "sonner";
 import { SelectInput } from "../../components/ui/select-input";
+import { TablePagination } from "../../components/TablePagination";
+import { Eye, ArrowUpDown } from "lucide-react";
 
 export const Route = createFileRoute("/web/logs")({
   head: () => ({
@@ -56,6 +58,11 @@ function LogHistoryPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedStationId, setExpandedStationId] = useState<string | null>(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [viewingStop, setViewingStop] = useState<LineStop | null>(null);
 
   // Correction Modal State
   const [correctingStop, setCorrectingStop] = useState<LineStop | null>(null);
@@ -104,6 +111,12 @@ function LogHistoryPage() {
 
     return result;
   }, [appState.stops, selectedStation, selectedCategory, selectedStatus, searchQuery, appState.categories, appState.stations]);
+
+  // Paginated Stops for Table View
+  const paginatedStops = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredStops.slice(start, start + pageSize);
+  }, [filteredStops, currentPage, pageSize]);
 
   const unrecordedStops = useMemo(() => {
     return appState.stops.filter((s) => s.source === "plc");
@@ -351,135 +364,199 @@ function LogHistoryPage() {
         /* LIST VIEW TABLE */
         <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-border bg-muted/40 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
+            <table className="w-full text-left text-xs font-sans">
+              <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Stasiun</th>
-                  <th className="py-3 px-4">Kategori</th>
-                  <th className="py-3 px-4">Mulai / Selesai (WIB)</th>
-                  <th className="py-3 px-4">Durasi</th>
-                  <th className="py-3 px-4">Sumber</th>
-                  <th className="py-3 px-4">Operator</th>
-                  <th className="py-3 px-4 text-right">Aksi</th>
+                  <th className="py-3.5 px-4 w-28 whitespace-nowrap">ACTION</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      START TIME (WIB)
+                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      END TIME
+                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      STATION
+                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      CATEGORY
+                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      DURATION
+                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      SOURCE
+                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      OPERATOR
+                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      STATUS
+                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/60 font-sans">
-                {filteredStops.length === 0 ? (
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+                {paginatedStops.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-muted-foreground font-mono">
+                    <td colSpan={9} className="py-12 text-center text-muted-foreground font-mono">
                       {t("common.emptyPeriod")}
                     </td>
                   </tr>
                 ) : (
-                  filteredStops.map((stop) => {
+                  paginatedStops.map((stop) => {
                     const st = appState.stations.find((x) => x.id === stop.stationId);
                     const cat = appState.categories.find((c) => c.id === stop.categoryId);
                     const isOpen = stop.status === "open";
                     const duration = stopDurationMs(stop, nowMs);
 
                     return (
-                      <tr key={stop.id} className="hover:bg-muted/30 transition-colors">
-                        {/* Status */}
-                        <td className="py-3 px-4 font-mono">
-                          {isOpen ? (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/20 text-red-600 dark:text-red-400 font-bold border border-red-500/30 text-[10px]">
-                              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-ping" />
-                              OPEN
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border text-[10px]">
-                              CLOSED
-                            </span>
-                          )}
+                      <tr key={stop.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                        {/* Action Column on Left (Sesuai Referensi Visual) */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            {/* View Button [ 👁 ] */}
+                            <button
+                              type="button"
+                              onClick={() => setViewingStop(stop)}
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
+                              title="Lihat Detail Log"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Edit / Correct Button [ ✏ ] */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCorrectModal(stop)}
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
+                              title="Koreksi / Edit Log"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Delete / Void Button [ 🗑 ] */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVoidingStop(stop);
+                                setVoidReason("");
+                              }}
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-red-600 hover:border-red-400 dark:hover:text-red-400 shadow-2xs transition-colors"
+                              title="Batalkan / Hapus (Void)"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+
+                            {isOpen && (
+                              <button
+                                type="button"
+                                onClick={() => handleCloseStop(stop)}
+                                className="px-2 h-8 inline-flex items-center rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-2xs transition-colors"
+                                title="Tutup Status Stop"
+                              >
+                                Tutup
+                              </button>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Waktu Mulai */}
+                        <td className="py-3.5 px-4 font-mono text-[13px] text-foreground font-semibold whitespace-nowrap">
+                          {fmtDateTime(stop.startMs)}
+                        </td>
+
+                        {/* Waktu Selesai */}
+                        <td className="py-3.5 px-4 font-mono text-[13px] text-muted-foreground whitespace-nowrap">
+                          {stop.endMs ? fmtTime(stop.endMs) : <span className="text-amber-500 font-semibold">— masih jalan —</span>}
                         </td>
 
                         {/* Stasiun */}
-                        <td className="py-3 px-4 font-mono font-medium text-foreground">
+                        <td className="py-3.5 px-4 font-sans font-medium text-foreground whitespace-nowrap">
                           <div>{st?.name ?? stop.stationId}</div>
                           {stop.note && (
-                            <div className="text-[11px] text-muted-foreground font-sans line-clamp-1 mt-0.5">
+                            <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
                               {stop.note}
                             </div>
                           )}
                         </td>
 
                         {/* Kategori */}
-                        <td className="py-3 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="text-foreground font-medium">{cat?.name ?? stop.categoryId}</div>
                           <div className="flex gap-1 mt-0.5">
                             {cat?.countsAsBreakdown && (
-                              <span className="font-mono text-[9px] px-1 rounded bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold">
+                              <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold">
                                 Breakdown
                               </span>
                             )}
                             {cat?.custom && (
-                              <span className="font-mono text-[9px] px-1 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-bold">
+                              <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-bold">
                                 Custom
                               </span>
                             )}
                           </div>
                         </td>
 
-                        {/* Waktu */}
-                        <td className="py-3 px-4 font-mono text-muted-foreground">
-                          <div className="text-foreground font-semibold">{fmtDateTime(stop.startMs)}</div>
-                          <div>{stop.endMs ? fmtTime(stop.endMs) : "— masih jalan —"}</div>
-                        </td>
-
                         {/* Durasi */}
-                        <td className="py-3 px-4 font-mono">
+                        <td className="py-3.5 px-4 font-mono whitespace-nowrap">
                           <span className={isOpen ? "text-red-600 dark:text-red-400 font-bold" : "text-foreground font-semibold"}>
                             {fmtDuration(duration)}
                           </span>
                         </td>
 
                         {/* Sumber */}
-                        <td className="py-3 px-4 font-mono text-[10px]">
+                        <td className="py-3.5 px-4 font-mono text-[11px] whitespace-nowrap">
                           {stop.source === "plc" ? (
-                            <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold">
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold">
                               PLC
                             </span>
                           ) : (
-                            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+                            <span className="px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border">
                               E-form
                             </span>
                           )}
                         </td>
 
                         {/* Operator */}
-                        <td className="py-3 px-4 font-mono text-muted-foreground">
+                        <td className="py-3.5 px-4 font-mono text-muted-foreground whitespace-nowrap">
                           {stop.reportedBy}
                         </td>
 
-                        {/* Aksi */}
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5 font-mono text-[11px]">
-                            {isOpen && (
-                              <button
-                                onClick={() => handleCloseStop(stop)}
-                                className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors shadow-2xs"
-                              >
-                                Tutup
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleOpenCorrectModal(stop)}
-                              className="px-2.5 py-1 rounded border border-border bg-card text-foreground hover:bg-muted transition-colors shadow-2xs"
-                            >
-                              Koreksi
-                            </button>
-                            <button
-                              onClick={() => {
-                                setVoidingStop(stop);
-                                setVoidReason("");
-                              }}
-                              className="p-1.5 rounded text-muted-foreground hover:text-red-600 hover:bg-red-500/10 transition-colors"
-                              title="Batalkan (Void)"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
+                        {/* Status */}
+                        <td className="py-3.5 px-4 font-mono whitespace-nowrap">
+                          {isOpen ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-600 dark:text-red-400 font-bold border border-red-500/30 text-[11px]">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-ping" />
+                              OPEN
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border text-[11px]">
+                              CLOSED
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -488,6 +565,15 @@ function LogHistoryPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Table Pagination Bar (Sesuai Referensi Visual) */}
+          <TablePagination
+            page={currentPage}
+            pageSize={pageSize}
+            totalItems={filteredStops.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       ) : (
         /* SUMMARY BY STATION VIEW */
@@ -741,6 +827,81 @@ function LogHistoryPage() {
                 className="px-3 py-1.5 rounded bg-red-600 text-white font-semibold font-mono text-xs hover:bg-red-500 shadow-xs"
               >
                 Konfirmasi Void
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Detail Modal [ 👁 ] */}
+      {viewingStop && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl space-y-4 font-sans text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+                  <Eye className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground">Detail Line Stop Event</h3>
+                  <p className="text-[11px] text-muted-foreground font-mono">ID: {viewingStop.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingStop(null)}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Stasiun</span>
+                <span className="text-foreground font-bold text-xs">
+                  {appState.stations.find((x) => x.id === viewingStop.stationId)?.name ?? viewingStop.stationId}
+                </span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Kategori</span>
+                <span className="text-foreground font-bold text-xs">
+                  {appState.categories.find((c) => c.id === viewingStop.categoryId)?.name ?? viewingStop.categoryId}
+                </span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Waktu Mulai</span>
+                <span className="text-foreground font-semibold">{fmtDateTime(viewingStop.startMs)}</span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Waktu Selesai</span>
+                <span className="text-foreground font-semibold">
+                  {viewingStop.endMs ? fmtDateTime(viewingStop.endMs) : "Masih aktif (OPEN)"}
+                </span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Total Durasi</span>
+                <span className="text-foreground font-bold text-xs">{fmtDuration(stopDurationMs(viewingStop, nowMs))}</span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Operator / Pelapor</span>
+                <span className="text-foreground font-semibold">{viewingStop.reportedBy}</span>
+              </div>
+            </div>
+
+            {viewingStop.note && (
+              <div className="p-3 rounded-lg bg-muted/30 border border-border text-[11px]">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold mb-1">Catatan Kejadian</span>
+                <p className="text-foreground font-sans">{viewingStop.note}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setViewingStop(null)}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors shadow-2xs"
+              >
+                Tutup
               </button>
             </div>
           </div>

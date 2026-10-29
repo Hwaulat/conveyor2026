@@ -22,6 +22,8 @@ import {
 } from "../../lib/calc";
 import { fmtDateTime, fmtDateKey, fmtDuration, dayStartMs } from "../../lib/format";
 import { toast } from "sonner";
+import { TablePagination } from "../../components/TablePagination";
+import { ArrowUpDown } from "lucide-react";
 
 export const Route = createFileRoute("/web/reports")({
   head: () => ({
@@ -44,6 +46,8 @@ function ReportsPage() {
   const [period, setPeriod] = useState<ReportPeriod>("7d");
   const [activeReport, setActiveReport] = useState<ReportType>("stop-summary");
   const [searchQuery, setSearchQuery] = useState("");
+  const [reportPage, setReportPage] = useState(1);
+  const [reportPageSize, setReportPageSize] = useState(10);
 
   const periodStartMs = useMemo(() => {
     if (period === "today") return dayStartMs(nowMs);
@@ -208,6 +212,26 @@ function ReportsPage() {
         r.status.toLowerCase().includes(q),
     );
   }, [logDetailData, searchQuery]);
+
+  const paginatedStopSummary = useMemo(() => {
+    const s = (reportPage - 1) * reportPageSize;
+    return filteredStopSummary.slice(s, s + reportPageSize);
+  }, [filteredStopSummary, reportPage, reportPageSize]);
+
+  const paginatedMttr = useMemo(() => {
+    const s = (reportPage - 1) * reportPageSize;
+    return filteredMttr.slice(s, s + reportPageSize);
+  }, [filteredMttr, reportPage, reportPageSize]);
+
+  const paginatedOee = useMemo(() => {
+    const s = (reportPage - 1) * reportPageSize;
+    return filteredOee.slice(s, s + reportPageSize);
+  }, [filteredOee, reportPage, reportPageSize]);
+
+  const paginatedLogDetail = useMemo(() => {
+    const s = (reportPage - 1) * reportPageSize;
+    return filteredLogDetail.slice(s, s + reportPageSize);
+  }, [filteredLogDetail, reportPage, reportPageSize]);
 
   // --- Excel Exporters ---
   const handleExportCurrentReport = () => {
@@ -526,14 +550,14 @@ function ReportsPage() {
               />
             </div>
 
-            {/* Download Excel Button */}
+            {/* Download Report Button (Orange Style Matching Reference) */}
             <button
               onClick={handleExportCurrentReport}
               disabled={activeRowCount === 0}
-              className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 px-3.5 py-1.5 font-mono text-xs font-semibold shadow-xs transition-colors shrink-0 disabled:opacity-50 disabled:pointer-events-none"
+              className="flex items-center gap-2 rounded-lg bg-[#ff5a1f] hover:bg-[#e04810] text-white px-4 py-2 font-sans text-xs font-semibold shadow-xs transition-colors shrink-0 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
             >
               <Download className="h-4 w-4" />
-              <span>{t("rep.exportExcel")}</span>
+              <span>Download Report</span>
             </button>
           </div>
         </div>
@@ -543,42 +567,72 @@ function ReportsPage() {
           {/* 1. Stop Summary Table */}
           {activeReport === "stop-summary" && (
             <table className="w-full text-left text-xs font-sans">
-              <thead className="border-b border-border bg-muted/60 font-mono text-[10px] uppercase text-muted-foreground">
+              <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-4 w-12 text-center">No</th>
-                  <th className="py-3 px-4">Stasiun</th>
-                  <th className="py-3 px-4">Konveyor</th>
-                  <th className="py-3 px-4 text-center">Total Stop</th>
-                  <th className="py-3 px-4 text-center">Breakdown</th>
-                  <th className="py-3 px-4 text-right">Total Downtime</th>
-                  <th className="py-3 px-4 text-right">Rata-rata Durasi</th>
-                  <th className="py-3 px-4 text-center">Ambang Kecepatan</th>
+                  <th className="py-3.5 px-4 w-12 text-center">NO</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      STASIUN <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      KONVEYOR <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      TOTAL STOP <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      BREAKDOWN <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      TOTAL DOWNTIME <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      RATA-RATA DURASI <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      THRESHOLD SPEED <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
-                {filteredStopSummary.length === 0 ? (
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+                {paginatedStopSummary.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-muted-foreground font-mono text-xs">
                       {t("rep.noData")}
                     </td>
                   </tr>
                 ) : (
-                  filteredStopSummary.map((row, idx) => (
-                    <tr key={row.stationId} className="hover:bg-muted/40 transition-colors">
-                      <td className="py-3 px-4 text-center font-mono text-muted-foreground">{idx + 1}</td>
-                      <td className="py-3 px-4 font-medium text-foreground">
+                  paginatedStopSummary.map((row, idx) => (
+                    <tr key={row.stationId} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                      <td className="py-3.5 px-4 text-center font-mono text-muted-foreground">
+                        {(reportPage - 1) * reportPageSize + idx + 1}
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">
                         <div className="font-semibold">{row.stationName}</div>
                         <div className="text-[10px] font-mono text-muted-foreground">{row.stationId}</div>
                       </td>
-                      <td className="py-3 px-4 font-mono text-muted-foreground">{row.conveyorId}</td>
-                      <td className="py-3 px-4 text-center font-mono">
+                      <td className="py-3.5 px-4 font-mono text-muted-foreground whitespace-nowrap">{row.conveyorId}</td>
+                      <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap">
                         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${
                           row.totalStops > 0 ? "bg-muted text-foreground" : "text-muted-foreground"
                         }`}>
                           {row.totalStops}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-center font-mono">
+                      <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap">
                         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${
                           row.breakdownStops > 0
                             ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
@@ -587,17 +641,17 @@ function ReportsPage() {
                           {row.breakdownStops}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right font-mono font-semibold text-foreground">
+                      <td className="py-3.5 px-4 text-right font-mono font-semibold text-foreground whitespace-nowrap">
                         {fmtDuration(row.totalDowntimeMs)}
                         <span className="text-[10px] text-muted-foreground font-normal ml-1">
                           ({Math.round(row.totalDowntimeMs / 60_000)}m)
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-muted-foreground">
+                      <td className="py-3.5 px-4 text-right font-mono text-muted-foreground whitespace-nowrap">
                         {row.avgDurationMs > 0 ? (row.avgDurationMs / 60_000).toFixed(1) + " m" : "0 m"}
                       </td>
-                      <td className="py-3 px-4 text-center font-mono text-muted-foreground">
-                        <span className="rounded bg-muted px-2 py-0.5 text-[10px]">
+                      <td className="py-3.5 px-4 text-center font-mono text-muted-foreground whitespace-nowrap">
+                        <span className="rounded bg-muted px-2 py-0.5 text-[11px] font-mono">
                           {row.thresholdSpeed}
                         </span>
                       </td>
@@ -611,37 +665,67 @@ function ReportsPage() {
           {/* 2. MTTR & MTBF Table */}
           {activeReport === "mttr-mtbf" && (
             <table className="w-full text-left text-xs font-sans">
-              <thead className="border-b border-border bg-muted/60 font-mono text-[10px] uppercase text-muted-foreground">
+              <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-4 w-12 text-center">No</th>
-                  <th className="py-3 px-4">Stasiun</th>
-                  <th className="py-3 px-4 text-center">Periode</th>
-                  <th className="py-3 px-4 text-center">Jumlah Breakdown</th>
-                  <th className="py-3 px-4 text-right">Total Downtime</th>
-                  <th className="py-3 px-4 text-right">MTTR (Menit)</th>
-                  <th className="py-3 px-4 text-right">MTBF (Jam)</th>
-                  <th className="py-3 px-4 text-right">Operating Time</th>
+                  <th className="py-3.5 px-4 w-12 text-center">NO</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      STASIUN <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      PERIODE <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      JUMLAH BREAKDOWN <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      TOTAL DOWNTIME <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      MTTR (MENIT) <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      MTBF (JAM) <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      OPERATING TIME <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
-                {filteredMttr.length === 0 ? (
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+                {paginatedMttr.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-muted-foreground font-mono text-xs">
                       {t("rep.noData")}
                     </td>
                   </tr>
                 ) : (
-                  filteredMttr.map((row, idx) => (
-                    <tr key={row.stationId} className="hover:bg-muted/40 transition-colors">
-                      <td className="py-3 px-4 text-center font-mono text-muted-foreground">{idx + 1}</td>
-                      <td className="py-3 px-4 font-medium text-foreground">
+                  paginatedMttr.map((row, idx) => (
+                    <tr key={row.stationId} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                      <td className="py-3.5 px-4 text-center font-mono text-muted-foreground">
+                        {(reportPage - 1) * reportPageSize + idx + 1}
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">
                         <div className="font-semibold">{row.stationName}</div>
                         <div className="text-[10px] font-mono text-muted-foreground">{row.stationId}</div>
                       </td>
-                      <td className="py-3 px-4 text-center font-mono text-muted-foreground">
+                      <td className="py-3.5 px-4 text-center font-mono text-muted-foreground whitespace-nowrap">
                         {row.periodDays} Hari
                       </td>
-                      <td className="py-3 px-4 text-center font-mono">
+                      <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap">
                         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${
                           row.breakdownCount > 0
                             ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
@@ -650,10 +734,10 @@ function ReportsPage() {
                           {row.breakdownCount}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-foreground font-semibold">
+                      <td className="py-3.5 px-4 text-right font-mono text-foreground font-semibold whitespace-nowrap">
                         {fmtDuration(row.totalDowntimeMs)}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono">
+                      <td className="py-3.5 px-4 text-right font-mono whitespace-nowrap">
                         {row.mttrMs !== null ? (
                           <span className="font-bold text-rose-600 dark:text-rose-400">
                             {Math.round(row.mttrMs / 60_000)} m
@@ -662,7 +746,7 @@ function ReportsPage() {
                           <span className="text-muted-foreground italic">N/A</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono">
+                      <td className="py-3.5 px-4 text-right font-mono whitespace-nowrap">
                         {row.mtbfMs !== null ? (
                           <span className="font-bold text-emerald-600 dark:text-emerald-400">
                             {(row.mtbfMs / 3_600_000).toFixed(1)} h
@@ -671,7 +755,7 @@ function ReportsPage() {
                           <span className="text-muted-foreground italic">N/A</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-muted-foreground">
+                      <td className="py-3.5 px-4 text-right font-mono text-muted-foreground whitespace-nowrap">
                         {row.operatingHours.toFixed(1)} Jam
                       </td>
                     </tr>
@@ -684,58 +768,96 @@ function ReportsPage() {
           {/* 3. OEE Table */}
           {activeReport === "oee" && (
             <table className="w-full text-left text-xs font-sans">
-              <thead className="border-b border-border bg-muted/60 font-mono text-[10px] uppercase text-muted-foreground">
+              <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-4 w-12 text-center">No</th>
-                  <th className="py-3 px-4">Tanggal & Shift</th>
-                  <th className="py-3 px-4">Area Produksi</th>
-                  <th className="py-3 px-4 text-right">Planned (Min)</th>
-                  <th className="py-3 px-4 text-right">Downtime (Min)</th>
-                  <th className="py-3 px-4 text-center">Total / Good Unit</th>
-                  <th className="py-3 px-4 text-right">Availability</th>
-                  <th className="py-3 px-4 text-right">Performance</th>
-                  <th className="py-3 px-4 text-right">Quality</th>
-                  <th className="py-3 px-4 text-center">Nilai OEE</th>
+                  <th className="py-3.5 px-4 w-12 text-center">NO</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      TANGGAL & SHIFT <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      AREA PRODUKSI <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      PLANNED (MIN) <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      DOWNTIME (MIN) <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      TOTAL / GOOD UNIT <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      AVAILABILITY <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      PERFORMANCE <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      QUALITY <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      NILAI OEE <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
-                {filteredOee.length === 0 ? (
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+                {paginatedOee.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="py-12 text-center text-muted-foreground font-mono text-xs">
                       {t("rep.noData")}
                     </td>
                   </tr>
                 ) : (
-                  filteredOee.map((row, idx) => {
+                  paginatedOee.map((row, idx) => {
                     const oeePct = row.oee.oee * 100;
                     return (
-                      <tr key={row.id} className="hover:bg-muted/40 transition-colors">
-                        <td className="py-3 px-4 text-center font-mono text-muted-foreground">{idx + 1}</td>
-                        <td className="py-3 px-4 font-medium text-foreground">
+                      <tr key={row.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                        <td className="py-3.5 px-4 text-center font-mono text-muted-foreground">
+                          {(reportPage - 1) * reportPageSize + idx + 1}
+                        </td>
+                        <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">
                           <div className="font-mono font-semibold">{row.date}</div>
                           <div className="text-[10px] text-muted-foreground">{row.shiftName}</div>
                         </td>
-                        <td className="py-3 px-4 font-mono text-foreground font-medium">{row.areaName}</td>
-                        <td className="py-3 px-4 text-right font-mono text-muted-foreground">{row.plannedMin} m</td>
-                        <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400 font-semibold">
+                        <td className="py-3.5 px-4 font-mono text-foreground font-medium whitespace-nowrap">{row.areaName}</td>
+                        <td className="py-3.5 px-4 text-right font-mono text-muted-foreground whitespace-nowrap">{row.plannedMin} m</td>
+                        <td className="py-3.5 px-4 text-right font-mono text-rose-600 dark:text-rose-400 font-semibold whitespace-nowrap">
                           {Math.round(row.downtimeMs / 60_000)} m
                         </td>
-                        <td className="py-3 px-4 text-center font-mono">
+                        <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap">
                           <span className="text-foreground font-bold">{row.goodCount}</span>
                           <span className="text-muted-foreground"> / {row.totalCount}</span>
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-foreground">
+                        <td className="py-3.5 px-4 text-right font-mono text-foreground whitespace-nowrap">
                           {(row.oee.availability * 100).toFixed(1)}%
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-foreground">
+                        <td className="py-3.5 px-4 text-right font-mono text-foreground whitespace-nowrap">
                           {(row.oee.performance * 100).toFixed(1)}%
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-foreground">
+                        <td className="py-3.5 px-4 text-right font-mono text-foreground whitespace-nowrap">
                           {(row.oee.quality * 100).toFixed(1)}%
                         </td>
-                        <td className="py-3 px-4 text-center font-mono">
+                        <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-black border ${
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black border ${
                               oeePct >= 85
                                 ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                                 : oeePct >= 65
@@ -757,56 +879,98 @@ function ReportsPage() {
           {/* 4. Log Detail Table */}
           {activeReport === "log-detail" && (
             <table className="w-full text-left text-xs font-sans">
-              <thead className="border-b border-border bg-muted/60 font-mono text-[10px] uppercase text-muted-foreground">
+              <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-4 w-12 text-center">No</th>
-                  <th className="py-3 px-4">ID Stop</th>
-                  <th className="py-3 px-4">Waktu Mulai (WIB)</th>
-                  <th className="py-3 px-4">Stasiun</th>
-                  <th className="py-3 px-4">Kategori</th>
-                  <th className="py-3 px-4 text-center">Tipe</th>
-                  <th className="py-3 px-4 text-right">Durasi</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                  <th className="py-3 px-4 text-center">Sumber</th>
-                  <th className="py-3 px-4">Pelapor</th>
-                  <th className="py-3 px-4">Catatan</th>
+                  <th className="py-3.5 px-4 w-12 text-center">NO</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      ID STOP <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      WAKTU MULAI (WIB) <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      STASIUN <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      KATEGORI <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      TIPE <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      DURASI <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      STATUS <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      SUMBER <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      PELAPOR <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      CATATAN <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    </span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
-                {filteredLogDetail.length === 0 ? (
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+                {paginatedLogDetail.length === 0 ? (
                   <tr>
                     <td colSpan={11} className="py-12 text-center text-muted-foreground font-mono text-xs">
                       {t("rep.noData")}
                     </td>
                   </tr>
                 ) : (
-                  filteredLogDetail.map((row, idx) => (
-                    <tr key={row.id} className="hover:bg-muted/40 transition-colors">
-                      <td className="py-3 px-4 text-center font-mono text-muted-foreground">{idx + 1}</td>
-                      <td className="py-3 px-4 font-mono font-bold text-foreground">{row.id}</td>
-                      <td className="py-3 px-4 font-mono text-muted-foreground text-[11px]">
+                  paginatedLogDetail.map((row, idx) => (
+                    <tr key={row.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                      <td className="py-3.5 px-4 text-center font-mono text-muted-foreground">
+                        {(reportPage - 1) * reportPageSize + idx + 1}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-foreground whitespace-nowrap">{row.id}</td>
+                      <td className="py-3.5 px-4 font-mono text-muted-foreground text-[11px] whitespace-nowrap">
                         <div>{fmtDateTime(row.startMs)}</div>
                         {row.endMs && <div className="text-[10px] text-muted-foreground/70">s/d {fmtDateTime(row.endMs)}</div>}
                       </td>
-                      <td className="py-3 px-4 font-medium text-foreground">{row.stationName}</td>
-                      <td className="py-3 px-4 text-foreground">{row.categoryName}</td>
-                      <td className="py-3 px-4 text-center font-mono">
+                      <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">{row.stationName}</td>
+                      <td className="py-3.5 px-4 text-foreground whitespace-nowrap">{row.categoryName}</td>
+                      <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap">
                         {row.isBreakdown ? (
-                          <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                             BREAKDOWN
                           </span>
                         ) : (
-                          <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border">
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border">
                             PLANNED
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-foreground">
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-foreground whitespace-nowrap">
                         {fmtDuration(row.durationMs)}
                       </td>
-                      <td className="py-3 px-4 text-center font-mono">
+                      <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap">
                         <span
-                          className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${
+                          className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase ${
                             row.status === "open"
                               ? "bg-rose-500/20 text-rose-500 border-rose-500/40 animate-pulse"
                               : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
@@ -815,13 +979,13 @@ function ReportsPage() {
                           {row.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-center font-mono text-[10px]">
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-muted-foreground uppercase font-semibold">
+                      <td className="py-3.5 px-4 text-center font-mono text-[10px] whitespace-nowrap">
+                        <span className="rounded bg-muted px-2 py-0.5 text-muted-foreground uppercase font-semibold">
                           {row.source}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-mono text-muted-foreground">{row.reportedBy}</td>
-                      <td className="py-3 px-4 text-muted-foreground max-w-[200px] truncate" title={row.note}>
+                      <td className="py-3.5 px-4 font-mono text-muted-foreground whitespace-nowrap">{row.reportedBy}</td>
+                      <td className="py-3.5 px-4 text-muted-foreground max-w-[200px] truncate" title={row.note}>
                         {row.note || "-"}
                       </td>
                     </tr>
@@ -831,6 +995,23 @@ function ReportsPage() {
             </table>
           )}
         </div>
+
+        {/* Pagination Bar */}
+        <TablePagination
+          page={reportPage}
+          pageSize={reportPageSize}
+          totalItems={
+            activeReport === "stop-summary"
+              ? filteredStopSummary.length
+              : activeReport === "mttr-mtbf"
+              ? filteredMttr.length
+              : activeReport === "oee"
+              ? filteredOee.length
+              : filteredLogDetail.length
+          }
+          onPageChange={setReportPage}
+          onPageSizeChange={setReportPageSize}
+        />
       </div>
     </div>
   );
