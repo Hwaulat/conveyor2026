@@ -9,6 +9,7 @@ export type Conveyor = { id: string; areaId: string; name: string };
 
 export type Station = {
   id: string;
+  code?: string | undefined;
   areaId: string;
   conveyorId: string;
   name: string;

@@ -55,12 +55,12 @@ export function createSeedData(): AppState {
   ];
 
   const stations: Station[] = [
-    { id: "st-1", areaId: "area-1", conveyorId: "cv-1", name: "ST-01 Stamping & Press", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-2", areaId: "area-1", conveyorId: "cv-1", name: "ST-02 Robotic Welding", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-3", areaId: "area-1", conveyorId: "cv-1", name: "ST-03 Automated Painting", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-4", areaId: "area-1", conveyorId: "cv-2", name: "ST-04 Main Assembly", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-5", areaId: "area-1", conveyorId: "cv-2", name: "ST-05 Optical Quality Inspection", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-6", areaId: "area-1", conveyorId: "cv-2", name: "ST-06 Packaging & Dispatch", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-1", code: "ST-01", areaId: "area-1", conveyorId: "cv-1", name: "Stamping & Press", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-2", code: "ST-02", areaId: "area-1", conveyorId: "cv-1", name: "Robotic Welding", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-3", code: "ST-03", areaId: "area-1", conveyorId: "cv-1", name: "Automated Painting", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-4", code: "ST-04", areaId: "area-1", conveyorId: "cv-2", name: "Main Assembly", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-5", code: "ST-05", areaId: "area-1", conveyorId: "cv-2", name: "Optical Quality Inspection", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-6", code: "ST-06", areaId: "area-1", conveyorId: "cv-2", name: "Packaging & Dispatch", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
   ];
 
   const categories: Category[] = [
@@ -585,11 +585,47 @@ export const store = {
     emitChange();
   },
 
+  // Area & Conveyor Helpers
+  ensureArea: (name: string): Area => {
+    const trimmed = name.trim();
+    const existing = currentState.areas.find((a) => a.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    const newArea: Area = {
+      id: `area-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      name: trimmed,
+    };
+    currentState = {
+      ...currentState,
+      areas: [...currentState.areas, newArea],
+    };
+    emitChange();
+    return newArea;
+  },
+
+  ensureConveyor: (name: string, areaId: string): Conveyor => {
+    const trimmed = name.trim();
+    const existing = currentState.conveyors.find(
+      (c) => c.name.toLowerCase() === trimmed.toLowerCase() && c.areaId === areaId,
+    );
+    if (existing) return existing;
+    const newConveyor: Conveyor = {
+      id: `cv-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      areaId,
+      name: trimmed,
+    };
+    currentState = {
+      ...currentState,
+      conveyors: [...currentState.conveyors, newConveyor],
+    };
+    emitChange();
+    return newConveyor;
+  },
+
   // Station Actions
-  addStation: (st: Omit<Station, "id">): Station => {
+  addStation: (st: Omit<Station, "id"> & { id?: string }): Station => {
     const newStation: Station = {
       ...st,
-      id: `st-${Date.now()}`,
+      id: st.id || `st-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     };
     currentState = {
       ...currentState,
@@ -610,6 +646,51 @@ export const store = {
     };
     emitChange();
     return newStation;
+  },
+
+  addStationsBatch: (stationsToAdd: Array<Omit<Station, "id"> & { id?: string }>): Station[] => {
+    const created: Station[] = [];
+    const newLiveMap = { ...currentState.stationLive };
+    const now = Date.now();
+
+    for (const [i, item] of stationsToAdd.entries()) {
+      const id = item.id || `st-${now + i}-${Math.floor(Math.random() * 1000)}`;
+      const newStation: Station = {
+        ...item,
+        id,
+      };
+      created.push(newStation);
+      newLiveMap[newStation.id] = {
+        stationId: newStation.id,
+        state: "running",
+        speed: 1.2,
+        lastStartMs: now,
+        lastStopMs: now - 3600000,
+        totalRunMs: 0,
+        stoppedSinceMs: null,
+        lastSeenMs: now,
+      };
+    }
+
+    currentState = {
+      ...currentState,
+      stations: [...currentState.stations, ...created],
+      stationLive: newLiveMap,
+    };
+    emitChange();
+    return created;
+  },
+
+  deleteStation: (id: string) => {
+    const nextStations = currentState.stations.filter((s) => s.id !== id);
+    const nextLive = { ...currentState.stationLive };
+    delete nextLive[id];
+    currentState = {
+      ...currentState,
+      stations: nextStations,
+      stationLive: nextLive,
+    };
+    emitChange();
   },
 
   updateStation: (id: string, updates: Partial<Station>) => {
