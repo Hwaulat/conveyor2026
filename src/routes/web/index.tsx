@@ -5,14 +5,11 @@ import {
   Clock,
   TrendingDown,
   Activity,
-  CheckCircle2,
-  AlertTriangle,
-  Play,
-  Square,
-  BarChart2,
   Layers,
   ArrowUpRight,
   X,
+  Building2,
+  Calendar,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -29,7 +26,7 @@ import {
 } from "recharts";
 import { useI18n } from "../../lib/i18n";
 import { useTheme } from "../../lib/theme";
-import { useAppStore, store } from "../../lib/store";
+import { useAppStore } from "../../lib/store";
 import {
   mttrMs,
   mtbfMs,
@@ -40,7 +37,6 @@ import {
   stopDurationMs,
 } from "../../lib/calc";
 import { fmtDuration, fmtMinutes, dayStartMs } from "../../lib/format";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/web/")({
   head: () => ({
@@ -52,56 +48,120 @@ export const Route = createFileRoute("/web/")({
   component: DashboardPage,
 });
 
-type Granularity = "day" | "week" | "month";
-
 function DashboardPage() {
   const { t } = useI18n();
   const { theme } = useTheme();
   const appState = useAppStore();
-  const [granularity, setGranularity] = useState<Granularity>("day");
-  const [selectedStationId, setSelectedStationId] = useState<string>("all");
   const nowMs = Date.now();
-
   const isDark = theme === "dark";
 
-  // Find selected station details if not "all"
+  // Filter 1: Area Filter (di samping kiri filter station)
+  const [selectedAreaId, setSelectedAreaId] = useState<string>("all");
+
+  // Filter 2: Station Filter (mengikuti area yang dipilih)
+  const [selectedStationId, setSelectedStationId] = useState<string>("all");
+
+  // Filter 3: Date Range (menggantikan tablist hari, minggu, bulan)
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date(Date.now() - 6 * 86_400_000);
+    return d.toISOString().slice(0, 10);
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    return new Date().toISOString().slice(0, 10);
+  });
+  const [datePreset, setDatePreset] = useState<"today" | "7d" | "30d" | "thisMonth" | "custom">("7d");
+
+  // Available stations filtered by selected area
+  const availableStations = useMemo(() => {
+    if (selectedAreaId === "all") return appState.stations;
+    return appState.stations.filter((s) => s.areaId === selectedAreaId);
+  }, [selectedAreaId, appState.stations]);
+
+  // Handle area change: resets station if current station does not belong to the newly selected area
+  const handleAreaChange = (newAreaId: string) => {
+    setSelectedAreaId(newAreaId);
+    if (newAreaId !== "all" && selectedStationId !== "all") {
+      const match = appState.stations.some(
+        (s) => s.id === selectedStationId && s.areaId === newAreaId,
+      );
+      if (!match) {
+        setSelectedStationId("all");
+      }
+    }
+  };
+
+  // Quick Presets Handler for Date Range
+  const handlePresetChange = (preset: "today" | "7d" | "30d" | "thisMonth" | "custom") => {
+    setDatePreset(preset);
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    if (preset === "today") {
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else if (preset === "7d") {
+      const past = new Date(Date.now() - 6 * 86_400_000);
+      setStartDate(past.toISOString().slice(0, 10));
+      setEndDate(todayStr);
+    } else if (preset === "30d") {
+      const past = new Date(Date.now() - 29 * 86_400_000);
+      setStartDate(past.toISOString().slice(0, 10));
+      setEndDate(todayStr);
+    } else if (preset === "thisMonth") {
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      setStartDate(`${year}-${month}-01`);
+      setEndDate(todayStr);
+    }
+  };
+
+  // Find selected area and station object
+  const selectedArea = useMemo(() => {
+    return selectedAreaId === "all" ? null : appState.areas.find((a) => a.id === selectedAreaId) ?? null;
+  }, [selectedAreaId, appState.areas]);
+
   const selectedStation = useMemo(() => {
     return selectedStationId === "all" ? null : appState.stations.find((s) => s.id === selectedStationId) ?? null;
   }, [selectedStationId, appState.stations]);
 
-  // Filter stops by granularity period AND station filter
-  const periodStartMs = useMemo(() => {
-    if (granularity === "day") return dayStartMs(nowMs);
-    if (granularity === "week") return nowMs - 7 * 86_400_000;
-    return nowMs - 30 * 86_400_000;
-  }, [granularity, nowMs]);
+  // Date range timestamps in epoch ms
+  const { rangeStartMs, rangeEndMs, daysCount } = useMemo(() => {
+    const sDate = startDate || new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10);
+    const eDate = endDate || new Date().toISOString().slice(0, 10);
+    const start = Date.parse(`${sDate}T00:00:00+07:00`) || (nowMs - 7 * 86_400_000);
+    const end = (Date.parse(`${eDate}T23:59:59.999+07:00`) || nowMs);
+    const days = Math.max(1, Math.round((end - start) / 86_400_000));
+    return { rangeStartMs: start, rangeEndMs: end, daysCount: days };
+  }, [startDate, endDate, nowMs]);
 
+  // Filter stops by Date Range, Area, and Station
   const filteredStops = useMemo(() => {
     return appState.stops.filter((s) => {
-      const matchPeriod = s.startMs >= periodStartMs;
+      const matchPeriod = s.startMs >= rangeStartMs && s.startMs <= rangeEndMs;
+      const matchArea = selectedAreaId === "all" ? true : s.areaId === selectedAreaId;
       const matchStation = selectedStationId === "all" ? true : s.stationId === selectedStationId;
-      return matchPeriod && matchStation;
+      return matchPeriod && matchArea && matchStation;
     });
-  }, [appState.stops, periodStartMs, selectedStationId]);
+  }, [appState.stops, rangeStartMs, rangeEndMs, selectedAreaId, selectedStationId]);
 
-  // Stops today specifically for the today KPI card (with station filter)
+  // Stops today specifically for the secondary info
   const todayStartMs = dayStartMs(nowMs);
   const stopsToday = useMemo(() => {
     return appState.stops.filter((s) => {
       const matchToday = s.startMs >= todayStartMs;
+      const matchArea = selectedAreaId === "all" ? true : s.areaId === selectedAreaId;
       const matchStation = selectedStationId === "all" ? true : s.stationId === selectedStationId;
-      return matchToday && matchStation;
+      return matchToday && matchArea && matchStation;
     });
-  }, [appState.stops, todayStartMs, selectedStationId]);
+  }, [appState.stops, todayStartMs, selectedAreaId, selectedStationId]);
 
   // Calculate KPIs
-  const totalDowntimeTodayMs = useMemo(() => {
-    return stopsToday.reduce((acc, s) => acc + stopDurationMs(s, nowMs), 0);
-  }, [stopsToday, nowMs]);
+  const totalDowntimeMs = useMemo(() => {
+    return filteredStops.reduce((acc, s) => acc + stopDurationMs(s, nowMs), 0);
+  }, [filteredStops, nowMs]);
 
-  const averageStopTodayMs = useMemo(() => {
-    return avgStopMs(stopsToday, nowMs);
-  }, [stopsToday, nowMs]);
+  const avgStopDurationMs = useMemo(() => {
+    return avgStopMs(filteredStops, nowMs);
+  }, [filteredStops, nowMs]);
 
   // MTTR in ms
   const currentMttrMs = useMemo(() => {
@@ -110,27 +170,15 @@ function DashboardPage() {
 
   // MTBF in ms
   const currentMtbfMs = useMemo(() => {
-    const totalPlannedMs = (granularity === "day" ? 1 : granularity === "week" ? 7 : 30) * 16 * 3_600_000;
+    const totalPlannedMs = daysCount * 16 * 3_600_000;
     const opTime = operatingTimeMs(totalPlannedMs, filteredStops, appState.categories, nowMs);
     return mtbfMs(filteredStops, appState.categories, opTime);
-  }, [filteredStops, appState.categories, granularity, nowMs]);
+  }, [filteredStops, appState.categories, daysCount, nowMs]);
 
-  const stoppedStations = useMemo(() => {
-    const stationsToCheck = selectedStationId === "all"
-      ? appState.stations
-      : appState.stations.filter((s) => s.id === selectedStationId);
-    return stationsToCheck.filter((s) => appState.stationLive[s.id]?.state === "stopped");
-  }, [appState.stations, appState.stationLive, selectedStationId]);
-
-  const liveStationStatus = useMemo(() => {
-    if (selectedStationId === "all") return null;
-    return appState.stationLive[selectedStationId] ?? null;
-  }, [selectedStationId, appState.stationLive]);
-
-  // Stop Frequency by Station Data for chart
+  // Stop Frequency by Station Data for chart (filtered by area & station)
   const stationFrequencyData = useMemo(() => {
     const stations = selectedStationId === "all"
-      ? appState.stations
+      ? (selectedAreaId === "all" ? appState.stations : appState.stations.filter((st) => st.areaId === selectedAreaId))
       : appState.stations.filter((st) => st.id === selectedStationId);
 
     return stations.map((st) => {
@@ -139,13 +187,13 @@ function DashboardPage() {
         .filter((s) => s.stationId === st.id)
         .reduce((acc, s) => acc + stopDurationMs(s, nowMs), 0);
       return {
-        name: st.name.split(" ")[0] || st.name,
+        name: st.code || st.name.split(" ")[0] || st.name,
         fullName: st.name,
         count,
         durationMin: Math.round(totalDuration / 60_000),
       };
     });
-  }, [appState.stations, filteredStops, nowMs, selectedStationId]);
+  }, [appState.stations, filteredStops, nowMs, selectedAreaId, selectedStationId]);
 
   // Pareto Downtime by Category
   const paretoData = useMemo(() => {
@@ -166,41 +214,55 @@ function DashboardPage() {
     });
   }, [filteredStops, appState.categories, nowMs]);
 
-  // MTTR & MTBF Trend Data (7 recent days) with station filter
+  // MTTR & MTBF Trend Data across the selected date range
   const trendData = useMemo(() => {
-    const days = 7;
+    const startD = new Date(`${startDate}T00:00:00+07:00`);
+    const endD = new Date(`${endDate}T00:00:00+07:00`);
+    const diffDays = Math.max(1, Math.round((endD.getTime() - startD.getTime()) / 86_400_000) + 1);
+    const daysToRender = Math.min(31, diffDays);
+    const step = Math.max(1, Math.floor(diffDays / daysToRender));
     const result = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const dStart = dayStartMs(nowMs - i * 86_400_000);
+
+    for (let i = 0; i < diffDays; i += step) {
+      const dStart = startD.getTime() + i * 86_400_000;
       const dEnd = dStart + 86_400_000;
       const dStops = appState.stops.filter((s) => {
         const matchTime = s.startMs >= dStart && s.startMs < dEnd;
+        const matchArea = selectedAreaId === "all" ? true : s.areaId === selectedAreaId;
         const matchStation = selectedStationId === "all" ? true : s.stationId === selectedStationId;
-        return matchTime && matchStation;
+        return matchTime && matchArea && matchStation;
       });
       const mttr = mttrMs(dStops, appState.categories);
       const op = operatingTimeMs(16 * 3_600_000, dStops, appState.categories, dEnd);
       const mtbf = mtbfMs(dStops, appState.categories, op);
-      const dLabel = new Date(dStart).toLocaleDateString("id-ID", { weekday: "short", day: "numeric" });
+      const curDate = new Date(dStart);
+      const dLabel = `${curDate.getDate()}/${curDate.getMonth() + 1}`;
       result.push({
         date: dLabel,
         mttrMin: mttr ? Math.round(mttr / 60_000) : 0,
-        mtbfHour: mtbf ? Number((mtbf / 3_600_000).toFixed(1)) : 0,
+        mtbfHour: mtbf ? Number((mtbf / 3_600_000).toFixed(1)) : 16,
       });
     }
     return result;
-  }, [appState.stops, appState.categories, nowMs, selectedStationId]);
+  }, [startDate, endDate, appState.stops, appState.categories, selectedAreaId, selectedStationId]);
 
-  // OEE Calculation from recent production records (affected by station filter)
+  // OEE Calculation filtered by Area and Date Range
   const oeeSummary = useMemo(() => {
     if (appState.productionRecords.length === 0) {
       return { availability: 0.88, performance: 0.85, quality: 0.98, oee: 0.73 };
     }
-    const recordsToUse = selectedStation
+    const areaFilteredRecords = selectedAreaId !== "all"
+      ? appState.productionRecords.filter((r) => r.areaId === selectedAreaId)
+      : selectedStation
       ? appState.productionRecords.filter((r) => r.areaId === selectedStation.areaId)
       : appState.productionRecords;
 
-    const recentRecords = (recordsToUse.length > 0 ? recordsToUse : appState.productionRecords).slice(-7);
+    const inRangeRecords = areaFilteredRecords.filter((rec) => {
+      const recMs = Date.parse(`${rec.date}T00:00:00+07:00`);
+      return recMs >= rangeStartMs && recMs <= rangeEndMs;
+    });
+
+    const recentRecords = inRangeRecords.length > 0 ? inRangeRecords : areaFilteredRecords.slice(-7);
     let totalAvail = 0;
     let totalPerf = 0;
     let totalQual = 0;
@@ -211,8 +273,9 @@ function DashboardPage() {
       const recDateEnd = recDateStart + 86_400_000;
       const dayStops = appState.stops.filter((s) => {
         const matchDate = s.startMs >= recDateStart && s.startMs < recDateEnd;
+        const matchArea = selectedAreaId === "all" ? true : s.areaId === selectedAreaId;
         const matchStation = selectedStationId === "all" ? true : s.stationId === selectedStationId;
-        return matchDate && matchStation;
+        return matchDate && matchArea && matchStation;
       });
       const dt = dayStops.reduce((sum, s) => sum + stopDurationMs(s, recDateEnd), 0);
       const calc = computeOee(rec, dt);
@@ -222,25 +285,14 @@ function DashboardPage() {
       totalOee += calc.oee;
     }
 
-    const n = recentRecords.length;
+    const n = recentRecords.length || 1;
     return {
       availability: totalAvail / n,
       performance: totalPerf / n,
       quality: totalQual / n,
       oee: totalOee / n,
     };
-  }, [appState.productionRecords, appState.stops, selectedStation, selectedStationId]);
-
-  const handleStationClick = (stId: string) => {
-    const live = appState.stationLive[stId];
-    if (live?.state === "running") {
-      store.simulateStopTrigger(stId, "cat-2", "form");
-      toast.error(`Stop manual dipicu pada stasiun ${stId}`);
-    } else if (live?.state === "stopped") {
-      store.simulateResumeStation(stId);
-      toast.success(`Stasiun ${stId} dilanjutkan kembali`);
-    }
-  };
+  }, [appState.productionRecords, appState.stops, selectedAreaId, selectedStation, selectedStationId, rangeStartMs, rangeEndMs]);
 
   const chartTooltipStyle = isDark
     ? { backgroundColor: "#09090b", border: "1px solid #27272a", borderRadius: "8px", color: "#ffffff" }
@@ -251,16 +303,33 @@ function DashboardPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Top Banner: Title & Granularity / Station Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Top Banner: Title & Filter Row */}
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
               {t("dash.title")}
             </h1>
+
+            {/* Active Filter Badges */}
+            {selectedArea && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-0.5 font-mono text-xs font-semibold text-cyan-600 dark:text-cyan-400">
+                <Building2 className="h-3 w-3" />
+                <span>Area: {selectedArea.name}</span>
+                <button
+                  onClick={() => handleAreaChange("all")}
+                  className="rounded-full hover:bg-cyan-500/20 p-0.5 transition-colors"
+                  title="Hapus filter area"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+
             {selectedStation && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-mono text-xs font-semibold text-primary">
-                <span>{selectedStation.name}</span>
+                <Layers className="h-3 w-3" />
+                <span>Stasiun: {selectedStation.name}</span>
                 <button
                   onClick={() => setSelectedStationId("all")}
                   className="rounded-full hover:bg-primary/20 p-0.5 transition-colors"
@@ -273,14 +342,36 @@ function DashboardPage() {
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             {selectedStation
-              ? `Menampilkan analisis kinerja & metrik untuk stasiun ${selectedStation.name} (${selectedStation.id})`
+              ? `Menampilkan analisis kinerja & metrik untuk ${selectedStation.name} (${selectedStation.code || selectedStation.id})`
+              : selectedArea
+              ? `Menampilkan analisis kinerja untuk ${selectedArea.name}`
               : t("dash.subtitle")}
           </p>
         </div>
 
-        {/* Filter Controls Row: Station Filter (Left) + Granularity (Right) */}
-        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
-          {/* Station Filter (posisi di samping kiri tablist per day, week, month) */}
+        {/* Filter Controls Row: Area Filter (Left) + Station Filter + Date Range Filter */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start xl:self-auto">
+          {/* 1. Area Filter (di samping kiri filter station) */}
+          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 font-mono text-xs shadow-2xs">
+            <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="text-muted-foreground whitespace-nowrap">Area:</span>
+            <select
+              value={selectedAreaId}
+              onChange={(e) => handleAreaChange(e.target.value)}
+              className="bg-transparent text-foreground font-semibold font-mono focus:outline-none cursor-pointer pr-1 text-xs"
+            >
+              <option value="all" className="bg-card text-foreground">
+                Semua Area ({appState.areas.length})
+              </option>
+              {appState.areas.map((a) => (
+                <option key={a.id} value={a.id} className="bg-card text-foreground">
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 2. Station Filter (opsi stasiun mengikuti area yang dipilih) */}
           <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 font-mono text-xs shadow-2xs">
             <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <span className="text-muted-foreground whitespace-nowrap">{t("dash.stationFilter")}:</span>
@@ -290,163 +381,92 @@ function DashboardPage() {
               className="bg-transparent text-foreground font-semibold font-mono focus:outline-none cursor-pointer pr-1 text-xs"
             >
               <option value="all" className="bg-card text-foreground">
-                {t("dash.allStations")} ({appState.stations.length})
+                {t("dash.allStations")} ({availableStations.length})
               </option>
-              {appState.stations.map((st) => (
+              {availableStations.map((st) => (
                 <option key={st.id} value={st.id} className="bg-card text-foreground">
-                  {st.name} ({st.id})
+                  {st.name} ({st.code || st.id})
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Granularity Selector */}
-          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card p-1 font-mono text-xs shadow-2xs">
-            <span className="text-muted-foreground px-2">{t("dash.granularity")}:</span>
-            {(["day", "week", "month"] as Granularity[]).map((g) => (
-              <button
-                key={g}
-                onClick={() => setGranularity(g)}
-                className={`px-3 py-1 rounded transition-colors ${
-                  granularity === g
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
-              >
-                {g === "day" ? t("dash.gran.day") : g === "week" ? t("dash.gran.week") : t("dash.gran.month")}
-              </button>
-            ))}
+          {/* 3. Date Range Selector (menggantikan tablist hari, minggu, bulan) */}
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5 font-mono text-xs shadow-2xs">
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Calendar className="h-3.5 w-3.5 shrink-0" />
+              <span className="whitespace-nowrap">Periode:</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setDatePreset("custom");
+                }}
+                className="bg-background/80 border border-border rounded px-2 py-0.5 text-foreground font-mono text-xs focus:outline-none focus:border-ring cursor-pointer"
+              />
+              <span className="text-muted-foreground font-bold">s/d</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setDatePreset("custom");
+                }}
+                className="bg-background/80 border border-border rounded px-2 py-0.5 text-foreground font-mono text-xs focus:outline-none focus:border-ring cursor-pointer"
+              />
+            </div>
+
+            {/* Quick Presets Dropdown */}
+            <select
+              value={datePreset}
+              onChange={(e) => handlePresetChange(e.target.value as any)}
+              className="bg-muted/60 border border-border text-foreground font-mono text-[11px] font-semibold rounded px-2 py-0.5 focus:outline-none cursor-pointer ml-1"
+            >
+              <option value="today">Hari Ini</option>
+              <option value="7d">7 Hari Terakhir</option>
+              <option value="30d">30 Hari Terakhir</option>
+              <option value="thisMonth">Bulan Ini</option>
+              <option value="custom">Kustom</option>
+            </select>
           </div>
-        </div>
-      </div>
-
-      {/* Live Station Telemetry Strip */}
-      <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-mono text-xs uppercase tracking-wider text-foreground font-bold">
-              {selectedStation ? `Telemetri Live (${selectedStation.name})` : t("dash.liveNow")}
-            </span>
-            <span className="text-xs text-muted-foreground hidden sm:inline">
-              (Klik stasiun untuk simulasi stop/resume)
-            </span>
-          </div>
-          <span className="font-mono text-xs text-muted-foreground">
-            {stoppedStations.length > 0 ? (
-              <span className="text-red-600 dark:text-red-400 font-bold">{stoppedStations.length} BERHENTI</span>
-            ) : (
-              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">SEMUA RUNNING</span>
-            )}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          {appState.stations.map((station) => {
-            const live = appState.stationLive[station.id];
-            const isStopped = live?.state === "stopped";
-            const isNoSignal = live?.state === "nosignal";
-            const isStationFiltered = selectedStationId === station.id;
-            const stoppedDuration = isStopped && live?.stoppedSinceMs ? nowMs - live.stoppedSinceMs : 0;
-
-            return (
-              <button
-                key={station.id}
-                onClick={() => handleStationClick(station.id)}
-                className={`relative flex flex-col justify-between p-3 rounded-lg border text-left transition-all hover:scale-[1.02] cursor-pointer shadow-2xs ${
-                  isStationFiltered
-                    ? "ring-2 ring-primary border-primary bg-primary/5 dark:bg-primary/10"
-                    : isStopped
-                    ? "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400 ring-1 ring-red-500/40"
-                    : isNoSignal
-                    ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                    : "border-border bg-muted/20 hover:border-primary/30 text-foreground"
-                } ${selectedStationId !== "all" && !isStationFiltered ? "opacity-65 hover:opacity-100" : ""}`}
-              >
-                <div className="flex items-start justify-between gap-1 mb-2">
-                  <div className="truncate">
-                    <span className="font-mono text-[11px] font-bold tracking-tight text-foreground block truncate">
-                      {station.name.split(" ")[0]}
-                    </span>
-                    {isStationFiltered && (
-                      <span className="text-[9px] font-mono text-primary font-bold">● FILTER</span>
-                    )}
-                  </div>
-                  <span
-                    className={`h-2 w-2 rounded-full shrink-0 ${
-                      isStopped
-                        ? "bg-red-500 animate-ping"
-                        : isNoSignal
-                        ? "bg-amber-400"
-                        : "bg-emerald-500"
-                    }`}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[10px] font-mono">
-                    <span className="text-muted-foreground">Status:</span>
-                    <span
-                      className={`font-bold uppercase ${
-                        isStopped ? "text-red-600 dark:text-red-400" : isNoSignal ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
-                      }`}
-                    >
-                      {isStopped ? "STOP" : isNoSignal ? "NO SIG" : "RUN"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] font-mono">
-                    <span className="text-muted-foreground">Speed:</span>
-                    <span className="text-foreground font-semibold">
-                      {isStopped ? "0.00" : live ? live.speed.toFixed(2) : "0.00"} {station.speedUnit}
-                    </span>
-                  </div>
-
-                  {isStopped && (
-                    <div className="pt-1 mt-1 border-t border-red-500/20 text-[10px] font-mono text-red-600 dark:text-red-400 font-bold flex items-center justify-between">
-                      <span>Downtime:</span>
-                      <span>{fmtDuration(stoppedDuration)}</span>
-                    </div>
-                  )}
-                </div>
-              </button>
-            );
-          })}
         </div>
       </div>
 
       {/* 6 Metric KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* 1. Stops Today */}
+        {/* 1. Stops in Date Range */}
         <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.stopsToday")}</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">Total Stop</span>
             <AlertOctagon className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="mt-2">
             <span className="font-mono text-3xl font-bold text-foreground tracking-tight">
-              {stopsToday.length}
+              {filteredStops.length}
             </span>
             <span className="text-xs text-muted-foreground ml-1">kali</span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-1">
-            {filteredStops.length} dalam {granularity}
+            {stopsToday.length} stop hari ini
           </div>
         </div>
 
-        {/* 2. Total Downtime Today */}
+        {/* 2. Total Downtime in Date Range */}
         <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.downtimeToday")}</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">Total Downtime</span>
             <Clock className="h-4 w-4 text-amber-500" />
           </div>
           <div className="mt-2">
             <span className="font-mono text-2xl font-bold text-amber-600 dark:text-amber-400 tracking-tight">
-              {fmtDuration(totalDowntimeTodayMs)}
+              {fmtDuration(totalDowntimeMs)}
             </span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-1">
-            {fmtMinutes(totalDowntimeTodayMs)} akumulasi
+            {fmtMinutes(totalDowntimeMs)} akumulasi
           </div>
         </div>
 
@@ -458,11 +478,11 @@ function DashboardPage() {
           </div>
           <div className="mt-2">
             <span className="font-mono text-2xl font-bold text-foreground tracking-tight">
-              {averageStopTodayMs ? fmtDuration(averageStopTodayMs) : "0s"}
+              {avgStopDurationMs ? fmtDuration(avgStopDurationMs) : "0s"}
             </span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-1">
-            Per kejadian hari ini
+            Per kejadian di rentang ini
           </div>
         </div>
 
@@ -478,7 +498,7 @@ function DashboardPage() {
             </span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-1">
-            Mean Time to Repair
+            Target: &lt; 20m per breakdown
           </div>
         </div>
 
@@ -486,7 +506,7 @@ function DashboardPage() {
         <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-1">
             <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.mtbf")}</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <Clock className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2">
             <span className="font-mono text-2xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
@@ -494,128 +514,167 @@ function DashboardPage() {
             </span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-1">
-            Mean Time Between Failures
+            Target: &gt; 45h antar kerusakan
           </div>
         </div>
 
-        {/* 6. Stations Stopped Currently / Status of Selected Station */}
-        <div
-          className={`rounded-xl border p-4 flex flex-col justify-between transition-colors shadow-xs ${
-            stoppedStations.length > 0
-              ? "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400"
-              : "border-border bg-card"
-          }`}
-        >
+        {/* 6. Overall OEE */}
+        <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">
-              {selectedStation ? `Status ${selectedStation.name.split(" ")[0]}` : t("dash.stationsStopped")}
-            </span>
-            <AlertTriangle className={`h-4 w-4 ${stoppedStations.length > 0 ? "text-red-500" : "text-muted-foreground"}`} />
+            <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.oee")}</span>
+            <span
+              className={`h-2 w-2 rounded-full ${
+                oeeSummary.oee >= 0.85 ? "bg-emerald-500" : oeeSummary.oee >= 0.7 ? "bg-amber-400" : "bg-red-500"
+              }`}
+            />
           </div>
           <div className="mt-2">
-            {selectedStation ? (
-              <span className={`font-mono text-2xl font-bold tracking-tight uppercase ${
-                liveStationStatus?.state === "stopped"
-                  ? "text-red-600 dark:text-red-400"
-                  : liveStationStatus?.state === "nosignal"
-                  ? "text-amber-600 dark:text-amber-400"
-                  : "text-emerald-600 dark:text-emerald-400"
-              }`}>
-                {liveStationStatus?.state === "stopped" ? "STOP" : liveStationStatus?.state === "nosignal" ? "NO SIG" : "RUNNING"}
-              </span>
-            ) : (
-              <>
-                <span className={`font-mono text-3xl font-bold tracking-tight ${stoppedStations.length > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                  {stoppedStations.length}
-                </span>
-                <span className="text-xs text-muted-foreground ml-1">/ {appState.stations.length}</span>
-              </>
-            )}
+            <span className="font-mono text-2xl font-bold text-foreground tracking-tight">
+              {(oeeSummary.oee * 100).toFixed(1)}%
+            </span>
           </div>
-          <div className="text-[10px] font-mono text-muted-foreground mt-1 truncate">
-            {selectedStation
-              ? `Speed: ${liveStationStatus ? liveStationStatus.speed.toFixed(2) : "0.00"} ${selectedStation.speedUnit}`
-              : stoppedStations.length > 0
-              ? "Perlu tindakan segera"
-              : "Semua stasiun aktif"}
+          <div className="text-[10px] text-muted-foreground mt-1">
+            Avail: {(oeeSummary.availability * 100).toFixed(0)}% • Perf: {(oeeSummary.performance * 100).toFixed(0)}%
           </div>
         </div>
       </div>
 
-      {/* Charts Grid: MTTR/MTBF Trend & Frequency */}
+      {/* Row 1 Charts: Trend MTTR/MTBF & Pareto Causes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Chart 1: MTTR & MTBF Trend */}
-        <div className="rounded-xl border border-border bg-card p-5 flex flex-col shadow-xs">
+        {/* Trend MTTR / MTBF Chart */}
+        <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-display text-sm font-semibold text-foreground">
-                Tren MTTR & MTBF (7 Hari Terakhir) {selectedStation ? `— ${selectedStation.name}` : ""}
+                Tren MTTR & MTBF ({trendData.length} Titik Waktu)
               </h3>
               <p className="text-xs text-muted-foreground">
-                MTTR (Menit) vs MTBF (Jam operasional antar breakdown)
+                {selectedStation ? `Khusus stasiun ${selectedStation.name}` : selectedArea ? `Khusus area ${selectedArea.name}` : "Perbandingan durasi perbaikan vs waktu antar kejadian"}
               </p>
             </div>
           </div>
+
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
-                <XAxis dataKey="date" stroke={chartAxisStroke} fontSize={11} tickLine={false} />
-                <YAxis stroke={chartAxisStroke} fontSize={11} tickLine={false} />
-                <Tooltip
-                  contentStyle={chartTooltipStyle}
-                  labelStyle={{ fontWeight: "bold" }}
-                />
-                <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} opacity={0.6} />
+                <XAxis dataKey="date" stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
+                <YAxis yAxisId="left" stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
+                <YAxis yAxisId="right" orientation="right" stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
+                <Tooltip contentStyle={chartTooltipStyle} />
+                <Legend wrapperStyle={{ fontSize: "11px", fontFamily: "monospace" }} />
                 <Line
+                  yAxisId="left"
                   type="monotone"
                   dataKey="mttrMin"
-                  name="MTTR (menit)"
+                  name="MTTR (Menit)"
                   stroke="#f43f5e"
                   strokeWidth={2}
-                  dot={{ r: 3, fill: "#f43f5e" }}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
                 />
                 <Line
+                  yAxisId="right"
                   type="monotone"
                   dataKey="mtbfHour"
-                  name="MTBF (jam)"
+                  name="MTBF (Jam)"
                   stroke="#10b981"
                   strokeWidth={2}
-                  dot={{ r: 3, fill: "#10b981" }}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 2: Stop Frequency by Station */}
-        <div className="rounded-xl border border-border bg-card p-5 flex flex-col shadow-xs">
+        {/* Pareto Downtime by Category Chart */}
+        <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-display text-sm font-semibold text-foreground">
-                {selectedStation ? `Kejadian Line-Stop: ${selectedStation.name}` : t("dash.frequency")}
+                {t("dash.pareto")} — Penyebab Line Stop
               </h3>
               <p className="text-xs text-muted-foreground">
-                {selectedStation ? "Frekuensi dan durasi stasiun terpilih" : "Jumlah kejadian line-stop per stasiun"}
+                Downtime kumulatif berdasarkan kategori penyebab stop
               </p>
             </div>
           </div>
+
+          <div className="h-64 w-full">
+            {paretoData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground font-mono">
+                Tidak ada data stop pada filter ini
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={paretoData} margin={{ top: 10, right: 10, left: -10, bottom: 25 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} opacity={0.6} />
+                  <XAxis
+                    dataKey="name"
+                    stroke={chartAxisStroke}
+                    fontSize={10}
+                    fontFamily="monospace"
+                    interval={0}
+                    angle={-20}
+                    textAnchor="end"
+                  />
+                  <YAxis stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(val, name, item) => {
+                      if (name === "durationMin") return [`${val} Menit (${item.payload.count}×)`, "Durasi Stop"];
+                      return [val, name];
+                    }}
+                  />
+                  <Bar dataKey="durationMin" name="Durasi (Menit)" radius={[4, 4, 0, 0]}>
+                    {paretoData.map((_, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={index === 0 ? "#f43f5e" : index === 1 ? "#fb923c" : "#60a5fa"}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Frequency per Station + OEE Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Frequency per Station (2 cols on LG) */}
+        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-display text-sm font-semibold text-foreground">
+                {t("dash.frequency")} per Stasiun
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {selectedArea ? `Stasiun di area ${selectedArea.name}` : "Frekuensi kejadian stop pada masing-masing stasiun"}
+              </p>
+            </div>
+            <span className="font-mono text-xs text-muted-foreground">
+              Total {stationFrequencyData.reduce((acc, curr) => acc + curr.count, 0)} kejadian
+            </span>
+          </div>
+
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stationFrequencyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
-                <XAxis dataKey="name" stroke={chartAxisStroke} fontSize={11} tickLine={false} />
-                <YAxis stroke={chartAxisStroke} fontSize={11} tickLine={false} />
+              <BarChart data={stationFrequencyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} opacity={0.6} />
+                <XAxis dataKey="name" stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
+                <YAxis stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
                 <Tooltip
                   contentStyle={chartTooltipStyle}
-                  labelStyle={{ fontWeight: "bold" }}
-                  formatter={(val, name, item) => [`${val} kali (${item.payload.durationMin} min)`, "Frekuensi"]}
+                  formatter={(val, _, item) => [`${val} Kejadian (${item.payload.durationMin} m)`, item.payload.fullName]}
                 />
-                <Bar dataKey="count" fill="currentColor" radius={[4, 4, 0, 0]}>
-                  {stationFrequencyData.map((entry, index) => (
+                <Bar dataKey="count" name="Jumlah Kejadian" fill="#3b82f6" radius={[4, 4, 0, 0]}>
+                  {stationFrequencyData.map((entry) => (
                     <Cell
-                      key={`cell-${index}`}
-                      fill={entry.count >= 4 ? "#ef4444" : entry.count >= 2 ? "#f59e0b" : "#3b82f6"}
+                      key={`st-${entry.name}`}
+                      fill={entry.count > 3 ? "#f43f5e" : entry.count > 0 ? "#3b82f6" : "#71717a"}
                     />
                   ))}
                 </Bar>
@@ -623,62 +682,17 @@ function DashboardPage() {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
-
-      {/* Row 2: Pareto Downtime by Category & OEE Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pareto Downtime by Category (2 cols on LG) */}
-        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5 flex flex-col shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-display text-sm font-semibold text-foreground">
-                {selectedStation ? `Pareto Kategori: ${selectedStation.name}` : t("dash.pareto")}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Kategori penyebab stop terlama (prinsip Pareto 80/20)
-              </p>
-            </div>
-          </div>
-          {paretoData.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center p-8 text-muted-foreground text-sm font-mono">
-              {t("dash.noData")}
-            </div>
-          ) : (
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={paretoData.slice(0, 6)}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
-                  <XAxis type="number" stroke={chartAxisStroke} fontSize={11} tickLine={false} unit="m" />
-                  <YAxis type="category" dataKey="name" stroke={chartAxisStroke} fontSize={11} tickLine={false} width={130} />
-                  <Tooltip
-                    contentStyle={chartTooltipStyle}
-                    labelStyle={{ fontWeight: "bold" }}
-                    formatter={(val, name, item) => [
-                      `${val} menit (${item.payload.count}× kejadian, kumulatif: ${item.payload.cumulativePct}%)`,
-                      "Durasi",
-                    ]}
-                  />
-                  <Bar dataKey="durationMin" fill="#f43f5e" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
 
         {/* OEE Overview Card (1 col on LG) */}
         <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between shadow-xs">
           <div>
             <div className="flex items-center justify-between">
               <h3 className="font-display text-sm font-semibold text-foreground">
-                {selectedStation ? `OEE Area — ${selectedStation.name}` : `${t("dash.oee")} — Overall Equipment Effectiveness`}
+                {selectedStation ? `OEE Area — ${selectedStation.name}` : selectedArea ? `OEE — ${selectedArea.name}` : `${t("dash.oee")} — Overall Equipment Effectiveness`}
               </h3>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {selectedStation ? `Estimasi efektivitas area ${selectedStation.areaId}` : t("dash.oeeNote")}
+              {selectedStation ? `Estimasi efektivitas area ${selectedStation.areaId}` : selectedArea ? `Estimasi efektivitas ${selectedArea.name}` : t("dash.oeeNote")}
             </p>
 
             {/* Big OEE Number */}

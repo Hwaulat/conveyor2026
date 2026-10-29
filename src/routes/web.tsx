@@ -18,6 +18,8 @@ import {
   X,
   Clock,
   ExternalLink,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useI18n } from "../lib/i18n";
 import { useTheme } from "../lib/theme";
@@ -56,6 +58,7 @@ function WebLayout() {
   const appState = useAppStore();
   const [nowMs, setNowMs] = useState(Date.now());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Live clock WIB ticking every second
   useEffect(() => {
@@ -160,7 +163,11 @@ function WebLayout() {
   return (
     <div className="flex min-h-screen bg-background text-foreground antialiased transition-colors">
       {/* Sidebar Desktop */}
-      <aside className="hidden lg:flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground sticky top-0 h-screen select-none">
+      <aside
+        className={`${
+          sidebarCollapsed ? "hidden" : "hidden lg:flex"
+        } w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground sticky top-0 h-screen select-none transition-all duration-200`}
+      >
         {/* Brand */}
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-5">
           <Link to="/web" className="flex items-center gap-2.5 min-w-0">
@@ -301,30 +308,26 @@ function WebLayout() {
       <div className="flex flex-1 flex-col min-w-0">
         {/* Top Header */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/90 px-4 md:px-6 backdrop-blur">
-          {/* Left: Mobile Toggle & Breadcrumb / Status */}
-          <div className="flex items-center gap-3">
+          {/* Left: Sidebar Collapse Icon Button (Replaces online status & shift) */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-1.5 rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={() => {
+                if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                  setMobileMenuOpen(!mobileMenuOpen);
+                } else {
+                  setSidebarCollapsed(!sidebarCollapsed);
+                }
+              }}
+              className="p-2 rounded-lg border border-border bg-card text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer"
+              title={sidebarCollapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
+              aria-label="Toggle Sidebar"
             >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {sidebarCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
             </button>
-
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-                <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 hidden sm:inline">
-                  {t("header.online")}
-                </span>
-              </div>
-              <span className="text-muted-foreground/40 hidden sm:inline">•</span>
-              <span className="inline-flex items-center rounded border border-border bg-muted/50 px-2 py-0.5 font-mono text-xs text-foreground">
-                {currentShift.name}
-              </span>
-            </div>
           </div>
 
           {/* Right: Clock WIB, Theme Switch, Language Switch, User Profile */}
@@ -341,22 +344,17 @@ function WebLayout() {
               </span>
             </div>
 
-            {/* Theme Switcher Toggle */}
+            {/* Theme Switcher Toggle (Icon Only) */}
             <button
               onClick={toggleTheme}
-              className="flex items-center gap-1.5 rounded border border-border bg-card px-2.5 py-1.5 font-mono text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
+              className="p-2 rounded-lg border border-border bg-card text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer"
               title={theme === "dark" ? "Ganti ke Mode Terang (Light Mode)" : "Ganti ke Mode Gelap (Dark Mode)"}
+              aria-label="Toggle Theme"
             >
               {theme === "dark" ? (
-                <>
-                  <Sun className="h-3.5 w-3.5 text-amber-400" />
-                  <span className="font-semibold uppercase hidden md:inline">{t("header.themeLight")}</span>
-                </>
+                <Sun className="h-4 w-4 text-amber-400" />
               ) : (
-                <>
-                  <Moon className="h-3.5 w-3.5 text-indigo-500" />
-                  <span className="font-semibold uppercase hidden md:inline">{t("header.themeDark")}</span>
-                </>
+                <Moon className="h-4 w-4 text-indigo-500" />
               )}
             </button>
 
