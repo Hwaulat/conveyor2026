@@ -24,7 +24,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/web/master-data")({
   head: () => ({
     meta: [
-      { title: "JSGI — Master Data Configuration" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — Master Data Configuration" },
       { name: "description", content: "Manage factory areas, conveyors, stations, stop categories, shifts, and devices." },
     ],
   }),

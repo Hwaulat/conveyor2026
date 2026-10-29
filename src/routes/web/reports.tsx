@@ -26,7 +26,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/web/reports")({
   head: () => ({
     meta: [
-      { title: "JSGI — Reports & Excel Export" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — Reports & Excel Export" },
       { name: "description", content: "Pratinjau data laporan produksi, MTTR, MTBF, dan Line-Stop serta ekspor ke Excel." },
     ],
   }),

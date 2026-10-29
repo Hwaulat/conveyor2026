@@ -35,7 +35,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/web/logs")({
   head: () => ({
     meta: [
-      { title: "JSGI — Log History & Audit" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — Log History & Audit" },
       { name: "description", content: "Complete history of conveyor line stops, PLC detections, and corrections." },
     ],
   }),

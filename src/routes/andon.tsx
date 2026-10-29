@@ -21,7 +21,7 @@ import { fmtTime, fmtDateHuman, fmtDuration, dayStartMs, shiftOf } from "../lib/
 export const Route = createFileRoute("/andon")({
   head: () => ({
     meta: [
-      { title: "JSGI — Andon Board TV Display" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — Andon Board TV Display" },
       { name: "description", content: "Fullscreen high-contrast TV Andon display for factory conveyor line-stop monitoring." },
     ],
   }),
@@ -73,8 +73,8 @@ function AndonPage() {
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-border pb-4 mb-6 gap-4">
         {/* Plant Identity */}
         <div className="flex items-center gap-4">
-          <div className="h-12 w-12 rounded-lg border-2 border-border bg-card flex items-center justify-center font-mono text-xl font-black text-foreground tracking-widest shadow-md">
-            JSGI
+          <div className="h-12 w-12 rounded-lg border-2 border-border bg-card flex items-center justify-center font-mono text-lg font-black text-foreground tracking-wider shadow-md">
+            KRM
           </div>
           <div>
             <div className="flex items-center gap-3">
@@ -87,7 +87,7 @@ function AndonPage() {
               </span>
             </div>
             <p className="font-mono text-xs md:text-sm text-muted-foreground mt-0.5">
-              PT. JSGI Manufacturing Indonesia • Assembly & Conveyor Line Monitoring
+              PT. Krama Yudha Ratu Motor Indonesia • Assembly & Conveyor Line Monitoring
             </p>
           </div>
         </div>
@@ -335,7 +335,7 @@ function AndonPage() {
           <span>{t("andon.updated")}: {fmtTime(nowMs)} WIB (Auto-refresh realtime)</span>
         </div>
         <div>
-          <span>Mode Siaran TV Layar Penuh • PT JSGI Line Control System</span>
+          <span>Mode Siaran TV Layar Penuh • PT. Krama Yudha Ratu Motor Indonesia Line Control System</span>
         </div>
       </footer>
     </div>

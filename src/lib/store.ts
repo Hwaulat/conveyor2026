@@ -36,7 +36,7 @@ export interface AppState {
 
 const STORAGE_KEY = "jsgi_conveyor_state_v1";
 
-// Default Seed Data based on PRD & JSGI Factory Model
+// Default Seed Data based on PRD & PT. Krama Yudha Ratu Motor Indonesia Factory Model
 export function createSeedData(): AppState {
   const now = Date.now();
   const dayMs = 86_400_000;
@@ -82,11 +82,11 @@ export function createSeedData(): AppState {
   ];
 
   const users: UserRow[] = [
-    { id: "usr-1", name: "Budi Santoso", email: "budi.s@jsgi.co.id", role: "admin", badge: "EMP-001" },
-    { id: "usr-2", name: "Siti Rahma", email: "siti.r@jsgi.co.id", role: "manager", badge: "EMP-042" },
-    { id: "usr-3", name: "Agus Pratama", email: "agus.p@jsgi.co.id", role: "supervisor", badge: "EMP-108" },
-    { id: "usr-4", name: "Rian Hidayat", email: "rian.h@jsgi.co.id", role: "operator", badge: "EMP-215" },
-    { id: "usr-5", name: "Dewi Lestari", email: "dewi.l@jsgi.co.id", role: "viewer", badge: "EMP-304" },
+    { id: "usr-1", name: "Budi Santoso", email: "budi.s@krm.co.id", role: "admin", badge: "EMP-001" },
+    { id: "usr-2", name: "Siti Rahma", email: "siti.r@krm.co.id", role: "manager", badge: "EMP-042" },
+    { id: "usr-3", name: "Agus Pratama", email: "agus.p@krm.co.id", role: "supervisor", badge: "EMP-108" },
+    { id: "usr-4", name: "Rian Hidayat", email: "rian.h@krm.co.id", role: "operator", badge: "EMP-215" },
+    { id: "usr-5", name: "Dewi Lestari", email: "dewi.l@krm.co.id", role: "viewer", badge: "EMP-304" },
   ];
 
   const devices: Device[] = [
@@ -374,7 +374,7 @@ let currentState: AppState = (() => {
       }
     }
   } catch (e) {
-    console.warn("Failed to load stored JSGI state, using seed data", e);
+    console.warn("Failed to load stored PT. Krama Yudha Ratu Motor Indonesia state, using seed data", e);
   }
   const initial = createSeedData();
   try {

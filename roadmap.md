@@ -1,7 +1,7 @@
-# Roadmap — Conveyor Line-Stop Monitoring, Andon & OEE (JSGI)
+# Roadmap — Conveyor Line-Stop Monitoring, Andon & OEE (PT. Krama Yudha Ratu Motor Indonesia)
 
 Keputusan: UI bilingual (ID/EN), mode demo (data PLC disimulasikan), tanpa login dulu, semua fitur MVP.
-Rute terpisah: `/web` (desktop), `/andon` (TV), `/ipad` (tablet E-form). Desain: x.ai (gelap, monokrom, mono aksen), struktur sidebar/header mengikuti referensi JSGI.
+Rute terpisah: `/web` (desktop), `/andon` (TV), `/ipad` (tablet E-form). Desain: x.ai (gelap, monokrom, mono aksen), struktur sidebar/header mengikuti referensi PT. Krama Yudha Ratu Motor Indonesia.
 
 - [x] Fondasi: design system, i18n, tipe data, kalkulasi (MTTR/MTBF/OEE), data seed + simulasi live
 - [x] Shell /web: sidebar (grup ala referensi) + header (jam, tanggal, bahasa, profil)

@@ -93,8 +93,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "JSGI — Conveyor Line-Stop, Andon & OEE" },
-      { name: "description", content: "Line-Stop Monitoring, Andon TV & OEE System for JSGI Manufacturing" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — Conveyor Line-Stop, Andon & OEE" },
+      { name: "description", content: "Line-Stop Monitoring, Andon TV & OEE System for PT. Krama Yudha Ratu Motor Indonesia" },
     ],
     links: [
       {

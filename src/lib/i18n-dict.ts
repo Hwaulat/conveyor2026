@@ -2,7 +2,7 @@
 export type Dict = Record<string, string>;
 
 const id: Dict = {
-  "app.name": "JSGI Line Monitoring",
+  "app.name": "PT. Krama Yudha Ratu Motor Indonesia Line Monitoring",
   "app.subtitle": "Line-Stop, Andon & OEE System",
   "common.save": "Simpan",
   "common.cancel": "Batal",
@@ -258,7 +258,7 @@ const id: Dict = {
 };
 
 const en: Dict = {
-  "app.name": "JSGI Line Monitoring",
+  "app.name": "PT. Krama Yudha Ratu Motor Indonesia Line Monitoring",
   "app.subtitle": "Line-Stop, Andon & OEE System",
   "common.save": "Save",
   "common.cancel": "Cancel",

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/web/users")({
   head: () => ({
     meta: [
-      { title: "JSGI — User Management & Roles" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — User Management & Roles" },
       { name: "description", content: "Manage system access, permissions and view audit logs." },
     ],
   }),
@@ -198,7 +198,7 @@ function UserManagementPage() {
                 <label className="block text-muted-foreground mb-1">{t("users.email")}:</label>
                 <input
                   type="email"
-                  placeholder="nama@jsgi.co.id"
+                  placeholder="nama@krm.co.id"
                   value={userEmail}
                   onChange={(e) => setUserEmail(e.target.value)}
                   className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"

@@ -35,7 +35,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/ipad")({
   head: () => ({
     meta: [
-      { title: "JSGI — E-Form Line Stop (Tablet)" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — E-Form Line Stop (Tablet)" },
       { name: "description", content: "Fast touch-optimized E-form for floor operators to record emergency stops." },
     ],
   }),

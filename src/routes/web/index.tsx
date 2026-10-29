@@ -45,7 +45,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/web/")({
   head: () => ({
     meta: [
-      { title: "JSGI — Real-time Dashboard & KPI" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — Real-time Dashboard & KPI" },
       { name: "description", content: "Real-time Conveyor line performance, MTTR, MTBF and OEE metrics." },
     ],
   }),

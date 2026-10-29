@@ -23,7 +23,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/web/production")({
   head: () => ({
     meta: [
-      { title: "JSGI — Production Data & OEE Calculation" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — Production Data & OEE Calculation" },
       { name: "description", content: "Upload factory production records and calculate automated OEE." },
     ],
   }),
@@ -75,7 +75,7 @@ function ProductionPage() {
     const ws = XLSX.utils.aoa_to_sheet(headers);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Production_Template");
-    XLSX.writeFile(wb, "Template_Produksi_JSGI.xlsx");
+    XLSX.writeFile(wb, "Template_Produksi_KRM.xlsx");
     toast.success("Template Excel berhasil diunduh");
   };
 

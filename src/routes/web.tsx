@@ -28,7 +28,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/web")({
   head: () => ({
     meta: [
-      { title: "JSGI Line Monitoring & OEE — Web Portal" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — Line Monitoring & OEE" },
       { name: "description", content: "Management console for line-stop monitoring, OEE analysis, and master data." },
     ],
   }),
@@ -163,16 +163,16 @@ function WebLayout() {
       <aside className="hidden lg:flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground sticky top-0 h-screen select-none">
         {/* Brand */}
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-5">
-          <Link to="/web" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded border border-sidebar-border bg-sidebar-accent font-mono text-sm font-bold tracking-wider text-sidebar-foreground">
-              JS
+          <Link to="/web" className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-sidebar-border bg-sidebar-accent font-mono text-xs font-black tracking-wider text-sidebar-foreground">
+              KRM
             </div>
-            <div className="flex flex-col">
-              <span className="font-display text-sm font-semibold tracking-wide text-sidebar-foreground">
-                JSGI MONITOR
+            <div className="flex flex-col min-w-0">
+              <span className="font-display text-xs font-bold tracking-tight text-sidebar-foreground truncate" title="PT. Krama Yudha Ratu Motor Indonesia">
+                PT. KRAMA YUDHA RATU MOTOR
               </span>
-              <span className="font-mono text-[10px] text-muted-foreground">
-                LINE-STOP & OEE
+              <span className="font-mono text-[9px] text-muted-foreground truncate">
+                LINE-STOP & OEE MONITOR
               </span>
             </div>
           </Link>
