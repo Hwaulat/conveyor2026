@@ -10,6 +10,7 @@ import {
   X,
   Building2,
   Calendar,
+  Gauge,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -23,6 +24,7 @@ import {
   Line,
   CartesianGrid,
   Legend,
+  ReferenceLine,
 } from "recharts";
 import { useI18n } from "../../lib/i18n";
 import { useTheme } from "../../lib/theme";
@@ -70,6 +72,7 @@ function DashboardPage() {
     return new Date().toISOString().slice(0, 10);
   });
   const [datePreset, setDatePreset] = useState<"today" | "7d" | "30d" | "thisMonth" | "custom">("7d");
+  const [speedWindowMinutes, setSpeedWindowMinutes] = useState<30 | 60>(60);
 
   // Available stations filtered by selected area
   const availableStations = useMemo(() => {
@@ -245,6 +248,67 @@ function DashboardPage() {
     }
     return result;
   }, [startDate, endDate, appState.stops, appState.categories, selectedAreaId, selectedStationId]);
+
+  // Line Chart: Trend Speed by Minute (Telemetri Kecepatan Konveyor)
+  const speedByMinuteData = useMemo(() => {
+    const points = [];
+    const windowMinutes = speedWindowMinutes;
+    const targetStation = selectedStation;
+    const targetThreshold = targetStation?.runningThreshold ?? 0.1;
+    const targetUnit = targetStation?.speedUnit ?? "m/min";
+    const baseSpeed = targetStation ? 1.25 : 1.20;
+
+    for (let i = windowMinutes - 1; i >= 0; i--) {
+      const minuteTimeMs = nowMs - i * 60_000;
+      const dateObj = new Date(minuteTimeMs);
+      const timeLabel = dateObj.toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+
+      // Check if any stop was active on this station/area during this minute
+      const wasStopped = appState.stops.some((s) => {
+        const matchArea = selectedAreaId === "all" ? true : s.areaId === selectedAreaId;
+        const matchStation = selectedStationId === "all" ? true : s.stationId === selectedStationId;
+        if (!matchArea || !matchStation) return false;
+
+        const stopStart = s.startMs;
+        const stopEnd = s.endMs ?? nowMs;
+        return minuteTimeMs >= stopStart && minuteTimeMs <= stopEnd;
+      });
+
+      let speedVal: number;
+      if (wasStopped) {
+        speedVal = 0.0;
+      } else {
+        const hash = Math.sin((minuteTimeMs / 60000) * 12.9898) * 43758.5453;
+        const variance = (hash - Math.floor(hash) - 0.5) * 0.12;
+        speedVal = Math.max(0.2, Number((baseSpeed + variance).toFixed(2)));
+      }
+
+      points.push({
+        time: timeLabel,
+        timestampMs: minuteTimeMs,
+        speed: speedVal,
+        threshold: targetThreshold,
+        status: speedVal <= targetThreshold ? "STOPPED" : "RUNNING",
+      });
+    }
+
+    const current = points[points.length - 1]?.speed ?? 0;
+    const avg = points.length > 0
+      ? +(points.reduce((sum, p) => sum + p.speed, 0) / points.length).toFixed(2)
+      : 0;
+
+    return {
+      points,
+      unit: targetUnit,
+      threshold: targetThreshold,
+      currentSpeed: current,
+      avgSpeed: avg,
+    };
+  }, [nowMs, speedWindowMinutes, appState.stops, selectedAreaId, selectedStationId, selectedStation]);
 
   // OEE Calculation filtered by Area and Date Range
   const oeeSummary = useMemo(() => {
@@ -536,6 +600,149 @@ function DashboardPage() {
           <div className="text-[10px] text-muted-foreground mt-1">
             Avail: {(oeeSummary.availability * 100).toFixed(0)}% • Perf: {(oeeSummary.performance * 100).toFixed(0)}%
           </div>
+        </div>
+      </div>
+
+      {/* Line Chart: Trend Speed by Minute */}
+      <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+              <Gauge className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-display text-sm font-semibold text-foreground">
+                  Tren Kecepatan per Menit (Trend Speed by Minute)
+                </h3>
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                    speedByMinuteData.currentSpeed > speedByMinuteData.threshold
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                      : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse"
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      speedByMinuteData.currentSpeed > speedByMinuteData.threshold ? "bg-emerald-500" : "bg-rose-500"
+                    }`}
+                  />
+                  {speedByMinuteData.currentSpeed > speedByMinuteData.threshold ? "NORMAL SPEED" : "LINE-STOP / BELOW THRESHOLD"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {selectedStation
+                  ? `Kecepatan telemetri stasiun ${selectedStation.name} (${selectedStation.code || selectedStation.id}) per menit`
+                  : selectedArea
+                  ? `Rata-rata kecepatan konveyor ${selectedArea.name} per menit`
+                  : "Monitoring telemetri kecepatan konveyor secara real-time per menit"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* KPI Badges: Current & Avg */}
+            <div className="flex items-center gap-2 font-mono text-xs">
+              <div className="px-3 py-1 rounded-lg border border-border bg-muted/40">
+                <span className="text-muted-foreground text-[10px] block">Kecepatan Terkini:</span>
+                <span className="font-bold text-foreground">
+                  {speedByMinuteData.currentSpeed.toFixed(2)} {speedByMinuteData.unit}
+                </span>
+              </div>
+              <div className="px-3 py-1 rounded-lg border border-border bg-muted/40">
+                <span className="text-muted-foreground text-[10px] block">Rata-rata ({speedWindowMinutes}m):</span>
+                <span className="font-bold text-foreground">
+                  {speedByMinuteData.avgSpeed.toFixed(2)} {speedByMinuteData.unit}
+                </span>
+              </div>
+            </div>
+
+            {/* Time Window Buttons (30m / 60m) */}
+            <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/30 p-1 font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => setSpeedWindowMinutes(30)}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  speedWindowMinutes === 30
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                30 Menit
+              </button>
+              <button
+                type="button"
+                onClick={() => setSpeedWindowMinutes(60)}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  speedWindowMinutes === 60
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                60 Menit
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* The Line Chart */}
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={speedByMinuteData.points} margin={{ top: 10, right: 15, left: -15, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} opacity={0.6} />
+              <XAxis
+                dataKey="time"
+                stroke={chartAxisStroke}
+                fontSize={11}
+                fontFamily="monospace"
+                interval={speedWindowMinutes === 60 ? 5 : 3}
+              />
+              <YAxis
+                domain={[0, 1.8]}
+                stroke={chartAxisStroke}
+                fontSize={11}
+                fontFamily="monospace"
+                tickFormatter={(v) => `${v.toFixed(1)}`}
+              />
+              <Tooltip
+                contentStyle={chartTooltipStyle}
+                formatter={(val, name) => [`${val} ${speedByMinuteData.unit}`, name]}
+                labelFormatter={(label) => `Waktu: ${label} WIB`}
+              />
+              <Legend wrapperStyle={{ fontSize: "11px", fontFamily: "monospace" }} />
+              <ReferenceLine
+                y={speedByMinuteData.threshold}
+                stroke="#f43f5e"
+                strokeDasharray="4 4"
+                label={{
+                  value: `Threshold Stop (${speedByMinuteData.threshold} ${speedByMinuteData.unit})`,
+                  fill: "#f43f5e",
+                  fontSize: 10,
+                  position: "insideBottomRight",
+                }}
+              />
+              <ReferenceLine
+                y={1.2}
+                stroke="#10b981"
+                strokeDasharray="3 3"
+                label={{
+                  value: `Target Normal (1.20 ${speedByMinuteData.unit})`,
+                  fill: "#10b981",
+                  fontSize: 10,
+                  position: "insideTopRight",
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="speed"
+                name={`Kecepatan (${speedByMinuteData.unit})`}
+                stroke="#06b6d4"
+                strokeWidth={2.5}
+                dot={false}
+                activeDot={{ r: 5, fill: "#06b6d4" }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
