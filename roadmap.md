@@ -9,7 +9,7 @@ Rute terpisah: `/web` (desktop), `/andon` (TV), `/ipad` (tablet E-form). Desain:
 - [x] `/web` Log History: filter, ringkasan per stasiun, detail per kejadian, unrecorded stops, koreksi
 - [x] `/web` Production (OEE): template Excel, upload + preview baris, hasil OEE
 - [x] `/web` Reports: ekspor Excel (netralisasi formula injection)
-- [x] `/web` Master Data: stasiun (input nama area, nama konveyor, dan daftar dinamis stasiun dengan kode & nama stasiun)
+- [x] `/web` Master Data: stasiun (area, konveyor, daftar dinamis stasiun) & kategori stop (kode, nama, flag breakdown MTTR/MTBF, data seed: Process, Breakdown, Maintenance, Part Issue)
 - [x] `/web` User Management: daftar user + peran
 - [x] `/andon`: papan TV fullscreen, timer berjalan, strip ringkasan, No signal
 - [x] `/ipad`: E-form touch besar, + tambah kategori, open stop, recent entries, offline queue
