@@ -65,8 +65,24 @@ function DashboardPage() {
 
   const isDark = theme === "dark";
 
-  // Filter 1: Area Filter (di samping kiri filter station)
-  const [selectedAreaId, setSelectedAreaId] = useState<string>("all");
+  // Default Area: PTED
+  const defaultAreaId = useMemo(() => {
+    return (
+      appState.areas.find(
+        (a) => a.name.toLowerCase() === "pted" || a.code?.toLowerCase() === "pted",
+      )?.id ?? appState.areas[0]?.id ?? "area-pted"
+    );
+  }, [appState.areas]);
+
+  // Filter 1: Area Filter (default: PTED)
+  const [selectedAreaId, setSelectedAreaId] = useState<string>(() => defaultAreaId);
+
+  useEffect(() => {
+    if (selectedAreaId === "all" || appState.areas.some((a) => a.id === selectedAreaId)) {
+      return;
+    }
+    setSelectedAreaId(defaultAreaId);
+  }, [defaultAreaId, selectedAreaId, appState.areas]);
 
   // Filter 2: Station Filter (mengikuti area yang dipilih)
   const [selectedStationId, setSelectedStationId] = useState<string>("all");

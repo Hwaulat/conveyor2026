@@ -3,7 +3,7 @@
 
 export type Role = "admin" | "manager" | "supervisor" | "operator" | "viewer";
 
-export type Area = { id: string; name: string; note?: string | undefined };
+export type Area = { id: string; name: string; code?: string | undefined; note?: string | undefined };
 
 export type Conveyor = { id: string; areaId: string; name: string };
 

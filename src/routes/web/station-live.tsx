@@ -37,8 +37,24 @@ function StationLivePage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Filter by Area
-  const [selectedAreaId, setSelectedAreaId] = useState<string>("all");
+  // Default Area: PTED
+  const defaultAreaId = useMemo(() => {
+    return (
+      appState.areas.find(
+        (a) => a.name.toLowerCase() === "pted" || a.code?.toLowerCase() === "pted",
+      )?.id ?? appState.areas[0]?.id ?? "area-pted"
+    );
+  }, [appState.areas]);
+
+  // Filter by Area (default: PTED)
+  const [selectedAreaId, setSelectedAreaId] = useState<string>(() => defaultAreaId);
+
+  useEffect(() => {
+    if (selectedAreaId === "all" || appState.areas.some((a) => a.id === selectedAreaId)) {
+      return;
+    }
+    setSelectedAreaId(defaultAreaId);
+  }, [defaultAreaId, selectedAreaId, appState.areas]);
 
   const filteredStations = useMemo(() => {
     if (selectedAreaId === "all") return appState.stations;

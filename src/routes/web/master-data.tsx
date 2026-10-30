@@ -50,15 +50,31 @@ function MasterDataPage() {
   // ==========================================
   // STATION STATE & HANDLERS
   // ==========================================
+  const defaultAreaId = useMemo(() => {
+    return (
+      appState.areas.find(
+        (a) => a.name.toLowerCase() === "pted" || a.code?.toLowerCase() === "pted",
+      )?.id ?? appState.areas[0]?.id ?? "area-pted"
+    );
+  }, [appState.areas]);
+
   const [stationSearchQuery, setStationSearchQuery] = useState("");
-  const [selectedAreaFilter, setSelectedAreaFilter] = useState("all");
+  const [selectedAreaFilter, setSelectedAreaFilter] = useState<string>(() => defaultAreaId);
+
+  useEffect(() => {
+    if (selectedAreaFilter === "all" || appState.areas.some((a) => a.id === selectedAreaFilter)) {
+      return;
+    }
+    setSelectedAreaFilter(defaultAreaId);
+  }, [defaultAreaId, selectedAreaFilter, appState.areas]);
+
   const [stationPage, setStationPage] = useState(1);
   const [stationPageSize, setStationPageSize] = useState(10);
   const [viewingStation, setViewingStation] = useState<Station | null>(null);
 
   // Modal: Batch Add Stations under Area & Conveyor
   const [batchModalOpen, setBatchModalOpen] = useState(false);
-  const [areaInput, setAreaInput] = useState("");
+  const [areaInput, setAreaInput] = useState("PTED");
   const [conveyorInput, setConveyorInput] = useState("");
   const [stationRows, setStationRows] = useState<StationDraftRow[]>([
     { id: "row-1", code: "", name: "" },

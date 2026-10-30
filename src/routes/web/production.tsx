@@ -60,9 +60,23 @@ function ProductionPage() {
   const [prodPageSize, setProdPageSize] = useState(10);
 
   // Manual Form State
+  const defaultAreaId = useMemo(() => {
+    return (
+      appState.areas.find(
+        (a) => a.name.toLowerCase() === "pted" || a.code?.toLowerCase() === "pted",
+      )?.id ?? appState.areas[0]?.id ?? "area-pted"
+    );
+  }, [appState.areas]);
+
   const [formDate, setFormDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [formShiftId, setFormShiftId] = useState(appState.shifts[0]?.id ?? "shift-1");
-  const [formAreaId, setFormAreaId] = useState(appState.areas[0]?.id ?? "area-1");
+  const [formAreaId, setFormAreaId] = useState(() => defaultAreaId);
+
+  useEffect(() => {
+    if (appState.areas.some((a) => a.id === formAreaId)) return;
+    setFormAreaId(defaultAreaId);
+  }, [defaultAreaId, formAreaId, appState.areas]);
+
   const [formPlannedMin, setFormPlannedMin] = useState(480);
   const [formTotalCount, setFormTotalCount] = useState(1300);
   const [formGoodCount, setFormGoodCount] = useState(1280);
@@ -72,7 +86,7 @@ function ProductionPage() {
   const handleDownloadTemplate = () => {
     const headers = [
       ["Date", "Shift", "Area", "PlannedMin", "TotalCount", "GoodCount", "IdealCycleSec"],
-      ["2026-10-28", "Shift 1 (Pagi)", "Main Assembly Line", 480, 1350, 1320, 18],
+      ["2026-10-28", "Shift 1 (Pagi)", "PTED", 480, 1350, 1320, 18],
       ["2026-10-28", "Shift 2 (Siang)", "Main Assembly Line", 450, 1220, 1195, 18],
       ["2026-10-27", "Shift 1 (Pagi)", "Main Assembly Line", 480, 1330, 1310, 18],
     ];

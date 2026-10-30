@@ -53,7 +53,7 @@ function IpadEFormPage() {
   const [simulatedOffline, setSimulatedOffline] = useState(false);
 
   // Form State
-  const [selectedStationId, setSelectedStationId] = useState<string>(() => appState.stations[0]?.id ?? "st-1");
+  const [selectedStationId, setSelectedStationId] = useState<string>(() => appState.stations[0]?.id ?? "st-pted-1");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => appState.categories[0]?.id ?? "cat-1");
   const [isOpenStop, setIsOpenStop] = useState<boolean>(true);
   const [startTimeVal, setStartTimeVal] = useState<string>(() => toLocalInputValue(Date.now()));
