@@ -367,8 +367,8 @@ function DashboardPage() {
     const areaFilteredRecords = selectedAreaId !== "all"
       ? appState.productionRecords.filter((r) => r.areaId === selectedAreaId)
       : selectedStation
-      ? appState.productionRecords.filter((r) => r.areaId === selectedStation.areaId)
-      : appState.productionRecords;
+        ? appState.productionRecords.filter((r) => r.areaId === selectedStation.areaId)
+        : appState.productionRecords;
 
     const inRangeRecords = areaFilteredRecords.filter((rec) => {
       const recMs = Date.parse(`${rec.date}T00:00:00+07:00`);
@@ -457,8 +457,8 @@ function DashboardPage() {
             {selectedStation
               ? `Menampilkan analisis kinerja & metrik untuk ${selectedStation.name} (${selectedStation.code || selectedStation.id})`
               : selectedArea
-              ? `Menampilkan analisis kinerja untuk ${selectedArea.name}`
-              : t("dash.subtitle")}
+                ? `Menampilkan analisis kinerja untuk ${selectedArea.name}`
+                : t("dash.subtitle")}
           </p>
         </div>
 
@@ -602,9 +602,8 @@ function DashboardPage() {
           <div className="flex items-center justify-between text-muted-foreground mb-1">
             <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.oee")}</span>
             <span
-              className={`h-2 w-2 rounded-full ${
-                oeeSummary.oee >= 0.85 ? "bg-emerald-500" : oeeSummary.oee >= 0.7 ? "bg-amber-400" : "bg-red-500"
-              }`}
+              className={`h-2 w-2 rounded-full ${oeeSummary.oee >= 0.85 ? "bg-emerald-500" : oeeSummary.oee >= 0.7 ? "bg-amber-400" : "bg-red-500"
+                }`}
             />
           </div>
           <div className="mt-2">
@@ -631,16 +630,14 @@ function DashboardPage() {
                   Tren Kecepatan per Menit (Trend Speed by Minute)
                 </h3>
                 <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                    speedByMinuteData.currentSpeed > speedByMinuteData.threshold
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${speedByMinuteData.currentSpeed > speedByMinuteData.threshold
                       ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                       : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse"
-                  }`}
+                    }`}
                 >
                   <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      speedByMinuteData.currentSpeed > speedByMinuteData.threshold ? "bg-emerald-500" : "bg-rose-500"
-                    }`}
+                    className={`h-1.5 w-1.5 rounded-full ${speedByMinuteData.currentSpeed > speedByMinuteData.threshold ? "bg-emerald-500" : "bg-rose-500"
+                      }`}
                   />
                   {speedByMinuteData.currentSpeed > speedByMinuteData.threshold ? "NORMAL SPEED" : "LINE-STOP / BELOW THRESHOLD"}
                 </span>
@@ -649,8 +646,8 @@ function DashboardPage() {
                 {selectedStation
                   ? `Kecepatan telemetri stasiun ${selectedStation.name} (${selectedStation.code || selectedStation.id}) per menit`
                   : selectedArea
-                  ? `Rata-rata kecepatan konveyor ${selectedArea.name} per menit`
-                  : "Monitoring telemetri kecepatan konveyor secara real-time per menit"}
+                    ? `Rata-rata kecepatan konveyor ${selectedArea.name} per menit`
+                    : "Monitoring telemetri kecepatan konveyor secara real-time per menit"}
               </p>
             </div>
           </div>
@@ -677,22 +674,20 @@ function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setSpeedWindowMinutes(30)}
-                className={`px-2.5 py-1 rounded transition-colors ${
-                  speedWindowMinutes === 30
+                className={`px-2.5 py-1 rounded transition-colors ${speedWindowMinutes === 30
                     ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
+                  }`}
               >
                 30 Menit
               </button>
               <button
                 type="button"
                 onClick={() => setSpeedWindowMinutes(60)}
-                className={`px-2.5 py-1 rounded transition-colors ${
-                  speedWindowMinutes === 60
+                className={`px-2.5 py-1 rounded transition-colors ${speedWindowMinutes === 60
                     ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
+                  }`}
               >
                 60 Menit
               </button>
@@ -929,13 +924,12 @@ function DashboardPage() {
               </div>
               <div className="text-right">
                 <span
-                  className={`inline-flex px-2 py-1 rounded text-xs font-mono font-bold ${
-                    oeeSummary.oee >= 0.85
+                  className={`inline-flex px-2 py-1 rounded text-xs font-mono font-bold ${oeeSummary.oee >= 0.85
                       ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                       : oeeSummary.oee >= 0.7
-                      ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
-                      : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
-                  }`}
+                        ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                        : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
+                    }`}
                 >
                   {oeeSummary.oee >= 0.85 ? "World Class" : oeeSummary.oee >= 0.7 ? "Moderate" : "Needs Action"}
                 </span>
@@ -1079,11 +1073,10 @@ function DashboardPage() {
 
           {/* 2. Stations Stopped */}
           <div
-            className={`rounded-xl border p-4 sm:p-5 flex flex-col justify-between shadow-xs transition-colors ${
-              liveStoppedCount > 0
+            className={`rounded-xl border p-4 sm:p-5 flex flex-col justify-between shadow-xs transition-colors ${liveStoppedCount > 0
                 ? "border-red-500 bg-red-500/10 dark:bg-red-950/40 ring-2 ring-red-500/50"
                 : "border-border bg-card"
-            }`}
+              }`}
           >
             <div className="flex items-center justify-between text-red-600 dark:text-red-400">
               <span className="font-mono text-xs uppercase tracking-wider font-semibold">
@@ -1093,9 +1086,8 @@ function DashboardPage() {
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span
-                className={`font-mono text-4xl sm:text-5xl font-black ${
-                  liveStoppedCount > 0 ? "text-red-600 dark:text-red-400" : "text-foreground"
-                }`}
+                className={`font-mono text-4xl sm:text-5xl font-black ${liveStoppedCount > 0 ? "text-red-600 dark:text-red-400" : "text-foreground"
+                  }`}
               >
                 {liveStoppedCount}
               </span>
@@ -1123,27 +1115,24 @@ function DashboardPage() {
 
           {/* 4. Longest Current Stop */}
           <div
-            className={`rounded-xl border p-4 sm:p-5 flex flex-col justify-between shadow-xs transition-colors ${
-              liveLongestCurrentStopMs > 0
+            className={`rounded-xl border p-4 sm:p-5 flex flex-col justify-between shadow-xs transition-colors ${liveLongestCurrentStopMs > 0
                 ? "border-red-500/60 bg-red-500/10 dark:bg-red-950/30"
                 : "border-border bg-card"
-            }`}
+              }`}
           >
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                 Stop Terlama Aktif
               </span>
               <Clock
-                className={`h-5 w-5 ${
-                  liveLongestCurrentStopMs > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
-                }`}
+                className={`h-5 w-5 ${liveLongestCurrentStopMs > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
+                  }`}
               />
             </div>
             <div className="mt-3">
               <span
-                className={`font-mono text-3xl sm:text-4xl font-black tracking-tight ${
-                  liveLongestCurrentStopMs > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
-                }`}
+                className={`font-mono text-3xl sm:text-4xl font-black tracking-tight ${liveLongestCurrentStopMs > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
+                  }`}
               >
                 {liveLongestCurrentStopMs > 0 ? fmtDuration(liveLongestCurrentStopMs) : "—"}
               </span>
@@ -1185,13 +1174,12 @@ function DashboardPage() {
               return (
                 <div
                   key={station.id}
-                  className={`rounded-2xl border-2 flex flex-col justify-between p-5 transition-all shadow-md relative overflow-hidden ${
-                    isStopped
+                  className={`rounded-2xl border-2 flex flex-col justify-between p-5 transition-all shadow-md relative overflow-hidden ${isStopped
                       ? "border-red-500 bg-red-500/10 dark:bg-red-950/40 ring-4 ring-red-500/30 shadow-red-500/20"
                       : isNoSignal
-                      ? "border-amber-500/50 bg-amber-500/10 dark:bg-amber-950/20"
-                      : "border-emerald-500/30 bg-card hover:border-emerald-500/60"
-                  }`}
+                        ? "border-amber-500/50 bg-amber-500/10 dark:bg-amber-950/20"
+                        : "border-emerald-500/30 bg-card hover:border-emerald-500/60"
+                    }`}
                 >
                   {/* Card Top: Station Header */}
                   <div>
@@ -1216,13 +1204,12 @@ function DashboardPage() {
 
                     {/* Big State Banner matching Andon */}
                     <div
-                      className={`rounded-xl p-4 my-3 text-center border-2 font-mono ${
-                        isStopped
+                      className={`rounded-xl p-4 my-3 text-center border-2 font-mono ${isStopped
                           ? "bg-red-600 border-red-400 text-white shadow-lg shadow-red-600/40"
                           : isNoSignal
-                          ? "bg-amber-500/20 border-amber-400 text-amber-700 dark:text-amber-300"
-                          : "bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300"
-                      }`}
+                            ? "bg-amber-500/20 border-amber-400 text-amber-700 dark:text-amber-300"
+                            : "bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300"
+                        }`}
                     >
                       <div className="text-2xl md:text-3xl font-black tracking-widest">
                         {isStopped ? "STOPPED" : isNoSignal ? "NO SIGNAL" : "RUNNING"}

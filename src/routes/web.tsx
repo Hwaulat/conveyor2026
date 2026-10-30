@@ -20,6 +20,7 @@ import {
   ExternalLink,
   PanelLeftClose,
   PanelLeftOpen,
+  Radio,
 } from "lucide-react";
 import { useI18n } from "../lib/i18n";
 import { useTheme } from "../lib/theme";
@@ -80,6 +81,13 @@ function WebLayout() {
           to: "/web",
           exact: true,
           icon: LayoutDashboard,
+          badge: stoppedStationsCount > 0 ? `${stoppedStationsCount} STOP` : undefined,
+          badgeVariant: "destructive",
+        },
+        {
+          label: t("nav.stationLive"),
+          to: "/web/station-live",
+          icon: Radio,
           badge: stoppedStationsCount > 0 ? `${stoppedStationsCount} STOP` : undefined,
           badgeVariant: "destructive",
         },

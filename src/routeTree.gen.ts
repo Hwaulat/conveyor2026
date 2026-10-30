@@ -18,6 +18,7 @@ import { Route as WebLogsRouteImport } from './routes/web/logs'
 import { Route as WebMasterDataRouteImport } from './routes/web/master-data'
 import { Route as WebProductionRouteImport } from './routes/web/production'
 import { Route as WebReportsRouteImport } from './routes/web/reports'
+import { Route as WebStationLiveRouteImport } from './routes/web/station-live'
 import { Route as WebUsersRouteImport } from './routes/web/users'
 
 const IndexRoute = IndexRouteImport.update({
@@ -65,6 +66,11 @@ const WebReportsRoute = WebReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => WebRoute,
 } as any)
+const WebStationLiveRoute = WebStationLiveRouteImport.update({
+  id: '/station-live',
+  path: '/station-live',
+  getParentRoute: () => WebRoute,
+} as any)
 const WebUsersRoute = WebUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/web/master-data': typeof WebMasterDataRoute
   '/web/production': typeof WebProductionRoute
   '/web/reports': typeof WebReportsRoute
+  '/web/station-live': typeof WebStationLiveRoute
   '/web/users': typeof WebUsersRoute
   '/web/': typeof WebIndexRoute
 }
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/web/master-data': typeof WebMasterDataRoute
   '/web/production': typeof WebProductionRoute
   '/web/reports': typeof WebReportsRoute
+  '/web/station-live': typeof WebStationLiveRoute
   '/web/users': typeof WebUsersRoute
   '/web': typeof WebIndexRoute
 }
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/web/master-data': typeof WebMasterDataRoute
   '/web/production': typeof WebProductionRoute
   '/web/reports': typeof WebReportsRoute
+  '/web/station-live': typeof WebStationLiveRoute
   '/web/users': typeof WebUsersRoute
   '/web/': typeof WebIndexRoute
 }
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/web/master-data'
     | '/web/production'
     | '/web/reports'
+    | '/web/station-live'
     | '/web/users'
     | '/web/'
   fileRoutesByTo: FileRoutesByTo
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/web/master-data'
     | '/web/production'
     | '/web/reports'
+    | '/web/station-live'
     | '/web/users'
     | '/web'
   id:
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/web/master-data'
     | '/web/production'
     | '/web/reports'
+    | '/web/station-live'
     | '/web/users'
     | '/web/'
   fileRoutesById: FileRoutesById
@@ -217,6 +229,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebReportsRouteImport
       parentRoute: typeof WebRoute
     }
+    '/web/station-live': {
+      id: '/web/station-live'
+      path: '/station-live'
+      fullPath: '/web/station-live'
+      preLoaderRoute: typeof WebStationLiveRouteImport
+      parentRoute: typeof WebRoute
+    }
     '/web/users': {
       id: '/web/users'
       path: '/users'
@@ -232,6 +251,7 @@ interface WebRouteChildren {
   WebMasterDataRoute: typeof WebMasterDataRoute
   WebProductionRoute: typeof WebProductionRoute
   WebReportsRoute: typeof WebReportsRoute
+  WebStationLiveRoute: typeof WebStationLiveRoute
   WebUsersRoute: typeof WebUsersRoute
   WebIndexRoute: typeof WebIndexRoute
 }
@@ -241,6 +261,7 @@ const WebRouteChildren: WebRouteChildren = {
   WebMasterDataRoute: WebMasterDataRoute,
   WebProductionRoute: WebProductionRoute,
   WebReportsRoute: WebReportsRoute,
+  WebStationLiveRoute: WebStationLiveRoute,
   WebUsersRoute: WebUsersRoute,
   WebIndexRoute: WebIndexRoute,
 }
