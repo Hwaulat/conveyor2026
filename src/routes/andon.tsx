@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import {
   Tv,
@@ -7,9 +7,6 @@ import {
   Square,
   AlertTriangle,
   CheckCircle2,
-  Maximize2,
-  Minimize2,
-  ArrowLeft,
   Sun,
   Moon,
 } from "lucide-react";
@@ -33,7 +30,6 @@ function AndonPage() {
   const { theme, toggleTheme } = useTheme();
   const appState = useAppStore();
   const [nowMs, setNowMs] = useState(Date.now());
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Tick every second for live timers
   useEffect(() => {
@@ -58,14 +54,6 @@ function AndonPage() {
     if (openStops.length === 0) return 0;
     return Math.max(...openStops.map((s) => nowMs - s.startMs));
   }, [appState.stops, nowMs]);
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
-    } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans select-none overflow-x-hidden p-4 md:p-6 lg:p-8 transition-colors">
@@ -114,25 +102,6 @@ function AndonPage() {
             >
               {theme === "dark" ? <Sun className="h-5 w-5 text-amber-400" /> : <Moon className="h-5 w-5 text-indigo-500" />}
             </button>
-
-            {/* Fullscreen Button */}
-            <button
-              onClick={toggleFullscreen}
-              className="p-2.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-2xs"
-              title="Fullscreen Mode"
-            >
-              {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-            </button>
-
-            {/* Back to Web */}
-            <Link
-              to="/web"
-              className="p-2.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors flex items-center gap-1.5 text-xs font-mono font-medium shadow-2xs"
-              title="Ke Portal Web"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden md:inline">Web Console</span>
-            </Link>
           </div>
         </div>
       </header>
