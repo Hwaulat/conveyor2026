@@ -34,7 +34,7 @@ export interface AppState {
   simulating: boolean;
 }
 
-const STORAGE_KEY = "krm_conveyor_state_v4";
+const STORAGE_KEY = "krm_conveyor_state_v5";
 
 // Default Seed Data based on PRD & PT. Krama Yudha Ratu Motor Indonesia Factory Model
 export function createSeedData(): AppState {
@@ -48,7 +48,7 @@ export function createSeedData(): AppState {
     { id: "area-ced", code: "CED", name: "CED", note: "Cathodic Electro-Deposition Area" },
     { id: "area-oven-ced", code: "OVEN-CED", name: "Oven CED", note: "Oven Cathodic Electro-Deposition" },
     { id: "area-mezzanine", code: "MEZZANINE", name: "Mezzanine", note: "Mezzanine Conveyor Line" },
-    { id: "area-drop-ced", code: "DROP-CED", name: "Drop CED", note: "Drop Cathodic Electro-Deposition" },
+    { id: "area-drop-ced", code: "DROP-CED", name: "Drop Cabin CED", note: "Drop Cabin Cathodic Electro-Deposition" },
     { id: "area-sanding", code: "SANDING", name: "Sanding", note: "Sanding Area" },
     { id: "area-sealing", code: "SEALING", name: "Sealing", note: "Body Sealing Line" },
     { id: "area-cooling-tunnel", code: "COOLING-TUNNEL", name: "Cooling Tunnel", note: "Cooling Tunnel Section" },
@@ -62,30 +62,62 @@ export function createSeedData(): AppState {
     { id: "cv-ced-1", areaId: "area-ced", name: "Conveyor CED Main Line" },
     { id: "cv-oven-1", areaId: "area-oven-ced", name: "Conveyor Oven CED" },
     { id: "cv-mez-1", areaId: "area-mezzanine", name: "Conveyor Mezzanine Transfer" },
-    { id: "cv-drop-1", areaId: "area-drop-ced", name: "Conveyor Drop CED" },
+    { id: "cv-drop-1", areaId: "area-drop-ced", name: "Conveyor Drop Cabin CED" },
     { id: "cv-sand-1", areaId: "area-sanding", name: "Conveyor Sanding Line" },
     { id: "cv-seal-1", areaId: "area-sealing", name: "Conveyor Sealing Line" },
     { id: "cv-cool-1", areaId: "area-cooling-tunnel", name: "Conveyor Cooling Tunnel" },
     { id: "cv-tc-1", areaId: "area-topcoat", name: "Conveyor Topcoat Booth" },
-    { id: "cv-tu-1", areaId: "area-touch-up", name: "Conveyor Touch Up & Inspection" },
+    { id: "cv-tu-1", areaId: "area-touch-up", name: "Conveyor Touch Up Line" },
   ];
 
   const stations: Station[] = [
+    // 1. PTED Area
     { id: "st-pted-1", code: "PTED-01", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Pre-Degreasing & Spray", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-pted-2", code: "PTED-02", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Dip Tank & Ultrasonic", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-pted-3", code: "PTED-03", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Surface Conditioning", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-pted-4", code: "PTED-04", areaId: "area-pted", conveyorId: "cv-pted-2", name: "Phosphate Bath", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-pted-5", code: "PTED-05", areaId: "area-pted", conveyorId: "cv-pted-2", name: "DI Water Rinsing", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-pted-6", code: "PTED-06", areaId: "area-pted", conveyorId: "cv-pted-2", name: "Hot Air Dryer & Transfer", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 2. CED Area
     { id: "st-ced-1", code: "CED-01", areaId: "area-ced", conveyorId: "cv-ced-1", name: "CED Main Tank", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 3. Oven CED Area
     { id: "st-oven-1", code: "OVEN-01", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "CED Baking Zone", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 4. Mezzanine Area
     { id: "st-mez-1", code: "MEZ-01", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Mezzanine Buffer", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-drop-1", code: "DROP-01", areaId: "area-drop-ced", conveyorId: "cv-drop-1", name: "Drop CED Transfer", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-sand-1", code: "SAND-01", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Dry Sanding Booth", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-seal-1", code: "SEAL-01", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Body Sealer Robot", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 5. Drop Cabin CED Area
+    { id: "st-drop-1", code: "DROP-01", areaId: "area-drop-ced", conveyorId: "cv-drop-1", name: "Drop Cabin CED", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 6. Sanding Area
+    { id: "st-sand-1", code: "SAND-01", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Sanding Outer", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-sand-2", code: "SAND-02", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Sanding Roof", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 7. Sealing Area
+    { id: "st-seal-1", code: "SEAL-01", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Underseal", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-seal-2", code: "SEAL-02", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Undercoat", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-seal-3", code: "SEAL-03", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Transfer Cabin Sealing", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-seal-4", code: "SEAL-04", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Roof Sealing", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-seal-5", code: "SEAL-05", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Finishing Sealing", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-seal-6", code: "SEAL-06", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Quality Gate Sealing", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 8. Cooling Tunnel Area
     { id: "st-cool-1", code: "COOL-01", areaId: "area-cooling-tunnel", conveyorId: "cv-cool-1", name: "Tunnel Cooling Fan", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-tc-1", code: "TC-01", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Topcoat Base & Clear", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-tu-1", code: "TU-01", areaId: "area-touch-up", conveyorId: "cv-tu-1", name: "Finish Touch Up & QC", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 9. Topcoat Area
+    { id: "st-tc-1", code: "TC-01", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Transfer Cabin Touch Up", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-2", code: "TC-02", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Airblow", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-3", code: "TC-03", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Station 4", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-4", code: "TC-04", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Station 3", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-5", code: "TC-05", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Setting Room", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-6", code: "TC-06", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Finishing", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-7", code: "TC-07", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "ASM", sequence: 7, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 10. Touch Up Area
+    { id: "st-tu-1", code: "TU-01", areaId: "area-touch-up", conveyorId: "cv-tu-1", name: "Panel Conveyor", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tu-2", code: "TU-02", areaId: "area-touch-up", conveyorId: "cv-tu-1", name: "Repair", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
   ];
 
   const categories: Category[] = [
@@ -322,89 +354,33 @@ export function createSeedData(): AppState {
     });
   }
 
-  // Initial station live telemetry
-  const stationLive: Record<string, StationLive> = {
-    "st-pted-1": {
-      stationId: "st-pted-1",
-      state: "running",
-      speed: 1.25,
-      lastStartMs: now - 1 * hourMs - 42 * minMs,
-      lastStopMs: now - 2 * hourMs,
-      totalRunMs: 5 * hourMs + 14 * minMs,
-      stoppedSinceMs: null,
-      lastSeenMs: now,
-    },
-    "st-pted-2": {
-      stationId: "st-pted-2",
-      state: "stopped",
-      speed: 0.0,
-      lastStartMs: now - 2 * hourMs - 10 * minMs,
-      lastStopMs: now - 14 * minMs - 32 * 1000,
-      totalRunMs: 4 * hourMs + 28 * minMs,
-      stoppedSinceMs: now - 14 * minMs - 32 * 1000,
-      lastSeenMs: now,
-    },
-    "st-pted-3": {
-      stationId: "st-pted-3",
-      state: "running",
-      speed: 1.18,
-      lastStartMs: now - 3 * hourMs,
-      lastStopMs: now - 5 * hourMs,
-      totalRunMs: 5 * hourMs + 45 * minMs,
-      stoppedSinceMs: null,
-      lastSeenMs: now,
-    },
-    "st-pted-4": {
-      stationId: "st-pted-4",
-      state: "running",
-      speed: 1.22,
-      lastStartMs: now - 3 * hourMs - 22 * minMs,
-      lastStopMs: now - 3 * hourMs - 45 * minMs,
-      totalRunMs: 4 * hourMs + 52 * minMs,
-      stoppedSinceMs: null,
-      lastSeenMs: now,
-    },
-    "st-pted-5": {
-      stationId: "st-pted-5",
-      state: "running",
-      speed: 1.20,
-      lastStartMs: now - 3 * hourMs - 48 * minMs,
-      lastStopMs: now - 4 * hourMs,
-      totalRunMs: 5 * hourMs + 10 * minMs,
-      stoppedSinceMs: null,
-      lastSeenMs: now,
-    },
-    "st-pted-6": {
-      stationId: "st-pted-6",
-      state: "running",
-      speed: 1.24,
-      lastStartMs: now - 6 * hourMs,
-      lastStopMs: now - 8 * hourMs,
-      totalRunMs: 6 * hourMs + 0 * minMs,
-      stoppedSinceMs: null,
-      lastSeenMs: now,
-    },
-    "st-ced-1": {
-      stationId: "st-ced-1",
-      state: "running",
-      speed: 1.21,
-      lastStartMs: now - 4 * hourMs,
-      lastStopMs: now - 6 * hourMs,
-      totalRunMs: 5 * hourMs + 30 * minMs,
-      stoppedSinceMs: null,
-      lastSeenMs: now,
-    },
-    "st-oven-1": {
-      stationId: "st-oven-1",
-      state: "running",
-      speed: 1.15,
-      lastStartMs: now - 5 * hourMs,
-      lastStopMs: now - 7 * hourMs,
-      totalRunMs: 6 * hourMs + 10 * minMs,
-      stoppedSinceMs: null,
-      lastSeenMs: now,
-    },
-  };
+  // Initial station live telemetry for all stations
+  const stationLive: Record<string, StationLive> = {};
+  for (const st of stations) {
+    if (st.id === "st-pted-2") {
+      stationLive[st.id] = {
+        stationId: st.id,
+        state: "stopped",
+        speed: 0.0,
+        lastStartMs: now - 2 * hourMs - 10 * minMs,
+        lastStopMs: now - 14 * minMs - 32 * 1000,
+        totalRunMs: 4 * hourMs + 28 * minMs,
+        stoppedSinceMs: now - 14 * minMs - 32 * 1000,
+        lastSeenMs: now,
+      };
+    } else {
+      stationLive[st.id] = {
+        stationId: st.id,
+        state: "running",
+        speed: Number((1.15 + ((st.sequence * 3) % 15) / 100).toFixed(2)),
+        lastStartMs: now - (2 + (st.sequence % 4)) * hourMs,
+        lastStopMs: now - 6 * hourMs,
+        totalRunMs: 5 * hourMs + 20 * minMs,
+        stoppedSinceMs: null,
+        lastSeenMs: now,
+      };
+    }
+  }
 
   const auditLogs: AuditLogEntry[] = [
     {
@@ -448,8 +424,13 @@ let currentState: AppState = (() => {
             code: c.code || `CAT-${c.name.slice(0, 4).toUpperCase().replace(/\s/g, "")}`,
           }));
         }
-        // Ensure standard 10 areas and PTED default data exist
-        if (!parsed.areas || !parsed.areas.some((a: any) => a.name === "PTED" || a.code === "PTED")) {
+        // Ensure standard 10 areas and all stations exist
+        if (
+          !parsed.areas ||
+          !parsed.areas.some((a: any) => a.name === "PTED" || a.code === "PTED") ||
+          !parsed.stations ||
+          !parsed.stations.some((s: any) => s.name === "Sanding Outer")
+        ) {
           const fresh = createSeedData();
           parsed.areas = fresh.areas;
           parsed.conveyors = fresh.conveyors;
