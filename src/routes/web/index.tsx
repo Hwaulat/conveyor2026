@@ -80,7 +80,7 @@ function DashboardPage() {
     return new Date().toISOString().slice(0, 10);
   });
   const [datePreset, setDatePreset] = useState<"today" | "7d" | "30d" | "thisMonth" | "custom">("7d");
-  const [speedWindowMinutes, setSpeedWindowMinutes] = useState<30 | 60>(60);
+  const speedWindowMinutes = 60;
 
   // Available stations filtered by selected area
   const availableStations = useMemo(() => {
@@ -309,14 +309,20 @@ function DashboardPage() {
       ? +(points.reduce((sum, p) => sum + p.speed, 0) / points.length).toFixed(2)
       : 0;
 
+    // Rata-rata per hari (Daily Average Speed)
+    const todayPlannedMs = 16 * 3_600_000;
+    const todayOperatingMs = operatingTimeMs(todayPlannedMs, stopsToday, appState.categories, nowMs);
+    const dailyAvg = +(baseSpeed * Math.min(1, todayOperatingMs / todayPlannedMs)).toFixed(2);
+
     return {
       points,
       unit: targetUnit,
       threshold: targetThreshold,
       currentSpeed: current,
       avgSpeed: avg,
+      dailyAvgSpeed: dailyAvg,
     };
-  }, [nowMs, speedWindowMinutes, appState.stops, selectedAreaId, selectedStationId, selectedStation]);
+  }, [nowMs, speedWindowMinutes, appState.stops, selectedAreaId, selectedStationId, selectedStation, stopsToday, appState.categories]);
 
   // OEE Calculation filtered by Area and Date Range
   const oeeSummary = useMemo(() => {
@@ -611,45 +617,13 @@ function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* KPI Badges: Current & Avg */}
-            <div className="flex items-center gap-2 font-mono text-xs">
-              <div className="px-3 py-1 rounded-lg border border-border bg-muted/40">
-                <span className="text-muted-foreground text-[10px] block">Kecepatan Terkini:</span>
-                <span className="font-bold text-foreground">
-                  {speedByMinuteData.currentSpeed.toFixed(2)} {speedByMinuteData.unit}
-                </span>
-              </div>
-              <div className="px-3 py-1 rounded-lg border border-border bg-muted/40">
-                <span className="text-muted-foreground text-[10px] block">Rata-rata ({speedWindowMinutes}m):</span>
-                <span className="font-bold text-foreground">
-                  {speedByMinuteData.avgSpeed.toFixed(2)} {speedByMinuteData.unit}
-                </span>
-              </div>
-            </div>
-
-            {/* Time Window Buttons (30m / 60m) */}
-            <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/30 p-1 font-mono text-xs">
-              <button
-                type="button"
-                onClick={() => setSpeedWindowMinutes(30)}
-                className={`px-2.5 py-1 rounded transition-colors ${speedWindowMinutes === 30
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-              >
-                30 Menit
-              </button>
-              <button
-                type="button"
-                onClick={() => setSpeedWindowMinutes(60)}
-                className={`px-2.5 py-1 rounded transition-colors ${speedWindowMinutes === 60
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-              >
-                60 Menit
-              </button>
+          {/* KPI Badge: Rata-rata per Hari */}
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <div className="px-3.5 py-1.5 rounded-lg border border-border bg-muted/40">
+              <span className="text-muted-foreground text-[10px] block font-medium">Rata-rata per Hari:</span>
+              <span className="font-bold text-foreground text-sm">
+                {speedByMinuteData.dailyAvgSpeed.toFixed(2)} {speedByMinuteData.unit}
+              </span>
             </div>
           </div>
         </div>
