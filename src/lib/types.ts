@@ -16,6 +16,7 @@ export type Station = {
   sequence: number;
   speedUnit: string;
   runningThreshold: number; // speeds <= this count as stopped
+  nominalSpeed?: number | undefined;
 };
 
 export type Category = {

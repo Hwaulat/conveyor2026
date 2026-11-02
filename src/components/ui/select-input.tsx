@@ -104,7 +104,7 @@ const SelectInput = forwardRef<
         isClearable={hideClear ? false : true}
         unstyled
         menuPosition="absolute"
-        menuPortalTarget={mounted && typeof document !== "undefined" ? document.body : undefined}
+        menuPortalTarget={mounted && typeof document !== "undefined" ? document.body : null}
         menuShouldScrollIntoView={false}
         closeMenuOnSelect={!props.isMulti}
         defaultValue={defaultValue}

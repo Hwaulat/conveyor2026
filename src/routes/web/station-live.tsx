@@ -352,7 +352,7 @@ function StationLivePage() {
                         {isStopped ? "0.00" : live ? live.speed.toFixed(2) : "0.00"} {station.speedUnit}
                       </span>
                       <span className="text-[10px] text-muted-foreground block">
-                        Nominal: {station.nominalSpeed} {station.speedUnit}
+                        Threshold: &gt; {station.runningThreshold} {station.speedUnit}
                       </span>
                     </div>
                   </div>
