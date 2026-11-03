@@ -88,14 +88,29 @@ function IpadErrorFallback() {
   );
 }
 
-// Built-in MTC Work Categories with official Category Codes
-const DEFAULT_MTC_CATEGORIES = [
-  { id: "mtc-01", code: "MTC-01", name: "Mechanical Maintenance", countsAsBreakdown: true },
-  { id: "mtc-02", code: "MTC-02", name: "Electrical & Power Supply", countsAsBreakdown: true },
-  { id: "mtc-03", code: "MTC-03", name: "Sensor, Limit Switch & PLC", countsAsBreakdown: false },
-  { id: "mtc-04", code: "MTC-04", name: "Conveyor Drive & Roller Chain", countsAsBreakdown: true },
-  { id: "mtc-05", code: "MTC-05", name: "Process Piping & Fluid Leak", countsAsBreakdown: false },
-  { id: "mtc-06", code: "MTC-06", name: "Emergency Stop & Safety Gate", countsAsBreakdown: false },
+// 1. Linestop Categories: Full cabin in line, Maintenance / machine problem, Incident, Breakdown
+const LINESTOP_CATEGORIES = [
+  { id: "cat-full-cabin", code: "LS-01", name: "Full cabin in line", countsAsBreakdown: false },
+  { id: "cat-mtc-prob", code: "LS-02", name: "Maintenance / machine problem", countsAsBreakdown: true },
+  { id: "cat-incident", code: "LS-03", name: "Incident", countsAsBreakdown: false },
+  { id: "cat-2", code: "LS-04", name: "Breakdown", countsAsBreakdown: true },
+];
+
+// 2. Linestop Maintenance Category: Dock pin stuck
+const LINESTOP_MAINTENANCE_CATEGORIES = [
+  { id: "cat-dock-pin", code: "LM-01", name: "Dock pin stuck", countsAsBreakdown: true },
+];
+
+// Standard Maintenance & Operator Technicians for Dropdown
+const TECHNICIANS_PRESETS = [
+  { name: "Rian Hidayat", badge: "EMP-215", role: "Floor Operator" },
+  { name: "Agus Pratama", badge: "EMP-108", role: "Maintenance Supervisor" },
+  { name: "Budi Santoso", badge: "EMP-001", role: "Lead MTC Engineer" },
+  { name: "Hendra Wijaya", badge: "MTC-115", role: "Mechanical Technician" },
+  { name: "Ahmad Fauzi", badge: "MTC-202", role: "Electrical & PLC Tech" },
+  { name: "Dedi Kurniawan", badge: "MTC-304", role: "Conveyor Specialist" },
+  { name: "Siti Rahma", badge: "EMP-042", role: "Shift Manager" },
+  { name: "Dewi Lestari", badge: "EMP-304", role: "Quality Gate Operator" },
 ];
 
 function IpadEFormPage() {
@@ -107,12 +122,12 @@ function IpadEFormPage() {
   const [isOnline, setIsOnline] = useState(true);
   const [simulatedOffline, setSimulatedOffline] = useState(false);
 
-  // Form Type: "linestop" | "mtc"
+  // Form Type: "linestop" (Linestop) | "mtc" (Linestop Maintenance)
   const [formType, setFormType] = useState<"linestop" | "mtc">("linestop");
 
   // Tablist Area Configuration for iPad:
   // - Linestop: 6 Areas (Sanding, Sealing, Topcoat, Touch Up, Drop Cabin CED, Cooling Tunnel)
-  // - MTC Maintenance: 2 Areas (Oven CED, Mezzanine)
+  // - Linestop Maintenance: 2 Areas (Oven CED, Mezzanine)
   const ipadAreaConfigs = useMemo(() => {
     const list =
       formType === "mtc"
@@ -185,36 +200,45 @@ function IpadEFormPage() {
   }, [appState?.stations, selectedStationId]);
 
   // Available categories based on Form Type:
-  // - Linestop Maintenance: temporarily only 1 category -> "Dock pin stuck" (code: "LS-01")
-  // - MTC Work: categories with Category Codes (MTC-01, MTC-02, etc.)
+  // - Linestop: Full cabin in line, Maintenance / machine problem, Incident, Breakdown
+  // - Linestop Maintenance: Dock pin stuck
   const availableCategories = useMemo(() => {
     if (formType === "linestop") {
-      const dockPinCat = (appState?.categories || []).find(
-        (c) => c && (c.id === "cat-dock-pin" || c.name.toLowerCase().includes("dock pin"))
-      ) || {
-        id: "cat-dock-pin",
-        code: "LS-01",
-        name: "Dock pin stuck",
-        countsAsBreakdown: true,
-      };
       const customCats = (appState?.categories || []).filter((c) => c && c.custom);
-      return [dockPinCat, ...customCats];
+      return [...LINESTOP_CATEGORIES, ...customCats];
     } else {
       const customCats = (appState?.categories || []).filter((c) => c && c.custom);
-      return [...DEFAULT_MTC_CATEGORIES, ...customCats];
+      return [...LINESTOP_MAINTENANCE_CATEGORIES, ...customCats];
     }
   }, [formType, appState?.categories]);
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => "cat-dock-pin");
-  const [isOpenStop, setIsOpenStop] = useState<boolean>(true);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => "cat-full-cabin");
   const [startTimeVal, setStartTimeVal] = useState<string>(() => toLocalInputValue(Date.now()));
   const [endTimeVal, setEndTimeVal] = useState<string>("");
+
+  // Technician / Operator Dropdown list
+  const technicianList = useMemo(() => {
+    const list = [...TECHNICIANS_PRESETS];
+    (appState?.users || []).forEach((u) => {
+      if (u && u.badge && !list.some((t) => t.badge === u.badge)) {
+        list.push({
+          name: u.name,
+          badge: u.badge,
+          role: u.role ? u.role.toUpperCase() : "Operator",
+        });
+      }
+    });
+    return list;
+  }, [appState?.users]);
+
   const [operatorBadge, setOperatorBadge] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("jsgi_operator_badge") || "Floor Operator (EMP-215)";
+      const saved = localStorage.getItem("jsgi_operator_badge");
+      if (saved) return saved;
     }
-    return "Floor Operator (EMP-215)";
+    return `${TECHNICIANS_PRESETS[0]!.name} (${TECHNICIANS_PRESETS[0]!.badge})`;
   });
+
   const [note, setNote] = useState<string>("");
 
   // Add Category Modal
@@ -231,7 +255,7 @@ function IpadEFormPage() {
     }
   };
 
-  // Change Form Type (Linestop vs MTC Maintenance)
+  // Change Form Type (Linestop vs Linestop Maintenance)
   const handleFormTypeChange = (type: "linestop" | "mtc") => {
     setFormType(type);
     const targetConfigs =
@@ -267,9 +291,9 @@ function IpadEFormPage() {
     }
 
     if (type === "linestop") {
-      setSelectedCategoryId("cat-dock-pin");
+      setSelectedCategoryId("cat-full-cabin");
     } else {
-      setSelectedCategoryId("mtc-01");
+      setSelectedCategoryId("cat-dock-pin");
     }
   };
 
@@ -326,36 +350,41 @@ function IpadEFormPage() {
     e.preventDefault();
 
     if (!selectedStationId || !selectedCategoryId || !operatorBadge.trim()) {
-      toast.error("Please fill in all required fields (Station, Category, Operator Badge).");
+      toast.error("Please fill in all required fields (Station, Category, Technician/Operator).");
       return;
     }
 
     const startMs = fromLocalInputValue(startTimeVal);
     if (isNaN(startMs)) {
-      toast.error("Invalid start time format.");
+      toast.error("Invalid incident start time.");
       return;
     }
 
     const now = Date.now();
     if (startMs > now + 60_000) {
-      toast.error("Start time cannot be in the future.");
+      toast.error("Incident start time cannot be in the future.");
       return;
     }
 
     if (now - startMs > 24 * 3_600_000) {
-      toast.error("Start time cannot be more than 24 hours ago.");
+      toast.error("Incident start time cannot be more than 24 hours ago.");
       return;
     }
 
+    const hasEndTime = !!endTimeVal.trim();
     let endMs: number | null = null;
-    if (!isOpenStop) {
-      endMs = endTimeVal ? fromLocalInputValue(endTimeVal) : now;
-      if (endMs && endMs < startMs) {
-        toast.error("End time cannot be earlier than start time.");
+    if (hasEndTime) {
+      endMs = fromLocalInputValue(endTimeVal);
+      if (isNaN(endMs)) {
+        toast.error("Invalid incident end time.");
         return;
       }
-      if (endMs && endMs > now + 60_000) {
-        toast.error("End time cannot be in the future.");
+      if (endMs < startMs) {
+        toast.error("Incident end time cannot be earlier than start time.");
+        return;
+      }
+      if (endMs > now + 60_000) {
+        toast.error("Incident end time cannot be in the future.");
         return;
       }
     }
@@ -373,7 +402,7 @@ function IpadEFormPage() {
       endMs,
       categoryId: selectedCategoryId,
       reportedBy: operatorBadge.trim(),
-      status: isOpenStop ? "open" : "closed",
+      status: hasEndTime ? "closed" : "open",
       source: "form",
       note: note.trim() || undefined,
       formType,
@@ -381,16 +410,16 @@ function IpadEFormPage() {
 
     if (effectiveOnline) {
       const created = store.addStop(stopPayload);
-      if (isOpenStop) {
+      if (!hasEndTime) {
         toast.warning(
-          formType === "mtc" ? "Line Start Linestop recorded as OPEN" : "Line-Stop incident recorded as OPEN"
+          formType === "mtc" ? "Linestop Maintenance recorded as OPEN" : "Linestop incident recorded as OPEN"
         );
       } else {
         const dur = stopDurationMs(created, endMs ?? now);
         toast.success(
           formType === "mtc"
-            ? `Finish Linestop saved. Duration: ${fmtDuration(dur)}`
-            : `Line-Stop incident resolved. Duration: ${fmtDuration(dur)}`
+            ? `Linestop Maintenance closed. Duration: ${fmtDuration(dur)}`
+            : `Linestop incident resolved. Duration: ${fmtDuration(dur)}`
         );
       }
     } else {
@@ -403,7 +432,6 @@ function IpadEFormPage() {
     setNote("");
     setStartTimeVal(toLocalInputValue(Date.now()));
     setEndTimeVal("");
-    setIsOpenStop(true);
   };
 
   const handleAddNewCategory = () => {
@@ -447,7 +475,7 @@ function IpadEFormPage() {
                 <Tablet className="h-5 w-5 text-cyan-500" />
               )}
               <h1 className="font-display text-xl md:text-2xl font-bold tracking-tight text-foreground uppercase">
-                {formType === "mtc" ? "MTC Maintenance E-Form" : "Linestop Maintenance E-Form"}
+                {formType === "mtc" ? "Linestop Maintenance E-Form" : "Linestop E-Form"}
               </h1>
             </div>
             <p className="text-xs text-muted-foreground font-mono">
@@ -504,7 +532,7 @@ function IpadEFormPage() {
         {/* Form Container */}
         <div className="rounded-2xl border-2 border-border bg-card p-6 md:p-8 shadow-md">
           <form onSubmit={handleSaveStop} className="space-y-6">
-            {/* 0. Form Type Selector (Linestop vs MTC) */}
+            {/* 0. Form Type Selector (Linestop vs Linestop Maintenance) */}
             <div>
               <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold mb-2">
                 E-Form Type:
@@ -521,8 +549,8 @@ function IpadEFormPage() {
                 >
                   <AlertTriangle className="h-5 w-5 shrink-0" />
                   <div className="text-left">
-                    <span className="block leading-none">Linestop Maintenance E-Form</span>
-                    <span className="text-[10px] font-sans font-normal opacity-85">Operational & Process Stops (6 Areas)</span>
+                    <span className="block leading-none text-base font-bold">Linestop</span>
+                    <span className="text-[10px] font-sans font-normal opacity-85">Operational & Production Stops (6 Areas)</span>
                   </div>
                 </button>
 
@@ -537,14 +565,14 @@ function IpadEFormPage() {
                 >
                   <Wrench className="h-5 w-5 shrink-0" />
                   <div className="text-left">
-                    <span className="block leading-none">MTC Maintenance E-Form</span>
+                    <span className="block leading-none text-base font-bold">Linestop Maintenance</span>
                     <span className="text-[10px] font-sans font-normal opacity-85">Oven CED & Mezzanine Maintenance (2 Areas)</span>
                   </div>
                 </button>
               </div>
             </div>
 
-            {/* 1. Tablist Area (Linestop: 6 Areas, MTC: 2 Areas) */}
+            {/* 1. Tablist Area (Linestop: 6 Areas, Linestop Maintenance: 2 Areas) */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
@@ -648,85 +676,50 @@ function IpadEFormPage() {
               )}
             </div>
 
-            {/* 3. Stop / MTC Status & Timing */}
-            <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
+            {/* 3. Stop Status & Timing (No Tablist, pure Incident Start Time & Incident End Time) */}
+            <div className="rounded-xl border border-border bg-muted/30 p-4 sm:p-5 space-y-4">
               <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                {formType === "mtc"
-                  ? "3. Line Start Linestop & Finish Linestop:"
-                  : "3. Stop Status & Timing:"}
+                3. Incident Timing:
               </label>
 
-              {/* Toggle Still Stopped vs Closed */}
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsOpenStop(true)}
-                  className={`p-3.5 rounded-xl border-2 font-mono text-xs font-bold text-center transition-all cursor-pointer ${
-                    isOpenStop
-                      ? formType === "mtc"
-                        ? "border-blue-500 bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                        : "border-red-500 bg-red-600 text-white shadow-md shadow-red-600/30"
-                      : "border-border bg-card text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {formType === "mtc"
-                    ? "Line Start Linestop (OPEN)"
-                    : "Still Stopped (Save as OPEN)"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsOpenStop(false)}
-                  className={`p-3.5 rounded-xl border-2 font-mono text-xs font-bold text-center transition-all cursor-pointer ${
-                    !isOpenStop
-                      ? "border-emerald-500 bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
-                      : "border-border bg-card text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {formType === "mtc"
-                    ? "Finish Linestop (CLOSED)"
-                    : "Resolved / Completed (CLOSED)"}
-                </button>
-              </div>
-
-              {/* Start & End Time Inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <span className="block font-mono text-[11px] text-muted-foreground mb-1">
-                    {formType === "mtc" ? "Line Start Linestop:" : "Incident Start Time:"}
-                  </span>
+                  <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold mb-1.5">
+                    Incident Start Time:
+                  </label>
                   <input
                     type="datetime-local"
                     value={startTimeVal}
                     onChange={(e) => setStartTimeVal(e.target.value)}
-                    className="w-full h-12 rounded-lg border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary"
+                    className="w-full h-12 rounded-xl border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary shadow-2xs"
                   />
                 </div>
 
-                {!isOpenStop && (
-                  <div>
-                    <span className="block font-mono text-[11px] text-muted-foreground mb-1">
-                      {formType === "mtc" ? "Finish Linestop:" : "Incident End Time:"}
-                    </span>
-                    <input
-                      type="datetime-local"
-                      value={endTimeVal}
-                      onChange={(e) => setEndTimeVal(e.target.value)}
-                      placeholder="Completion Time"
-                      className="w-full h-12 rounded-lg border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                )}
+                <div>
+                  <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold mb-1.5">
+                    Incident End Time:
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={endTimeVal}
+                    onChange={(e) => setEndTimeVal(e.target.value)}
+                    placeholder="Optional (leave blank if ongoing)"
+                    className="w-full h-12 rounded-xl border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary shadow-2xs"
+                  />
+                  <span className="text-[10px] text-muted-foreground font-mono mt-1 block">
+                    {endTimeVal.trim() ? "● Status: CLOSED (Resolved)" : "○ Status: OPEN (Ongoing stop)"}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* 4. Category Selector */}
+            {/* 4. Incident Category Selector */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
                   {formType === "mtc"
-                    ? "4. MTC Work Category (with Category Code):"
-                    : "4. Incident Category (Linestop Maintenance):"}
+                    ? "4. Incident Category (Linestop Maintenance):"
+                    : "4. Incident Category (Linestop):"}
                 </label>
                 <button
                   type="button"
@@ -786,24 +779,28 @@ function IpadEFormPage() {
               </div>
             </div>
 
-            {/* 5. Operator / Technician & Notes */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* 5. Technician Dropdown & Notes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block font-mono text-[11px] text-muted-foreground mb-1">
-                  {formType === "mtc" ? "Technician / Badge No.:" : "Operator / Badge No.:"}
+                <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold mb-1.5">
+                  Technician / Operator:
                 </label>
-                <input
-                  type="text"
+                <select
                   value={operatorBadge}
                   onChange={(e) => setOperatorBadge(e.target.value)}
-                  placeholder={formType === "mtc" ? "e.g. Maintenance Tech (EMP-108)" : "e.g. Floor Operator (EMP-215)"}
-                  className="w-full h-11 rounded-lg border border-input bg-background px-3 font-mono text-xs text-foreground focus:outline-none focus:border-primary"
-                />
+                  className="w-full h-12 rounded-xl border border-input bg-background px-3 font-mono text-xs font-semibold text-foreground focus:outline-none focus:border-primary shadow-2xs cursor-pointer"
+                >
+                  {technicianList.map((tech) => (
+                    <option key={tech.badge} value={`${tech.name} (${tech.badge})`}>
+                      {tech.name} ({tech.badge}) — {tech.role}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="block font-mono text-[11px] text-muted-foreground mb-1">
-                  {formType === "mtc" ? "MTC Work Description (Optional):" : "Additional Notes / Actions (Optional):"}
+                <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold mb-1.5">
+                  Additional Notes / Corrective Actions:
                 </label>
                 <input
                   type="text"
@@ -811,10 +808,10 @@ function IpadEFormPage() {
                   onChange={(e) => setNote(e.target.value)}
                   placeholder={
                     formType === "mtc"
-                      ? "e.g. Replaced conveyor roller bearing, overhauled motor drive..."
-                      : "e.g. Workpiece jammed on feeder conveyor, safety gate sensor tripped..."
+                      ? "e.g. Cleared dock pin blockage, inspected skid lifter sensor..."
+                      : "e.g. Workpiece cleared from line, reset conveyor drive..."
                   }
-                  className="w-full h-11 rounded-lg border border-input bg-background px-3 font-sans text-xs text-foreground focus:outline-none focus:border-primary"
+                  className="w-full h-12 rounded-xl border border-input bg-background px-3 font-sans text-xs text-foreground focus:outline-none focus:border-primary shadow-2xs"
                 />
               </div>
             </div>
@@ -824,22 +821,18 @@ function IpadEFormPage() {
               type="submit"
               className={`w-full h-14 rounded-xl font-display text-base font-bold tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
                 formType === "mtc"
-                  ? isOpenStop
+                  ? endTimeVal.trim()
                     ? "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30"
-                    : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30"
-                  : isOpenStop
-                    ? "bg-red-600 hover:bg-red-500 text-white shadow-red-600/30"
-                    : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+                    : "bg-blue-700 hover:bg-blue-600 text-white shadow-blue-700/30"
+                  : endTimeVal.trim()
+                    ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+                    : "bg-red-600 hover:bg-red-500 text-white shadow-red-600/30"
               }`}
             >
               {formType === "mtc" ? <Wrench className="h-5 w-5" /> : <Send className="h-5 w-5" />}
-              {formType === "mtc"
-                ? isOpenStop
-                  ? "Save Line Start Linestop (OPEN)"
-                  : "Save Finish Linestop (CLOSED)"
-                : isOpenStop
-                  ? "Save Line-Stop as OPEN (Still Stopped)"
-                  : "Submit Line-Stop Incident Report (CLOSED)"}
+              {endTimeVal.trim()
+                ? "Submit Incident Report (CLOSED)"
+                : "Save Incident Report (OPEN)"}
             </button>
           </form>
         </div>
@@ -876,7 +869,7 @@ function IpadEFormPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. MTC-07 or LS-02"
+                  placeholder="e.g. LS-05 or LM-02"
                   value={newCatCode}
                   onChange={(e) => setNewCatCode(e.target.value)}
                   className="w-full h-12 rounded-lg border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary"
