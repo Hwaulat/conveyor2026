@@ -129,6 +129,8 @@ export function createSeedData(): AppState {
       countsAsDowntime: true,
       active: true,
       custom: false,
+      forLinestop: true,
+      forLinestopMaintenance: false,
     },
     {
       id: "cat-mtc-prob",
@@ -138,6 +140,8 @@ export function createSeedData(): AppState {
       countsAsDowntime: true,
       active: true,
       custom: false,
+      forLinestop: true,
+      forLinestopMaintenance: false,
     },
     {
       id: "cat-incident",
@@ -147,6 +151,8 @@ export function createSeedData(): AppState {
       countsAsDowntime: true,
       active: true,
       custom: false,
+      forLinestop: true,
+      forLinestopMaintenance: false,
     },
     {
       id: "cat-2",
@@ -156,6 +162,8 @@ export function createSeedData(): AppState {
       countsAsDowntime: true,
       active: true,
       custom: false,
+      forLinestop: true,
+      forLinestopMaintenance: false,
     },
     {
       id: "cat-dock-pin",
@@ -165,6 +173,8 @@ export function createSeedData(): AppState {
       countsAsDowntime: true,
       active: true,
       custom: false,
+      forLinestop: false,
+      forLinestopMaintenance: true,
     },
     {
       id: "cat-1",
@@ -174,6 +184,8 @@ export function createSeedData(): AppState {
       countsAsDowntime: true,
       active: true,
       custom: false,
+      forLinestop: true,
+      forLinestopMaintenance: false,
     },
     {
       id: "cat-3",
@@ -183,6 +195,8 @@ export function createSeedData(): AppState {
       countsAsDowntime: true,
       active: true,
       custom: false,
+      forLinestop: true,
+      forLinestopMaintenance: false,
     },
     {
       id: "cat-4",
@@ -192,6 +206,8 @@ export function createSeedData(): AppState {
       countsAsDowntime: true,
       active: true,
       custom: false,
+      forLinestop: true,
+      forLinestopMaintenance: false,
     },
   ];
 

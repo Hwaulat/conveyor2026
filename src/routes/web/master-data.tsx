@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import {
   Layers,
@@ -53,8 +53,16 @@ function MasterDataPage() {
   const { t } = useI18n();
   const appState = useAppStore();
 
-  // Active Tab: "stations" | "categories"
-  const [activeTab, setActiveTab] = useState<"stations" | "categories">("stations");
+  const location = useLocation();
+
+  // Active View: "stations" | "categories" (driven by URL search param ?view=)
+  const activeView = useMemo(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get("view") === "categories") return "categories";
+    }
+    return "stations";
+  }, [location.search]);
 
   // ==========================================
   // STATION STATE & HANDLERS
@@ -332,22 +340,29 @@ function MasterDataPage() {
   const [categoryPage, setCategoryPage] = useState(1);
   const [categoryPageSize, setCategoryPageSize] = useState(10);
 
-  // Modal: Add Category
+  // Modal: Add Category Problem
   const [addCatModalOpen, setAddCatModalOpen] = useState(false);
   const [catCodeInput, setCatCodeInput] = useState("");
   const [catNameInput, setCatNameInput] = useState("");
+  const [catForLinestop, setCatForLinestop] = useState(true);
+  const [catForLinestopMtc, setCatForLinestopMtc] = useState(false);
   const [catBreakdownInput, setCatBreakdownInput] = useState(false);
   const [catDowntimeInput, setCatDowntimeInput] = useState(true);
   const [catActiveInput, setCatActiveInput] = useState(true);
 
-  // Modal: Edit Category
+  // Modal: Edit Category Problem
   const [editCatModalOpen, setEditCatModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editCatCode, setEditCatCode] = useState("");
   const [editCatName, setEditCatName] = useState("");
+  const [editCatForLinestop, setEditCatForLinestop] = useState(true);
+  const [editCatForLinestopMtc, setEditCatForLinestopMtc] = useState(false);
   const [editCatBreakdown, setEditCatBreakdown] = useState(false);
   const [editCatDowntime, setEditCatDowntime] = useState(true);
   const [editCatActive, setEditCatActive] = useState(true);
+
+  // Filter for Category Problem
+  const [categoryTypeFilter, setCategoryTypeFilter] = useState<"all" | "linestop" | "mtc" | "both">("all");
 
   // Modal: Delete Category
   const [deleteCatTarget, setDeleteCatTarget] = useState<Category | null>(null);
@@ -355,6 +370,10 @@ function MasterDataPage() {
   // Filtered categories
   const filteredCategories = useMemo(() => {
     return appState.categories.filter((cat) => {
+      if (categoryTypeFilter === "linestop" && cat.forLinestop === false) return false;
+      if (categoryTypeFilter === "mtc" && !cat.forLinestopMaintenance) return false;
+      if (categoryTypeFilter === "both" && (cat.forLinestop === false || !cat.forLinestopMaintenance)) return false;
+
       if (categoryFilter === "breakdown" && !cat.countsAsBreakdown) return false;
       if (categoryFilter === "non-breakdown" && cat.countsAsBreakdown) return false;
 
@@ -367,7 +386,7 @@ function MasterDataPage() {
 
       return codeMatch || nameMatch || idMatch;
     });
-  }, [appState.categories, categoryFilter, categorySearchQuery]);
+  }, [appState.categories, categoryTypeFilter, categoryFilter, categorySearchQuery]);
 
   const paginatedCategories = useMemo(() => {
     const start = (categoryPage - 1) * categoryPageSize;
@@ -377,8 +396,10 @@ function MasterDataPage() {
   // Open Add Category Modal
   const handleOpenAddCategory = () => {
     const nextNum = appState.categories.length + 1;
-    setCatCodeInput(`CAT-${String(nextNum).padStart(2, "0")}`);
+    setCatCodeInput(`LS-${String(nextNum).padStart(2, "0")}`);
     setCatNameInput("");
+    setCatForLinestop(true);
+    setCatForLinestopMtc(false);
     setCatBreakdownInput(false);
     setCatDowntimeInput(true);
     setCatActiveInput(true);
@@ -401,7 +422,11 @@ function MasterDataPage() {
 
   const handleSaveNewCategory = () => {
     if (!catNameInput.trim()) {
-      toast.error("Nama kategori wajib diisi");
+      toast.error("Nama category problem wajib diisi");
+      return;
+    }
+    if (!catForLinestop && !catForLinestopMtc) {
+      toast.error("Pilih minimal satu tipe E-Form (Linestop atau Linestop Maintenance)");
       return;
     }
     const code = catCodeInput.trim().toUpperCase() || `CAT-${catNameInput.slice(0, 4).toUpperCase()}`;
@@ -413,9 +438,11 @@ function MasterDataPage() {
       countsAsDowntime: catDowntimeInput,
       active: catActiveInput,
       custom: true,
+      forLinestop: catForLinestop,
+      forLinestopMaintenance: catForLinestopMtc,
     });
 
-    toast.success(`Kategori "${catNameInput.trim()}" (${code}) berhasil ditambahkan`);
+    toast.success(`Category Problem "${catNameInput.trim()}" (${code}) berhasil ditambahkan`);
     setAddCatModalOpen(false);
   };
 
@@ -424,6 +451,8 @@ function MasterDataPage() {
     setEditingCategory(cat);
     setEditCatCode(cat.code || `CAT-${cat.name.slice(0, 4).toUpperCase().replace(/\s/g, "")}`);
     setEditCatName(cat.name);
+    setEditCatForLinestop(cat.forLinestop !== false);
+    setEditCatForLinestopMtc(cat.forLinestopMaintenance === true);
     setEditCatBreakdown(cat.countsAsBreakdown);
     setEditCatDowntime(cat.countsAsDowntime);
     setEditCatActive(cat.active);
@@ -433,7 +462,11 @@ function MasterDataPage() {
   const handleSaveEditCategory = () => {
     if (!editingCategory) return;
     if (!editCatName.trim()) {
-      toast.error("Nama kategori wajib diisi");
+      toast.error("Nama category problem wajib diisi");
+      return;
+    }
+    if (!editCatForLinestop && !editCatForLinestopMtc) {
+      toast.error("Pilih minimal satu tipe E-Form (Linestop atau Linestop Maintenance)");
       return;
     }
 
@@ -443,9 +476,11 @@ function MasterDataPage() {
       countsAsBreakdown: editCatBreakdown,
       countsAsDowntime: editCatDowntime,
       active: editCatActive,
+      forLinestop: editCatForLinestop,
+      forLinestopMaintenance: editCatForLinestopMtc,
     });
 
-    toast.success(`Kategori "${editCatName.trim()}" berhasil diperbarui`);
+    toast.success(`Category Problem "${editCatName.trim()}" berhasil diperbarui`);
     setEditCatModalOpen(false);
     setEditingCategory(null);
   };
@@ -467,18 +502,20 @@ function MasterDataPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
-            {t("md.title")}
+            {activeView === "categories" ? "Master Data — Category Problem" : "Master Data — Stasiun & Area"}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Konfigurasi Area, Jalur Konveyor, Stasiun Produksi, dan Kategori Stop (MTTR & MTBF).
+            {activeView === "categories"
+              ? "Konfigurasi Kode Kategori Masalah dan Relasi Tipe E-Form (Linestop & Linestop Maintenance)."
+              : "Konfigurasi Area, Jalur Konveyor, dan Stasiun Produksi Pabrik."}
           </p>
         </div>
 
-        {/* Action Button depending on Active Tab */}
-        {activeTab === "stations" ? (
+        {/* Action Button depending on Active View */}
+        {activeView === "stations" ? (
           <button
             onClick={handleOpenBatchModal}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow transition-colors cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Tambah Data Stasiun</span>
@@ -486,85 +523,19 @@ function MasterDataPage() {
         ) : (
           <button
             onClick={handleOpenAddCategory}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow transition-colors cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            <span>{t("md.addCategory")}</span>
+            <span>Tambah Category Problem</span>
           </button>
         )}
       </div>
 
-      {/* Navigation Tab Bar: Stations vs Categories */}
-      <div className="flex items-center gap-2 border-b border-border pb-3">
-        <button
-          type="button"
-          onClick={() => setActiveTab("stations")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-mono text-xs font-bold transition-all shadow-2xs ${
-            activeTab === "stations"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted"
-          }`}
-        >
-          <Workflow className="h-4 w-4" />
-          <span>{t("md.tab.stations")} ({appState.stations.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("categories")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-mono text-xs font-bold transition-all shadow-2xs ${
-            activeTab === "categories"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted"
-          }`}
-        >
-          <Tag className="h-4 w-4" />
-          <span>{t("md.tab.categories")} ({appState.categories.length})</span>
-        </button>
-      </div>
-
       {/* ======================================================== */}
-      {/* TAB 1: MASTER DATA STATIONS                              */}
+      {/* VIEW 1: MASTER DATA STATIONS & AREA                      */}
       {/* ======================================================== */}
-      {activeTab === "stations" && (
+      {activeView === "stations" && (
         <div className="space-y-6">
-          {/* Summary KPI Strip: Total Area & Total Stasiun Saja (Requirement 6) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Card 1: Total Areas */}
-            <div className="rounded-xl border border-border bg-card p-4 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
-                  <Building2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="font-mono text-xs text-muted-foreground block uppercase font-bold">
-                    Total Area Pabrik
-                  </span>
-                  <span className="font-mono text-2xl font-black text-foreground">
-                    {appState.areas.length} Area
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: Total Stations */}
-            <div className="rounded-xl border border-border bg-card p-4 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                  <Layers className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="font-mono text-xs text-muted-foreground block uppercase font-bold">
-                    Total Stasiun Terdaftar
-                  </span>
-                  <span className="font-mono text-2xl font-black text-foreground">
-                    {appState.stations.length} Stasiun
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Main Station Master Table Card */}
           <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs space-y-0">
             {/* Toolbar: Search & Area Filter */}
@@ -784,104 +755,49 @@ function MasterDataPage() {
       )}
 
       {/* ======================================================== */}
-      {/* TAB 2: MASTER DATA CATEGORIES (MTTR & MTBF)              */}
+      {/* VIEW 2: MASTER DATA CATEGORY PROBLEM                     */}
       {/* ======================================================== */}
-      {activeTab === "categories" && (
+      {activeView === "categories" && (
         <div className="space-y-6">
-          {/* Summary KPI Strip for Categories */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            {/* Card 1: Total Kategori */}
-            <div className="rounded-xl border border-border bg-card p-4 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                  <Tag className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="font-mono text-xs text-muted-foreground block uppercase font-bold">
-                    Total Kategori
-                  </span>
-                  <span className="font-mono text-2xl font-black text-foreground">
-                    {appState.categories.length}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: Breakdown (MTTR & MTBF) */}
-            <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-4 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
-                  <AlertTriangle className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="font-mono text-xs text-rose-600 dark:text-rose-400 block uppercase font-bold">
-                    Breakdown (MTTR & MTBF)
-                  </span>
-                  <span className="font-mono text-2xl font-black text-rose-600 dark:text-rose-400">
-                    {appState.categories.filter((c) => c.countsAsBreakdown).length}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3: Non-Breakdown (Normal Stops) */}
-            <div className="rounded-xl border border-border bg-card p-4 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="font-mono text-xs text-muted-foreground block uppercase font-bold">
-                    Non-Breakdown (Normal)
-                  </span>
-                  <span className="font-mono text-2xl font-black text-foreground">
-                    {appState.categories.filter((c) => !c.countsAsBreakdown).length}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 4: Kategori Aktif */}
-            <div className="rounded-xl border border-border bg-card p-4 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                  <SlidersHorizontal className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="font-mono text-xs text-muted-foreground block uppercase font-bold">
-                    Kategori Aktif
-                  </span>
-                  <span className="font-mono text-2xl font-black text-foreground">
-                    {appState.categories.filter((c) => c.active).length}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Main Category Table Card */}
           <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs space-y-0">
             {/* Toolbar */}
             <div className="p-4 border-b border-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs text-muted-foreground font-semibold">
-                  Menampilkan {filteredCategories.length} dari {appState.categories.length} kategori stop
+                  Menampilkan {filteredCategories.length} dari {appState.categories.length} category problem
                 </span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
+                {/* Tipe E-form Filter */}
+                <div className="w-52 sm:w-60">
+                  <SelectInput
+                    hideClear
+                    value={categoryTypeFilter}
+                    onChange={(val) => setCategoryTypeFilter((val as any) ?? "all")}
+                    datalist={[
+                      { value: "all", label: "Semua Tipe E-Form" },
+                      { value: "linestop", label: "Hanya Linestop" },
+                      { value: "mtc", label: "Hanya Linestop Maintenance" },
+                      { value: "both", label: "Kedua Tipe E-Form" },
+                    ]}
+                    placeholder="Filter Tipe E-Form"
+                  />
+                </div>
+
                 {/* Breakdown Filter */}
-                <div className="w-56 sm:w-64">
+                <div className="w-48 sm:w-56">
                   <SelectInput
                     hideClear
                     value={categoryFilter}
                     onChange={(val) => setCategoryFilter((val as any) ?? "all")}
                     datalist={[
                       { value: "all", label: "Semua Kategori" },
-                      { value: "breakdown", label: "Hanya Breakdown (MTTR/MTBF)" },
-                      { value: "non-breakdown", label: "Hanya Non-Breakdown" },
+                      { value: "breakdown", label: "Breakdown (MTTR/MTBF)" },
+                      { value: "non-breakdown", label: "Non-Breakdown" },
                     ]}
-                    placeholder="Filter Kategori"
+                    placeholder="Filter Breakdown"
                   />
                 </div>
 
@@ -892,7 +808,7 @@ function MasterDataPage() {
                     type="text"
                     value={categorySearchQuery}
                     onChange={(e) => setCategorySearchQuery(e.target.value)}
-                    placeholder="Cari kode atau nama kategori..."
+                    placeholder="Cari kode atau nama category problem..."
                     className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground text-xs font-mono focus:outline-none focus:border-ring"
                   />
                   {categorySearchQuery && (
@@ -921,19 +837,19 @@ function MasterDataPage() {
                     </th>
                     <th className="py-3.5 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
-                        NAMA KATEGORI
+                        NAMA CATEGORY PROBLEM
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        TIPE E-FORM
                         <ArrowUpDown className="h-3 w-3 text-slate-400" />
                       </span>
                     </th>
                     <th className="py-3.5 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         PERHITUNGAN MTTR & MTBF
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                      </span>
-                    </th>
-                    <th className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1">
-                        DOWNTIME
                         <ArrowUpDown className="h-3 w-3 text-slate-400" />
                       </span>
                     </th>
@@ -950,8 +866,8 @@ function MasterDataPage() {
                     <tr>
                       <td colSpan={6} className="py-12 text-center text-muted-foreground font-mono">
                         <Tag className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        <p className="font-medium text-sm">Tidak ada kategori ditemukan</p>
-                        <p className="text-xs mt-1">Gunakan tombol &quot;Tambah Kategori&quot; untuk menambahkan kategori stop baru.</p>
+                        <p className="font-medium text-sm">Tidak ada category problem ditemukan</p>
+                        <p className="text-xs mt-1">Gunakan tombol &quot;Tambah Category Problem&quot; untuk menambahkan data baru.</p>
                       </td>
                     </tr>
                   ) : (
@@ -966,8 +882,8 @@ function MasterDataPage() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditCategory(cat)}
-                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
-                                title="Ubah Kategori"
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors cursor-pointer"
+                                title="Ubah Category Problem"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
@@ -976,8 +892,8 @@ function MasterDataPage() {
                               <button
                                 type="button"
                                 onClick={() => setDeleteCatTarget(cat)}
-                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-red-600 hover:border-red-400 dark:hover:text-red-400 shadow-2xs transition-colors"
-                                title="Hapus Kategori"
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-red-600 hover:border-red-400 dark:hover:text-red-400 shadow-2xs transition-colors cursor-pointer"
+                                title="Hapus Category Problem"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -991,7 +907,7 @@ function MasterDataPage() {
                             </span>
                           </td>
 
-                          {/* Nama Kategori */}
+                          {/* Nama Category Problem */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <div className="font-semibold text-foreground text-[13px]">
                               {cat.name}
@@ -1001,50 +917,76 @@ function MasterDataPage() {
                             </span>
                           </td>
 
+                          {/* Tipe E-Form */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {cat.forLinestop !== false && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                  Linestop
+                                </span>
+                              )}
+                              {cat.forLinestopMaintenance === true && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-500" />
+                                  Linestop Maintenance
+                                </span>
+                              )}
+                              {cat.forLinestop === false && !cat.forLinestopMaintenance && (
+                                <span className="text-muted-foreground text-xs italic">-</span>
+                              )}
+                            </div>
+                          </td>
+
                           {/* MTTR / MTBF Breakdown */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             {cat.countsAsBreakdown ? (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
                                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                                <span>Dihitung (Breakdown MTTR/MTBF)</span>
+                                <span>Breakdown (MTTR/MTBF)</span>
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-muted text-muted-foreground border border-border">
                                 <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                <span>Non-Breakdown (Normal Stop)</span>
+                                <span>Non-Breakdown</span>
                               </span>
                             )}
                           </td>
 
-                          {/* Downtime */}
+                          {/* Status Live diganti jadi Toggle Switch Active & Inactive */}
                           <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            {cat.countsAsDowntime ? (
-                              <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                Kurangi Run Time
-                              </span>
-                            ) : (
-                              <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-muted text-muted-foreground">
-                                Terencana (Planned)
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                                cat.active
-                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                  : "bg-muted text-muted-foreground border border-border"
-                              }`}
-                            >
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  cat.active ? "bg-emerald-500" : "bg-muted-foreground"
+                            <div className="inline-flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={cat.active}
+                                onClick={() => {
+                                  store.updateCategory(cat.id, { active: !cat.active });
+                                  toast.success(
+                                    `Status "${cat.name}" diubah menjadi ${!cat.active ? "Aktif" : "Nonaktif"}`,
+                                  );
+                                }}
+                                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary ${
+                                  cat.active ? "bg-emerald-600 dark:bg-emerald-500" : "bg-slate-300 dark:bg-zinc-700"
                                 }`}
-                              />
-                              {cat.active ? "AKTIF" : "NONAKTIF"}
-                            </span>
+                                title={cat.active ? "Klik untuk menonaktifkan" : "Klik untuk mengaktifkan"}
+                              >
+                                <span className="sr-only">Toggle status kategori</span>
+                                <span
+                                  aria-hidden="true"
+                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                                    cat.active ? "translate-x-5" : "translate-x-0"
+                                  }`}
+                                />
+                              </button>
+                              <span
+                                className={`text-[11px] font-bold font-mono ${
+                                  cat.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+                                }`}
+                              >
+                                {cat.active ? "Active" : "Inactive"}
+                              </span>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1417,16 +1359,16 @@ function MasterDataPage() {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: ADD CATEGORY (WITH MTTR & MTBF BREAKDOWN FLAG)    */}
+      {/* MODAL: ADD CATEGORY PROBLEM                              */}
       {/* ======================================================== */}
       {addCatModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
               <div className="flex items-center gap-2">
                 <Tag className="h-5 w-5 text-primary" />
                 <h3 className="font-display text-base font-bold text-foreground">
-                  {t("md.addCategory")}
+                  Tambah Category Problem
                 </h3>
               </div>
               <button
@@ -1445,7 +1387,7 @@ function MasterDataPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Contoh: CAT-BRK, CAT-PROC, CAT-MAINT, CAT-PART"
+                  placeholder="Contoh: LS-05, LM-02, CAT-BRK"
                   value={catCodeInput}
                   onChange={(e) => handleCatCodeChange(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground font-bold uppercase placeholder:text-muted-foreground focus:outline-none focus:border-ring"
@@ -1455,15 +1397,84 @@ function MasterDataPage() {
               {/* Category Name */}
               <div>
                 <label className="block text-foreground font-semibold mb-1">
-                  Nama Kategori (Category Name):
+                  Nama Category Problem:
                 </label>
                 <input
                   type="text"
-                  placeholder="Contoh: Breakdown, Process, Maintenance, Part Issue"
+                  placeholder="Contoh: Full cabin in line, Dock pin stuck, Sensor jam"
                   value={catNameInput}
                   onChange={(e) => handleCatNameChange(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
                 />
+              </div>
+
+              {/* Type E-Form Checkbox Buttons (Linestop, Linestop Maintenance, or Both) */}
+              <div>
+                <label className="block text-foreground font-semibold mb-2">
+                  Tipe Formulir E-Form:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-sans">
+                  {/* Button 1: Linestop */}
+                  <button
+                    type="button"
+                    onClick={() => setCatForLinestop(!catForLinestop)}
+                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      catForLinestop
+                        ? "border-amber-500 bg-amber-500/10 shadow-2xs"
+                        : "border-border bg-card hover:bg-muted"
+                    }`}
+                  >
+                    <div
+                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${
+                        catForLinestop
+                          ? "bg-amber-500 border-amber-500 text-white"
+                          : "border-muted-foreground"
+                      }`}
+                    >
+                      {catForLinestop && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={`text-xs font-bold ${catForLinestop ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}>
+                        Linestop
+                      </span>
+                      <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                        Tersedia pada form Line Stop produksi
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Button 2: Linestop Maintenance */}
+                  <button
+                    type="button"
+                    onClick={() => setCatForLinestopMtc(!catForLinestopMtc)}
+                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      catForLinestopMtc
+                        ? "border-cyan-500 bg-cyan-500/10 shadow-2xs"
+                        : "border-border bg-card hover:bg-muted"
+                    }`}
+                  >
+                    <div
+                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${
+                        catForLinestopMtc
+                          ? "bg-cyan-500 border-cyan-500 text-white"
+                          : "border-muted-foreground"
+                      }`}
+                    >
+                      {catForLinestopMtc && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={`text-xs font-bold ${catForLinestopMtc ? "text-cyan-600 dark:text-cyan-400" : "text-foreground"}`}>
+                        Linestop Maintenance
+                      </span>
+                      <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                        Tersedia pada form teknisi Maintenance
+                      </span>
+                    </div>
+                  </button>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1.5 font-sans">
+                  * Bisa pilih salah satu tipe E-Form, atau centang kedua-duanya sekaligus.
+                </p>
               </div>
 
               {/* MTTR & MTBF Breakdown Flag Box */}
@@ -1479,25 +1490,12 @@ function MasterDataPage() {
                     <span className="block font-bold text-rose-600 dark:text-rose-400">
                       Dihitung dalam MTTR & MTBF (Breakdown Category)
                     </span>
-                    <span className="text-[11px] text-muted-foreground leading-relaxed block mt-0.5">
+                    <span className="text-[11px] text-muted-foreground leading-relaxed block mt-0.5 font-sans">
                       {t("md.breakdownHint")}
                     </span>
                   </div>
                 </label>
               </div>
-
-              {/* Downtime Flag */}
-              <label className="flex items-center gap-2 cursor-pointer pt-1">
-                <input
-                  type="checkbox"
-                  checked={catDowntimeInput}
-                  onChange={(e) => setCatDowntimeInput(e.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                />
-                <span className="text-foreground">
-                  Dihitung sebagai Downtime Produksi (Mengurangi Running Time)
-                </span>
-              </label>
 
               {/* Active Flag */}
               <label className="flex items-center gap-2 cursor-pointer">
@@ -1508,7 +1506,7 @@ function MasterDataPage() {
                   className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                 />
                 <span className="text-foreground">
-                  Kategori Aktif (Dapat dipilih oleh operator)
+                  Kategori Aktif (Dapat dipilih pada formulir iPad)
                 </span>
               </label>
             </div>
@@ -1517,16 +1515,16 @@ function MasterDataPage() {
               <button
                 type="button"
                 onClick={() => setAddCatModalOpen(false)}
-                className="px-4 py-2 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
+                className="px-4 py-2 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={handleSaveNewCategory}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs transition-colors"
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs transition-colors cursor-pointer"
               >
-                Simpan Kategori
+                Simpan Category Problem
               </button>
             </div>
           </div>
@@ -1534,14 +1532,14 @@ function MasterDataPage() {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: EDIT CATEGORY                                     */}
+      {/* MODAL: EDIT CATEGORY PROBLEM                             */}
       {/* ======================================================== */}
       {editCatModalOpen && editingCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
               <h3 className="font-display text-base font-semibold text-foreground">
-                Ubah Kategori Stop ({editingCategory.name})
+                Ubah Category Problem ({editingCategory.name})
               </h3>
               <button
                 onClick={() => setEditCatModalOpen(false)}
@@ -1558,20 +1556,89 @@ function MasterDataPage() {
                   type="text"
                   value={editCatCode}
                   onChange={(e) => setEditCatCode(e.target.value.toUpperCase())}
-                  placeholder="Contoh: CAT-BRK"
+                  placeholder="Contoh: LS-01, LM-01"
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground font-bold uppercase focus:outline-none focus:border-ring"
                 />
               </div>
 
               <div>
-                <label className="block text-muted-foreground mb-1">Nama Kategori:</label>
+                <label className="block text-muted-foreground mb-1">Nama Category Problem:</label>
                 <input
                   type="text"
                   value={editCatName}
                   onChange={(e) => setEditCatName(e.target.value)}
-                  placeholder="Contoh: Breakdown"
+                  placeholder="Contoh: Full cabin in line"
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground focus:outline-none focus:border-ring"
                 />
+              </div>
+
+              {/* Type E-Form Checkbox Buttons (Linestop, Linestop Maintenance, or Both) */}
+              <div>
+                <label className="block text-foreground font-semibold mb-2">
+                  Tipe Formulir E-Form:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-sans">
+                  {/* Button 1: Linestop */}
+                  <button
+                    type="button"
+                    onClick={() => setEditCatForLinestop(!editCatForLinestop)}
+                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      editCatForLinestop
+                        ? "border-amber-500 bg-amber-500/10 shadow-2xs"
+                        : "border-border bg-card hover:bg-muted"
+                    }`}
+                  >
+                    <div
+                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${
+                        editCatForLinestop
+                          ? "bg-amber-500 border-amber-500 text-white"
+                          : "border-muted-foreground"
+                      }`}
+                    >
+                      {editCatForLinestop && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={`text-xs font-bold ${editCatForLinestop ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}>
+                        Linestop
+                      </span>
+                      <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                        Tersedia pada form Line Stop produksi
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Button 2: Linestop Maintenance */}
+                  <button
+                    type="button"
+                    onClick={() => setEditCatForLinestopMtc(!editCatForLinestopMtc)}
+                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      editCatForLinestopMtc
+                        ? "border-cyan-500 bg-cyan-500/10 shadow-2xs"
+                        : "border-border bg-card hover:bg-muted"
+                    }`}
+                  >
+                    <div
+                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${
+                        editCatForLinestopMtc
+                          ? "bg-cyan-500 border-cyan-500 text-white"
+                          : "border-muted-foreground"
+                      }`}
+                    >
+                      {editCatForLinestopMtc && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={`text-xs font-bold ${editCatForLinestopMtc ? "text-cyan-600 dark:text-cyan-400" : "text-foreground"}`}>
+                        Linestop Maintenance
+                      </span>
+                      <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                        Tersedia pada form teknisi Maintenance
+                      </span>
+                    </div>
+                  </button>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1.5 font-sans">
+                  * Bisa pilih salah satu tipe E-Form, atau centang kedua-duanya sekaligus.
+                </p>
               </div>
 
               {/* MTTR & MTBF Breakdown Flag Box */}
@@ -1587,25 +1654,12 @@ function MasterDataPage() {
                     <span className="block font-bold text-rose-600 dark:text-rose-400">
                       Dihitung dalam MTTR & MTBF (Breakdown Category)
                     </span>
-                    <span className="text-[11px] text-muted-foreground leading-relaxed block mt-0.5">
+                    <span className="text-[11px] text-muted-foreground leading-relaxed block mt-0.5 font-sans">
                       {t("md.breakdownHint")}
                     </span>
                   </div>
                 </label>
               </div>
-
-              {/* Downtime Flag */}
-              <label className="flex items-center gap-2 cursor-pointer pt-1">
-                <input
-                  type="checkbox"
-                  checked={editCatDowntime}
-                  onChange={(e) => setEditCatDowntime(e.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                />
-                <span className="text-foreground">
-                  Dihitung sebagai Downtime Produksi (Mengurangi Running Time)
-                </span>
-              </label>
 
               {/* Active Flag */}
               <label className="flex items-center gap-2 cursor-pointer">
@@ -1625,14 +1679,14 @@ function MasterDataPage() {
               <button
                 type="button"
                 onClick={() => setEditCatModalOpen(false)}
-                className="px-4 py-2 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
+                className="px-4 py-2 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={handleSaveEditCategory}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs"
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs cursor-pointer"
               >
                 Simpan Perubahan
               </button>
@@ -1642,7 +1696,7 @@ function MasterDataPage() {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: DELETE CATEGORY CONFIRMATION                      */}
+      {/* MODAL: DELETE CATEGORY PROBLEM CONFIRMATION              */}
       {/* ======================================================== */}
       {deleteCatTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-xs p-4">
@@ -1650,11 +1704,11 @@ function MasterDataPage() {
             <div className="flex items-center gap-3 mb-3 text-rose-600 dark:text-rose-400">
               <AlertTriangle className="h-6 w-6 shrink-0" />
               <h3 className="font-display text-base font-bold text-foreground">
-                Hapus Kategori?
+                Hapus Category Problem?
               </h3>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-              Apakah Anda yakin ingin menghapus kategori <strong className="text-foreground">{deleteCatTarget.name} ({deleteCatTarget.code || deleteCatTarget.id})</strong>?
+              Apakah Anda yakin ingin menghapus category problem <strong className="text-foreground">{deleteCatTarget.name} ({deleteCatTarget.code || deleteCatTarget.id})</strong>?
             </p>
 
             {linkedStopsCount > 0 && (
@@ -1666,15 +1720,15 @@ function MasterDataPage() {
             <div className="flex justify-end gap-2 pt-4 border-t border-border">
               <button
                 onClick={() => setDeleteCatTarget(null)}
-                className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
+                className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted cursor-pointer"
               >
                 Batal
               </button>
               <button
                 onClick={handleConfirmDeleteCategory}
-                className="px-4 py-2 rounded bg-rose-600 text-white font-semibold font-mono text-xs hover:bg-rose-500 shadow-2xs"
+                className="px-4 py-2 rounded bg-rose-600 text-white font-semibold font-mono text-xs hover:bg-rose-500 shadow-2xs cursor-pointer"
               >
-                Ya, Hapus Kategori
+                Ya, Hapus Category Problem
               </button>
             </div>
           </div>

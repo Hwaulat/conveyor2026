@@ -199,16 +199,19 @@ function IpadEFormPage() {
     return (appState?.stations || []).find((s) => s && s.id === selectedStationId);
   }, [appState?.stations, selectedStationId]);
 
-  // Available categories based on Form Type:
-  // - Linestop: Full cabin in line, Maintenance / machine problem, Incident, Breakdown
-  // - Linestop Maintenance: Dock pin stuck
+  // Available categories based on Form Type and Category configuration:
+  // - Linestop: categories with forLinestop !== false
+  // - Linestop Maintenance: categories with forLinestopMaintenance === true
   const availableCategories = useMemo(() => {
+    const all = appState?.categories || [];
     if (formType === "linestop") {
-      const customCats = (appState?.categories || []).filter((c) => c && c.custom);
-      return [...LINESTOP_CATEGORIES, ...customCats];
+      const filtered = all.filter((c) => c && c.active && c.forLinestop !== false);
+      if (filtered.length > 0) return filtered;
+      return LINESTOP_CATEGORIES;
     } else {
-      const customCats = (appState?.categories || []).filter((c) => c && c.custom);
-      return [...LINESTOP_MAINTENANCE_CATEGORIES, ...customCats];
+      const filtered = all.filter((c) => c && c.active && c.forLinestopMaintenance === true);
+      if (filtered.length > 0) return filtered;
+      return LINESTOP_MAINTENANCE_CATEGORIES;
     }
   }, [formType, appState?.categories]);
 
@@ -441,12 +444,14 @@ function IpadEFormPage() {
     }
     const created = store.addCategory({
       name: newCatName.trim(),
-      code: newCatCode.trim() || `CAT-${Date.now().toString().slice(-4)}`,
+      code: newCatCode.trim() || (formType === "mtc" ? `LM-${Date.now().toString().slice(-4)}` : `LS-${Date.now().toString().slice(-4)}`),
       countsAsBreakdown: false,
       countsAsDowntime: true,
       active: true,
       custom: true,
       createdBy: operatorBadge,
+      forLinestop: formType === "linestop",
+      forLinestopMaintenance: formType === "mtc",
     });
     setSelectedCategoryId(created.id);
     toast.success(`New category saved: ${created.name}`);

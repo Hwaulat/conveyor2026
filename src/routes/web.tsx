@@ -11,13 +11,8 @@ import {
   FileSpreadsheet,
   BookOpen,
   Layers,
-  List,
-  Globe,
-  Users,
-  Building2,
-  Settings,
-  MapPin,
-  DollarSign,
+  Workflow,
+  SlidersHorizontal,
   User,
   PanelLeft,
   Moon,
@@ -31,6 +26,7 @@ import {
   Tv,
   Tablet,
   ExternalLink,
+  Globe,
   Radio,
 } from "lucide-react";
 import { useI18n } from "../lib/i18n";
@@ -81,7 +77,15 @@ export function WebLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [masterDataExpanded, setMasterDataExpanded] = useState(true);
-  const [activeSubItem, setActiveSubItem] = useState("sparepart");
+  const [activeSubItem, setActiveSubItem] = useState("stations");
+
+  const currentView = useMemo(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get("view") === "categories") return "categories";
+    }
+    return activeSubItem || "stations";
+  }, [location.search, activeSubItem]);
 
   // Live clock WIB ticking every second
   useEffect(() => {
@@ -162,14 +166,8 @@ export function WebLayout() {
   ];
 
   const masterDataSubItems = [
-    { name: "Maintenance Setup", icon: List, key: "maint-setup" },
-    { name: "Region", icon: Globe, key: "region" },
-    { name: "Business Partner", icon: Users, key: "partner" },
-    { name: "Organization", icon: Building2, key: "org" },
-    { name: "Equipment", icon: Settings, key: "equipment" },
-    { name: "Location", icon: MapPin, key: "location" },
-    { name: "Sparepart", icon: Settings, key: "sparepart" },
-    { name: "Budget Item", icon: DollarSign, key: "budget" },
+    { name: "Stasiun & Area", icon: Workflow, key: "stations", view: "stations" },
+    { name: "Category Problem", icon: SlidersHorizontal, key: "categories", view: "categories" },
   ];
 
   const isActive = (to: string, exact?: boolean) => {
@@ -396,13 +394,14 @@ export function WebLayout() {
                 {masterDataExpanded && (
                   <div className="ml-5 pl-2.5 my-1 space-y-0.5 border-l border-[#1d3554]">
                     {masterDataSubItems.map((sub) => {
-                      const isSelected = isMasterDataActive && activeSubItem === sub.key;
+                      const isSelected = isMasterDataActive && currentView === sub.key;
                       const SubIcon = sub.icon;
 
                       return (
                         <Link
                           key={sub.name}
                           to="/web/master-data"
+                          search={{ view: sub.view }}
                           onClick={() => setActiveSubItem(sub.key)}
                           className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
                             isSelected

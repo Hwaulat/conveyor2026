@@ -29,6 +29,8 @@ export type Category = {
   active: boolean;
   custom: boolean;
   createdBy?: string | undefined;
+  forLinestop?: boolean | undefined;
+  forLinestopMaintenance?: boolean | undefined;
 };
 
 export type LineStop = {
