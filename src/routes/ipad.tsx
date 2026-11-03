@@ -109,20 +109,23 @@ function IpadEFormPage() {
   // Form Type: "linestop" | "mtc"
   const [formType, setFormType] = useState<"linestop" | "mtc">("linestop");
 
-  // Tablist Area Khusus iPad (5 Area yang direlasikan ke Stasiun):
-  // 1. Sanding Area
-  // 2. Sealing Area
-  // 3. Topcoat Area
-  // 4. Touch Up Area
-  // 5. Drop Cabin CED
+  // Tablist Area Khusus iPad:
+  // - E-Form Linestop: 5 Area (Sanding, Sealing, Topcoat, Touch Up, Drop Cabin CED)
+  // - E-Form Linestop Maintenance: 2 Area (Oven CED, Mezzanine)
   const ipadAreaConfigs = useMemo(() => {
-    const list = [
-      { key: "area-sanding", name: "Sanding Area", code: "SANDING" },
-      { key: "area-sealing", name: "Sealing Area", code: "SEALING" },
-      { key: "area-topcoat", name: "Topcoat Area", code: "TOPCOAT" },
-      { key: "area-touch-up", name: "Touch Up Area", code: "TOUCH-UP" },
-      { key: "area-drop-ced", name: "Drop Cabin CED", code: "DROP-CED" },
-    ];
+    const list =
+      formType === "mtc"
+        ? [
+            { key: "area-oven-ced", name: "Oven CED", code: "OVEN-CED" },
+            { key: "area-mezzanine", name: "Mezzanine", code: "MEZZANINE" },
+          ]
+        : [
+            { key: "area-sanding", name: "Sanding Area", code: "SANDING" },
+            { key: "area-sealing", name: "Sealing Area", code: "SEALING" },
+            { key: "area-topcoat", name: "Topcoat Area", code: "TOPCOAT" },
+            { key: "area-touch-up", name: "Touch Up Area", code: "TOUCH-UP" },
+            { key: "area-drop-ced", name: "Drop Cabin CED", code: "DROP-CED" },
+          ];
     const areas = appState?.areas || [];
     return list.map((item) => {
       const found = areas.find(
@@ -138,9 +141,19 @@ function IpadEFormPage() {
         code: found?.code ?? item.code,
       };
     });
-  }, [appState?.areas]);
+  }, [formType, appState?.areas]);
 
   const [selectedAreaId, setSelectedAreaId] = useState<string>(() => ipadAreaConfigs[0]?.id ?? "area-sanding");
+
+  // Pastikan area terpilih selalu berada di daftar area yang valid untuk formType aktif
+  useEffect(() => {
+    if (ipadAreaConfigs.length > 0 && !ipadAreaConfigs.some((a) => a.id === selectedAreaId)) {
+      const firstArea = ipadAreaConfigs[0]!;
+      setSelectedAreaId(firstArea.id);
+      const st = (appState?.stations || []).filter((s) => s && s.areaId === firstArea.id);
+      if (st.length > 0) setSelectedStationId(st[0]!.id);
+    }
+  }, [ipadAreaConfigs, selectedAreaId, appState?.stations]);
 
   const currentAreaConfig = useMemo(() => {
     return ipadAreaConfigs.find((a) => a.id === selectedAreaId) ?? ipadAreaConfigs[0] ?? { id: "area-sanding", name: "Sanding Area", code: "SANDING" };
@@ -194,10 +207,41 @@ function IpadEFormPage() {
     }
   };
 
-  // Ganti Jenis Form (Linestop vs MTC)
+  // Ganti Jenis Form (Linestop vs Linestop Maintenance)
   const handleFormTypeChange = (type: "linestop" | "mtc") => {
     setFormType(type);
     const categories = appState?.categories || [];
+    const targetConfigs =
+      type === "mtc"
+        ? [
+            { key: "area-oven-ced", name: "Oven CED", code: "OVEN-CED" },
+            { key: "area-mezzanine", name: "Mezzanine", code: "MEZZANINE" },
+          ]
+        : [
+            { key: "area-sanding", name: "Sanding Area", code: "SANDING" },
+            { key: "area-sealing", name: "Sealing Area", code: "SEALING" },
+            { key: "area-topcoat", name: "Topcoat Area", code: "TOPCOAT" },
+            { key: "area-touch-up", name: "Touch Up Area", code: "TOUCH-UP" },
+            { key: "area-drop-ced", name: "Drop Cabin CED", code: "DROP-CED" },
+          ];
+
+    const areas = appState?.areas || [];
+    const firstTarget = targetConfigs[0]!;
+    const foundFirstArea = areas.find(
+      (a) =>
+        a &&
+        (a.id === firstTarget.key ||
+          a.code?.toUpperCase() === firstTarget.code ||
+          (typeof a.name === "string" && a.name.toLowerCase().includes(firstTarget.code.toLowerCase().slice(0, 4))))
+    );
+    const targetAreaId = foundFirstArea?.id ?? firstTarget.key;
+    setSelectedAreaId(targetAreaId);
+
+    const st = (appState?.stations || []).filter((s) => s && s.areaId === targetAreaId);
+    if (st.length > 0) {
+      setSelectedStationId(st[0]!.id);
+    }
+
     if (type === "mtc") {
       const mtcCat = categories.find(
         (c) => c && (c.id === "cat-3" || (typeof c.name === "string" && c.name.toLowerCase().includes("maint")))
@@ -321,13 +365,13 @@ function IpadEFormPage() {
       const created = store.addStop(stopPayload);
       if (isOpenStop) {
         toast.warning(
-          formType === "mtc" ? "Pekerjaan MTC tersimpan sebagai OPEN" : t("form.savedOpen")
+          formType === "mtc" ? "Line Start Linestop tersimpan sebagai OPEN" : t("form.savedOpen")
         );
       } else {
         const dur = stopDurationMs(created, endMs ?? now);
         toast.success(
           formType === "mtc"
-            ? `Laporan MTC tersimpan. Durasi: ${fmtDuration(dur)}`
+            ? `Finish Linestop tersimpan. Durasi: ${fmtDuration(dur)}`
             : t("form.savedWithDuration", { duration: fmtDuration(dur) })
         );
       }
@@ -454,7 +498,7 @@ function IpadEFormPage() {
                   <AlertTriangle className="h-5 w-5 shrink-0" />
                   <div className="text-left">
                     <span className="block leading-none">E-Form Linestop</span>
-                    <span className="text-[10px] font-sans font-normal opacity-85">Stop Operasional & Proses</span>
+                    <span className="text-[10px] font-sans font-normal opacity-85">Stop Operasional & Proses (5 Area)</span>
                   </div>
                 </button>
 
@@ -468,25 +512,31 @@ function IpadEFormPage() {
                 >
                   <Wrench className="h-5 w-5 shrink-0" />
                   <div className="text-left">
-                    <span className="block leading-none">E-Form MTC</span>
-                    <span className="text-[10px] font-sans font-normal opacity-85">Maintenance & Perbaikan</span>
+                    <span className="block leading-none">E-Form Linestop Maintenance</span>
+                    <span className="text-[10px] font-sans font-normal opacity-85">Oven CED & Mezzanine (2 Area)</span>
                   </div>
                 </button>
               </div>
             </div>
 
-            {/* 1. Tablist Area */}
+            {/* 1. Tablist Area (Linestop: 5 Area, Maintenance: 2 Area) */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                  1. Tablist Area:
+                  1. Tablist Area ({formType === "mtc" ? "Oven CED & Mezzanine" : "5 Area Produksi"}):
                 </label>
                 <span className="font-mono text-[11px] text-muted-foreground">
                   {currentAreaConfig?.name} • {areaStations.length} Stasiun
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              <div
+                className={`grid gap-2 ${
+                  formType === "mtc"
+                    ? "grid-cols-2"
+                    : "grid-cols-2 sm:grid-cols-3 md:grid-cols-5"
+                }`}
+              >
                 {ipadAreaConfigs.map((area) => {
                   const isAreaSelected = selectedAreaId === area.id;
                   const count = (appState?.stations || []).filter((s) => s && s.areaId === area.id).length;
@@ -515,7 +565,7 @@ function IpadEFormPage() {
               </div>
             </div>
 
-            {/* 2. Stasiun di Area Terpilih */}
+            {/* 2. Stasiun di Area Terpilih (Hanya Nama Stasiun Saja, Tanpa Waktu m/min) */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
@@ -542,34 +592,28 @@ function IpadEFormPage() {
                         type="button"
                         key={station.id}
                         onClick={() => setSelectedStationId(station.id)}
-                        className={`min-h-[64px] p-3 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex flex-col justify-between ${isSelected
+                        className={`p-3.5 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                          isSelected
                             ? formType === "mtc"
-                              ? "border-blue-500 bg-blue-600 text-white font-bold shadow-md scale-[1.02]"
-                              : "border-primary bg-primary text-primary-foreground font-bold shadow-md scale-[1.02]"
+                              ? "border-blue-500 bg-blue-600 text-white font-bold shadow-md scale-[1.01]"
+                              : "border-primary bg-primary text-primary-foreground font-bold shadow-md scale-[1.01]"
                             : isStopped
                               ? "border-red-500/60 bg-red-500/10 text-red-600 dark:text-red-400 hover:border-red-500"
-                              : "border-border bg-muted/30 text-foreground hover:border-primary/40 hover:bg-muted/60"
-                          }`}
+                              : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-muted"
+                        }`}
                       >
-                        <div className="flex items-start justify-between gap-1">
-                          <span className="text-xs font-bold leading-tight block">
-                            {station.name}
-                          </span>
-                          <span className="text-[9px] px-1 py-0.5 rounded bg-muted/50 border border-border/50 shrink-0">
-                            {station.code || `#${station.sequence}`}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-[10px] opacity-90 mt-2 pt-1 border-t border-border/30">
-                          <span className="text-[9px] truncate">
-                            {live && !isStopped && typeof live.speed === "number"
-                              ? `${live.speed.toFixed(2)} ${station.speedUnit || "m/min"}`
-                              : `Thr: ${station.runningThreshold ?? 0.1}`}
-                          </span>
-                          <span className={isStopped ? "text-red-600 dark:text-red-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
-                            {isStopped ? "STOPPED" : "RUNNING"}
-                          </span>
-                        </div>
+                        <span className="text-xs font-bold leading-tight block truncate pr-1">
+                          {station.name}
+                        </span>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold shrink-0 ${
+                            isSelected
+                              ? "bg-white/20 text-white"
+                              : "bg-muted text-muted-foreground border border-border"
+                          }`}
+                        >
+                          {station.code || `#${station.sequence}`}
+                        </span>
                       </button>
                     );
                   })}
@@ -577,10 +621,12 @@ function IpadEFormPage() {
               )}
             </div>
 
-            {/* 3. Stop / MTC Status & Timing */}
+            {/* 3. Stop / MTC Status & Timing: Line Start Linestop dan Finish Linestop */}
             <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
               <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                {formType === "mtc" ? "3. Status & Waktu Pekerjaan MTC:" : "3. Status & Waktu Berhenti:"}
+                {formType === "mtc"
+                  ? "3. Line Start Linestop & Finish Linestop:"
+                  : "3. Status & Waktu Berhenti:"}
               </label>
 
               {/* Toggle Still Stopped vs Closed */}
@@ -588,25 +634,31 @@ function IpadEFormPage() {
                 <button
                   type="button"
                   onClick={() => setIsOpenStop(true)}
-                  className={`p-3.5 rounded-xl border-2 font-mono text-xs font-bold text-center transition-all cursor-pointer ${isOpenStop
+                  className={`p-3.5 rounded-xl border-2 font-mono text-xs font-bold text-center transition-all cursor-pointer ${
+                    isOpenStop
                       ? formType === "mtc"
                         ? "border-blue-500 bg-blue-600 text-white shadow-md shadow-blue-600/30"
                         : "border-red-500 bg-red-600 text-white shadow-md shadow-red-600/30"
                       : "border-border bg-card text-muted-foreground hover:text-foreground"
-                    }`}
+                  }`}
                 >
-                  {formType === "mtc" ? "Sedang Dikerjakan (MTC OPEN)" : "Masih Berhenti (Simpan OPEN)"}
+                  {formType === "mtc"
+                    ? "Line Start Linestop (OPEN)"
+                    : "Masih Berhenti (Simpan OPEN)"}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setIsOpenStop(false)}
-                  className={`p-3.5 rounded-xl border-2 font-mono text-xs font-bold text-center transition-all cursor-pointer ${!isOpenStop
+                  className={`p-3.5 rounded-xl border-2 font-mono text-xs font-bold text-center transition-all cursor-pointer ${
+                    !isOpenStop
                       ? "border-emerald-500 bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
                       : "border-border bg-card text-muted-foreground hover:text-foreground"
-                    }`}
+                  }`}
                 >
-                  {formType === "mtc" ? "Pekerjaan Selesai (CLOSED)" : "Sudah Selesai (CLOSED)"}
+                  {formType === "mtc"
+                    ? "Finish Linestop (CLOSED)"
+                    : "Sudah Selesai (CLOSED)"}
                 </button>
               </div>
 
@@ -614,7 +666,7 @@ function IpadEFormPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <span className="block font-mono text-[11px] text-muted-foreground mb-1">
-                    {formType === "mtc" ? "Waktu Mulai Pekerjaan:" : t("form.startTime")}:
+                    {formType === "mtc" ? "Line Start Linestop:" : t("form.startTime")}:
                   </span>
                   <input
                     type="datetime-local"
@@ -627,7 +679,7 @@ function IpadEFormPage() {
                 {!isOpenStop && (
                   <div>
                     <span className="block font-mono text-[11px] text-muted-foreground mb-1">
-                      {formType === "mtc" ? "Waktu Selesai Pekerjaan:" : t("form.endTime")}:
+                      {formType === "mtc" ? "Finish Linestop:" : t("form.endTime")}:
                     </span>
                     <input
                       type="datetime-local"
@@ -738,8 +790,8 @@ function IpadEFormPage() {
               {formType === "mtc" ? <Wrench className="h-5 w-5" /> : <Send className="h-5 w-5" />}
               {formType === "mtc"
                 ? isOpenStop
-                  ? "Simpan Pekerjaan MTC (OPEN)"
-                  : "Simpan Laporan MTC (CLOSED)"
+                  ? "Simpan Line Start Linestop (OPEN)"
+                  : "Simpan Finish Linestop (CLOSED)"
                 : isOpenStop
                   ? t("form.saveOpen")
                   : t("form.submit")}
