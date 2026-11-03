@@ -417,29 +417,40 @@ let currentState: AppState = (() => {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.stations && parsed.stops) {
-        if (Array.isArray(parsed.categories)) {
-          parsed.categories = parsed.categories.map((c: any) => ({
-            ...c,
-            code: c.code || `CAT-${c.name.slice(0, 4).toUpperCase().replace(/\s/g, "")}`,
-          }));
-        }
-        // Ensure standard 10 areas and all stations exist
+      if (parsed && typeof parsed === "object") {
+        const seed = createSeedData();
+        const safeState: AppState = {
+          ...seed,
+          ...parsed,
+          areas: Array.isArray(parsed.areas) && parsed.areas.length > 0 ? parsed.areas : seed.areas,
+          conveyors: Array.isArray(parsed.conveyors) && parsed.conveyors.length > 0 ? parsed.conveyors : seed.conveyors,
+          stations: Array.isArray(parsed.stations) && parsed.stations.length > 0 ? parsed.stations : seed.stations,
+          categories: Array.isArray(parsed.categories) && parsed.categories.length > 0 ? parsed.categories : seed.categories,
+          shifts: Array.isArray(parsed.shifts) && parsed.shifts.length > 0 ? parsed.shifts : seed.shifts,
+          users: Array.isArray(parsed.users) && parsed.users.length > 0 ? parsed.users : seed.users,
+          devices: Array.isArray(parsed.devices) && parsed.devices.length > 0 ? parsed.devices : seed.devices,
+          stops: Array.isArray(parsed.stops) ? parsed.stops : seed.stops,
+          auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : seed.auditLogs,
+          productionRecords: Array.isArray(parsed.productionRecords) ? parsed.productionRecords : seed.productionRecords,
+          offlineQueue: Array.isArray(parsed.offlineQueue) ? parsed.offlineQueue : [],
+          stationLive: parsed.stationLive && typeof parsed.stationLive === "object" ? { ...seed.stationLive, ...parsed.stationLive } : seed.stationLive,
+        };
+
+        safeState.categories = safeState.categories.map((c: any) => ({
+          ...c,
+          code: c.code || `CAT-${c.name?.slice(0, 4).toUpperCase().replace(/\s/g, "") || "GEN"}`,
+        }));
+
         if (
-          !parsed.areas ||
-          !parsed.areas.some((a: any) => a.name === "PTED" || a.code === "PTED") ||
-          !parsed.stations ||
-          !parsed.stations.some((s: any) => s.name === "Sanding Outer")
+          !safeState.areas.some((a) => a.name === "PTED" || a.code === "PTED") ||
+          !safeState.stations.some((s) => s.name === "Sanding Outer")
         ) {
-          const fresh = createSeedData();
-          parsed.areas = fresh.areas;
-          parsed.conveyors = fresh.conveyors;
-          parsed.stations = fresh.stations;
-          parsed.stops = fresh.stops;
-          parsed.productionRecords = fresh.productionRecords;
-          parsed.stationLive = fresh.stationLive;
+          safeState.areas = seed.areas;
+          safeState.conveyors = seed.conveyors;
+          safeState.stations = seed.stations;
         }
-        return parsed as AppState;
+
+        return safeState;
       }
     }
   } catch (e) {

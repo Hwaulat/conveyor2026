@@ -41,8 +41,60 @@ export const Route = createFileRoute("/ipad")({
       { name: "description", content: "Fast touch-optimized E-form for floor operators to record emergency stops." },
     ],
   }),
+  errorComponent: IpadErrorFallback,
   component: IpadEFormPage,
 });
+
+function IpadErrorFallback() {
+  return (
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
+      <div className="max-w-md w-full rounded-2xl border-2 border-border bg-card p-6 shadow-xl text-center space-y-4 font-mono">
+        <div className="h-12 w-12 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 mx-auto flex items-center justify-center border border-rose-500/20">
+          <AlertTriangle className="h-6 w-6" />
+        </div>
+        <h2 className="text-lg font-bold text-foreground">Kendala Memuat E-Form Tablet</h2>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Terjadi kesalahan saat memuat data form pada perangkat. Anda dapat mencoba memuat ulang atau mereset data lokal perangkat.
+        </p>
+        <div className="flex flex-col gap-2 pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.location.reload();
+              }
+            }}
+            className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-bold text-xs hover:bg-primary/90 transition-colors shadow-xs"
+          >
+            Muat Ulang Halaman
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                try {
+                  window.localStorage.removeItem("krm_conveyor_state_v5");
+                } catch {
+                  // ignore
+                }
+                window.location.reload();
+              }
+            }}
+            className="w-full py-2.5 rounded-xl border border-border bg-muted/40 hover:bg-muted text-foreground font-bold text-xs transition-colors"
+          >
+            Reset Cache & Pulihkan Data Awal
+          </button>
+          <Link
+            to="/web"
+            className="w-full py-2.5 rounded-xl border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground text-xs text-center block"
+          >
+            Kembali ke Dashboard Web
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function IpadEFormPage() {
   const { t } = useI18n();
@@ -71,12 +123,14 @@ function IpadEFormPage() {
       { key: "area-touch-up", name: "Touch Up Area", code: "TOUCH-UP" },
       { key: "area-drop-ced", name: "Drop Cabin CED", code: "DROP-CED" },
     ];
+    const areas = appState?.areas || [];
     return list.map((item) => {
-      const found = appState.areas.find(
+      const found = areas.find(
         (a) =>
-          a.id === item.key ||
-          a.code?.toUpperCase() === item.code ||
-          a.name.toLowerCase().includes(item.code.toLowerCase().slice(0, 4))
+          a &&
+          (a.id === item.key ||
+            a.code?.toUpperCase() === item.code ||
+            (typeof a.name === "string" && a.name.toLowerCase().includes(item.code.toLowerCase().slice(0, 4))))
       );
       return {
         id: found?.id ?? item.key,
@@ -84,22 +138,24 @@ function IpadEFormPage() {
         code: found?.code ?? item.code,
       };
     });
-  }, [appState.areas]);
+  }, [appState?.areas]);
 
   const [selectedAreaId, setSelectedAreaId] = useState<string>(() => ipadAreaConfigs[0]?.id ?? "area-sanding");
 
   const currentAreaConfig = useMemo(() => {
-    return ipadAreaConfigs.find((a) => a.id === selectedAreaId) ?? ipadAreaConfigs[0];
+    return ipadAreaConfigs.find((a) => a.id === selectedAreaId) ?? ipadAreaConfigs[0] ?? { id: "area-sanding", name: "Sanding Area", code: "SANDING" };
   }, [ipadAreaConfigs, selectedAreaId]);
 
   // Stasiun yang terelasi dengan area terpilih
   const areaStations = useMemo(() => {
-    return appState.stations.filter((s) => s.areaId === selectedAreaId);
-  }, [appState.stations, selectedAreaId]);
+    const stations = appState?.stations || [];
+    return stations.filter((s) => s && s.areaId === selectedAreaId);
+  }, [appState?.stations, selectedAreaId]);
 
   const [selectedStationId, setSelectedStationId] = useState<string>(() => {
-    const initialStations = appState.stations.filter((s) => s.areaId === (ipadAreaConfigs[0]?.id ?? "area-sanding"));
-    return initialStations[0]?.id ?? appState.stations[0]?.id ?? "st-sand-1";
+    const stations = appState?.stations || [];
+    const initialStations = stations.filter((s) => s && s.areaId === (ipadAreaConfigs[0]?.id ?? "area-sanding"));
+    return initialStations[0]?.id ?? stations[0]?.id ?? "st-sand-1";
   });
 
   // Pastikan stasiun terpilih selalu berada di area aktif
@@ -110,10 +166,10 @@ function IpadEFormPage() {
   }, [areaStations, selectedStationId]);
 
   const targetStation = useMemo(() => {
-    return appState.stations.find((s) => s.id === selectedStationId);
-  }, [appState.stations, selectedStationId]);
+    return (appState?.stations || []).find((s) => s && s.id === selectedStationId);
+  }, [appState?.stations, selectedStationId]);
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => appState.categories[0]?.id ?? "cat-1");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => appState?.categories?.[0]?.id ?? "cat-1");
   const [isOpenStop, setIsOpenStop] = useState<boolean>(true);
   const [startTimeVal, setStartTimeVal] = useState<string>(() => toLocalInputValue(Date.now()));
   const [endTimeVal, setEndTimeVal] = useState<string>("");
@@ -132,7 +188,7 @@ function IpadEFormPage() {
   // Ganti Area & Otomatis Pilih Stasiun Pertama di Area Tersebut
   const handleSelectArea = (areaId: string) => {
     setSelectedAreaId(areaId);
-    const stationsInArea = appState.stations.filter((s) => s.areaId === areaId);
+    const stationsInArea = (appState?.stations || []).filter((s) => s && s.areaId === areaId);
     if (stationsInArea.length > 0) {
       setSelectedStationId(stationsInArea[0]!.id);
     }
@@ -141,14 +197,15 @@ function IpadEFormPage() {
   // Ganti Jenis Form (Linestop vs MTC)
   const handleFormTypeChange = (type: "linestop" | "mtc") => {
     setFormType(type);
+    const categories = appState?.categories || [];
     if (type === "mtc") {
-      const mtcCat = appState.categories.find(
-        (c) => c.id === "cat-3" || c.name.toLowerCase().includes("maint")
+      const mtcCat = categories.find(
+        (c) => c && (c.id === "cat-3" || (typeof c.name === "string" && c.name.toLowerCase().includes("maint")))
       );
       if (mtcCat) setSelectedCategoryId(mtcCat.id);
     } else {
-      const procCat = appState.categories.find(
-        (c) => c.id === "cat-1" || c.name.toLowerCase().includes("process")
+      const procCat = categories.find(
+        (c) => c && (c.id === "cat-1" || (typeof c.name === "string" && c.name.toLowerCase().includes("process")))
       );
       if (procCat) setSelectedCategoryId(procCat.id);
     }
@@ -432,7 +489,7 @@ function IpadEFormPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                 {ipadAreaConfigs.map((area) => {
                   const isAreaSelected = selectedAreaId === area.id;
-                  const count = appState.stations.filter((s) => s.areaId === area.id).length;
+                  const count = (appState?.stations || []).filter((s) => s && s.areaId === area.id).length;
                   return (
                     <button
                       type="button"
@@ -477,7 +534,7 @@ function IpadEFormPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {areaStations.map((station) => {
                     const isSelected = selectedStationId === station.id;
-                    const live = appState.stationLive[station.id];
+                    const live = appState?.stationLive?.[station.id];
                     const isStopped = live?.state === "stopped";
 
                     return (
@@ -505,7 +562,9 @@ function IpadEFormPage() {
 
                         <div className="flex items-center justify-between text-[10px] opacity-90 mt-2 pt-1 border-t border-border/30">
                           <span className="text-[9px] truncate">
-                            {live && !isStopped ? `${live.speed.toFixed(2)} ${station.speedUnit}` : `Thr: ${station.runningThreshold}`}
+                            {live && !isStopped && typeof live.speed === "number"
+                              ? `${live.speed.toFixed(2)} ${station.speedUnit || "m/min"}`
+                              : `Thr: ${station.runningThreshold ?? 0.1}`}
                           </span>
                           <span className={isStopped ? "text-red-600 dark:text-red-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
                             {isStopped ? "STOPPED" : "RUNNING"}
@@ -599,7 +658,8 @@ function IpadEFormPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {appState.categories.map((c) => {
+                {(appState?.categories || []).map((c) => {
+                  if (!c) return null;
                   const isSelected = selectedCategoryId === c.id;
                   return (
                     <button
@@ -690,17 +750,17 @@ function IpadEFormPage() {
         {/* Recent Entries & Offline Queue (5 cols) */}
         <div className="lg:col-span-5 space-y-6 flex flex-col justify-between">
           {/* Offline Queue Strip if items waiting */}
-          {appState.offlineQueue.length > 0 && (
+          {(appState?.offlineQueue || []).length > 0 && (
             <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/30 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-300 flex items-center gap-2">
                   <WifiOff className="h-4 w-4" />
-                  Antrean Offline ({appState.offlineQueue.length})
+                  Antrean Offline ({(appState?.offlineQueue || []).length})
                 </span>
                 <span className="font-mono text-[10px] text-amber-700 dark:text-amber-400">Menunggu jaringan</span>
               </div>
               <div className="space-y-1.5 font-mono text-xs">
-                {appState.offlineQueue.map((item) => (
+                {(appState?.offlineQueue || []).map((item) => (
                   <div key={item.id} className="p-2 rounded bg-card border border-amber-500/30 text-foreground flex justify-between">
                     <span>{item.stationId}</span>
                     <span className="text-amber-600 dark:text-amber-300">{fmtTime(item.startMs)}</span>
@@ -725,9 +785,10 @@ function IpadEFormPage() {
 
               <div className="space-y-3">
                 {recentStops.map((stop) => {
-                  const st = appState.stations.find((x) => x.id === stop.stationId);
-                  const area = appState.areas.find((a) => a.id === (st?.areaId || stop.areaId));
-                  const cat = appState.categories.find((c) => c.id === stop.categoryId);
+                  if (!stop) return null;
+                  const st = (appState?.stations || []).find((x) => x && x.id === stop.stationId);
+                  const area = (appState?.areas || []).find((a) => a && a.id === (st?.areaId || stop.areaId));
+                  const cat = (appState?.categories || []).find((c) => c && c.id === stop.categoryId);
                   const isOpen = stop.status === "open";
                   const dur = stopDurationMs(stop, nowMs);
                   const isMtc = stop.formType === "mtc" || cat?.id === "cat-3";

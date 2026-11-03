@@ -109,7 +109,7 @@ export function dayStartMs(ms: number): number {
   return Date.parse(`${key}T00:00:00+07:00`);
 }
 
-export function shiftOf(ms: number, shifts: Shift[]): Shift {
+export function shiftOf(ms: number, shifts?: Shift[]): Shift {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: PLANT_TZ,
     hour: "2-digit",
@@ -118,7 +118,8 @@ export function shiftOf(ms: number, shifts: Shift[]): Shift {
   }).formatToParts(new Date(ms));
   const get = (t: string) => +(parts.find((p) => p.type === t)?.value ?? "0");
   const minutes = get("hour") * 60 + get("minute");
-  const sorted = [...shifts].sort((a, b) => a.startHour * 60 + a.startMinute - (b.startHour * 60 + b.startMinute));
+  const list = Array.isArray(shifts) ? shifts : [];
+  const sorted = [...list].sort((a, b) => a.startHour * 60 + a.startMinute - (b.startHour * 60 + b.startMinute));
   if (sorted.length === 0) {
     return { id: "shift-default", name: "Shift 1", startHour: 7, startMinute: 0 };
   }
