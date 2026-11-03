@@ -2,24 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import {
   Tablet,
-  CheckCircle2,
   AlertTriangle,
-  Clock,
-  Plus,
   Wifi,
   WifiOff,
   ArrowLeft,
   Send,
-  Save,
-  Check,
-  X,
-  History,
   Sun,
   Moon,
   Wrench,
-  Layers,
+  Plus,
 } from "lucide-react";
-import { useI18n } from "../lib/i18n";
 import { useTheme } from "../lib/theme";
 import { useAppStore, store } from "../lib/store";
 import type { LineStop } from "../lib/types";
@@ -37,8 +29,8 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/ipad")({
   head: () => ({
     meta: [
-      { title: "PT. Krama Yudha Ratu Motor Indonesia — E-Form Line Stop (Tablet)" },
-      { name: "description", content: "Fast touch-optimized E-form for floor operators to record emergency stops." },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — Line-Stop E-Form (Tablet)" },
+      { name: "description", content: "Fast touch-optimized E-form for floor operators to record emergency line stops." },
     ],
   }),
   errorComponent: IpadErrorFallback,
@@ -52,9 +44,9 @@ function IpadErrorFallback() {
         <div className="h-12 w-12 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 mx-auto flex items-center justify-center border border-rose-500/20">
           <AlertTriangle className="h-6 w-6" />
         </div>
-        <h2 className="text-lg font-bold text-foreground">Kendala Memuat E-Form Tablet</h2>
+        <h2 className="text-lg font-bold text-foreground">Unable to Load Tablet E-Form</h2>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Terjadi kesalahan saat memuat data form pada perangkat. Anda dapat mencoba memuat ulang atau mereset data lokal perangkat.
+          An error occurred while loading form data on this device. You can try reloading the page or resetting local cached data.
         </p>
         <div className="flex flex-col gap-2 pt-2">
           <button
@@ -66,7 +58,7 @@ function IpadErrorFallback() {
             }}
             className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-bold text-xs hover:bg-primary/90 transition-colors shadow-xs"
           >
-            Muat Ulang Halaman
+            Reload Page
           </button>
           <button
             type="button"
@@ -82,13 +74,13 @@ function IpadErrorFallback() {
             }}
             className="w-full py-2.5 rounded-xl border border-border bg-muted/40 hover:bg-muted text-foreground font-bold text-xs transition-colors"
           >
-            Reset Cache & Pulihkan Data Awal
+            Clear Cache & Restore Defaults
           </button>
           <Link
             to="/web"
             className="w-full py-2.5 rounded-xl border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground text-xs text-center block"
           >
-            Kembali ke Dashboard Web
+            Back to Web Dashboard
           </Link>
         </div>
       </div>
@@ -96,8 +88,17 @@ function IpadErrorFallback() {
   );
 }
 
+// Built-in MTC Work Categories with official Category Codes
+const DEFAULT_MTC_CATEGORIES = [
+  { id: "mtc-01", code: "MTC-01", name: "Mechanical Maintenance", countsAsBreakdown: true },
+  { id: "mtc-02", code: "MTC-02", name: "Electrical & Power Supply", countsAsBreakdown: true },
+  { id: "mtc-03", code: "MTC-03", name: "Sensor, Limit Switch & PLC", countsAsBreakdown: false },
+  { id: "mtc-04", code: "MTC-04", name: "Conveyor Drive & Roller Chain", countsAsBreakdown: true },
+  { id: "mtc-05", code: "MTC-05", name: "Process Piping & Fluid Leak", countsAsBreakdown: false },
+  { id: "mtc-06", code: "MTC-06", name: "Emergency Stop & Safety Gate", countsAsBreakdown: false },
+];
+
 function IpadEFormPage() {
-  const { t } = useI18n();
   const { theme, toggleTheme } = useTheme();
   const appState = useAppStore();
   const [nowMs, setNowMs] = useState(Date.now());
@@ -109,9 +110,9 @@ function IpadEFormPage() {
   // Form Type: "linestop" | "mtc"
   const [formType, setFormType] = useState<"linestop" | "mtc">("linestop");
 
-  // Tablist Area Khusus iPad:
-  // - E-Form Linestop: 5 Area (Sanding, Sealing, Topcoat, Touch Up, Drop Cabin CED)
-  // - E-Form Linestop Maintenance: 2 Area (Oven CED, Mezzanine)
+  // Tablist Area Configuration for iPad:
+  // - Linestop: 6 Areas (Sanding, Sealing, Topcoat, Touch Up, Drop Cabin CED, Cooling Tunnel)
+  // - MTC Maintenance: 2 Areas (Oven CED, Mezzanine)
   const ipadAreaConfigs = useMemo(() => {
     const list =
       formType === "mtc"
@@ -125,6 +126,7 @@ function IpadEFormPage() {
             { key: "area-topcoat", name: "Topcoat Area", code: "TOPCOAT" },
             { key: "area-touch-up", name: "Touch Up Area", code: "TOUCH-UP" },
             { key: "area-drop-ced", name: "Drop Cabin CED", code: "DROP-CED" },
+            { key: "area-cooling-tunnel", name: "Cooling Tunnel", code: "COOLING-TUNNEL" },
           ];
     const areas = appState?.areas || [];
     return list.map((item) => {
@@ -145,7 +147,7 @@ function IpadEFormPage() {
 
   const [selectedAreaId, setSelectedAreaId] = useState<string>(() => ipadAreaConfigs[0]?.id ?? "area-sanding");
 
-  // Pastikan area terpilih selalu berada di daftar area yang valid untuk formType aktif
+  // Ensure selected area is valid for the current form type
   useEffect(() => {
     if (ipadAreaConfigs.length > 0 && !ipadAreaConfigs.some((a) => a.id === selectedAreaId)) {
       const firstArea = ipadAreaConfigs[0]!;
@@ -159,7 +161,7 @@ function IpadEFormPage() {
     return ipadAreaConfigs.find((a) => a.id === selectedAreaId) ?? ipadAreaConfigs[0] ?? { id: "area-sanding", name: "Sanding Area", code: "SANDING" };
   }, [ipadAreaConfigs, selectedAreaId]);
 
-  // Stasiun yang terelasi dengan area terpilih
+  // Stations associated with the selected area
   const areaStations = useMemo(() => {
     const stations = appState?.stations || [];
     return stations.filter((s) => s && s.areaId === selectedAreaId);
@@ -171,7 +173,7 @@ function IpadEFormPage() {
     return initialStations[0]?.id ?? stations[0]?.id ?? "st-sand-1";
   });
 
-  // Pastikan stasiun terpilih selalu berada di area aktif
+  // Ensure selected station belongs to the active area
   useEffect(() => {
     if (areaStations.length > 0 && !areaStations.some((s) => s.id === selectedStationId)) {
       setSelectedStationId(areaStations[0]!.id);
@@ -182,23 +184,45 @@ function IpadEFormPage() {
     return (appState?.stations || []).find((s) => s && s.id === selectedStationId);
   }, [appState?.stations, selectedStationId]);
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => appState?.categories?.[0]?.id ?? "cat-1");
+  // Available categories based on Form Type:
+  // - Linestop Maintenance: temporarily only 1 category -> "Dock pin stuck" (code: "LS-01")
+  // - MTC Work: categories with Category Codes (MTC-01, MTC-02, etc.)
+  const availableCategories = useMemo(() => {
+    if (formType === "linestop") {
+      const dockPinCat = (appState?.categories || []).find(
+        (c) => c && (c.id === "cat-dock-pin" || c.name.toLowerCase().includes("dock pin"))
+      ) || {
+        id: "cat-dock-pin",
+        code: "LS-01",
+        name: "Dock pin stuck",
+        countsAsBreakdown: true,
+      };
+      const customCats = (appState?.categories || []).filter((c) => c && c.custom);
+      return [dockPinCat, ...customCats];
+    } else {
+      const customCats = (appState?.categories || []).filter((c) => c && c.custom);
+      return [...DEFAULT_MTC_CATEGORIES, ...customCats];
+    }
+  }, [formType, appState?.categories]);
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => "cat-dock-pin");
   const [isOpenStop, setIsOpenStop] = useState<boolean>(true);
   const [startTimeVal, setStartTimeVal] = useState<string>(() => toLocalInputValue(Date.now()));
   const [endTimeVal, setEndTimeVal] = useState<string>("");
   const [operatorBadge, setOperatorBadge] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("jsgi_operator_badge") || "Rian Hidayat (EMP-215)";
+      return localStorage.getItem("jsgi_operator_badge") || "Floor Operator (EMP-215)";
     }
-    return "Rian Hidayat (EMP-215)";
+    return "Floor Operator (EMP-215)";
   });
   const [note, setNote] = useState<string>("");
 
   // Add Category Modal
   const [newCatModalOpen, setNewCatModalOpen] = useState(false);
   const [newCatName, setNewCatName] = useState("");
+  const [newCatCode, setNewCatCode] = useState("");
 
-  // Ganti Area & Otomatis Pilih Stasiun Pertama di Area Tersebut
+  // Select Area & automatically pick first station
   const handleSelectArea = (areaId: string) => {
     setSelectedAreaId(areaId);
     const stationsInArea = (appState?.stations || []).filter((s) => s && s.areaId === areaId);
@@ -207,10 +231,9 @@ function IpadEFormPage() {
     }
   };
 
-  // Ganti Jenis Form (Linestop vs Linestop Maintenance)
+  // Change Form Type (Linestop vs MTC Maintenance)
   const handleFormTypeChange = (type: "linestop" | "mtc") => {
     setFormType(type);
-    const categories = appState?.categories || [];
     const targetConfigs =
       type === "mtc"
         ? [
@@ -223,6 +246,7 @@ function IpadEFormPage() {
             { key: "area-topcoat", name: "Topcoat Area", code: "TOPCOAT" },
             { key: "area-touch-up", name: "Touch Up Area", code: "TOUCH-UP" },
             { key: "area-drop-ced", name: "Drop Cabin CED", code: "DROP-CED" },
+            { key: "area-cooling-tunnel", name: "Cooling Tunnel", code: "COOLING-TUNNEL" },
           ];
 
     const areas = appState?.areas || [];
@@ -242,16 +266,10 @@ function IpadEFormPage() {
       setSelectedStationId(st[0]!.id);
     }
 
-    if (type === "mtc") {
-      const mtcCat = categories.find(
-        (c) => c && (c.id === "cat-3" || (typeof c.name === "string" && c.name.toLowerCase().includes("maint")))
-      );
-      if (mtcCat) setSelectedCategoryId(mtcCat.id);
+    if (type === "linestop") {
+      setSelectedCategoryId("cat-dock-pin");
     } else {
-      const procCat = categories.find(
-        (c) => c && (c.id === "cat-1" || (typeof c.name === "string" && c.name.toLowerCase().includes("process")))
-      );
-      if (procCat) setSelectedCategoryId(procCat.id);
+      setSelectedCategoryId("mtc-01");
     }
   };
 
@@ -268,8 +286,8 @@ function IpadEFormPage() {
       if (!simulatedOffline) {
         const count = store.syncOfflineQueue();
         if (count > 0) {
-          toast.success(t("form.online"), {
-            description: `${count} entri yang tertunda berhasil dikirimkan ke server.`,
+          toast.success("Network Online", {
+            description: `${count} queued offline report(s) successfully synchronized to server.`,
           });
         }
       }
@@ -282,7 +300,7 @@ function IpadEFormPage() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [simulatedOffline, t]);
+  }, [simulatedOffline]);
 
   const effectiveOnline = isOnline && !simulatedOffline;
   const currentShift = shiftOf(nowMs, appState.shifts);
@@ -293,14 +311,14 @@ function IpadEFormPage() {
     if (!next) {
       const count = store.syncOfflineQueue();
       if (count > 0) {
-        toast.success(t("form.online"), {
-          description: `${count} antrean entri offline berhasil disinkronkan.`,
+        toast.success("Network Online", {
+          description: `${count} queued offline report(s) synchronized to server.`,
         });
       } else {
-        toast.info("Status jaringan: ONLINE");
+        toast.info("Network status: ONLINE");
       }
     } else {
-      toast.warning(t("form.offline"));
+      toast.warning("Network status: OFFLINE QUEUE MODE");
     }
   };
 
@@ -308,24 +326,24 @@ function IpadEFormPage() {
     e.preventDefault();
 
     if (!selectedStationId || !selectedCategoryId || !operatorBadge.trim()) {
-      toast.error(t("form.error.required"));
+      toast.error("Please fill in all required fields (Station, Category, Operator Badge).");
       return;
     }
 
     const startMs = fromLocalInputValue(startTimeVal);
     if (isNaN(startMs)) {
-      toast.error("Waktu mulai tidak valid");
+      toast.error("Invalid start time format.");
       return;
     }
 
     const now = Date.now();
     if (startMs > now + 60_000) {
-      toast.error(t("form.error.startFuture"));
+      toast.error("Start time cannot be in the future.");
       return;
     }
 
     if (now - startMs > 24 * 3_600_000) {
-      toast.error(t("form.error.notWithin24h"));
+      toast.error("Start time cannot be more than 24 hours ago.");
       return;
     }
 
@@ -333,11 +351,11 @@ function IpadEFormPage() {
     if (!isOpenStop) {
       endMs = endTimeVal ? fromLocalInputValue(endTimeVal) : now;
       if (endMs && endMs < startMs) {
-        toast.error(t("form.error.endBeforeStart"));
+        toast.error("End time cannot be earlier than start time.");
         return;
       }
       if (endMs && endMs > now + 60_000) {
-        toast.error(t("form.error.endFuture"));
+        toast.error("End time cannot be in the future.");
         return;
       }
     }
@@ -346,10 +364,10 @@ function IpadEFormPage() {
       localStorage.setItem("jsgi_operator_badge", operatorBadge);
     }
 
-    const targetStation = appState.stations.find((s) => s.id === selectedStationId);
+    const targetStationObj = appState.stations.find((s) => s.id === selectedStationId);
 
     const stopPayload: Omit<LineStop, "id"> = {
-      areaId: targetStation?.areaId ?? selectedAreaId,
+      areaId: targetStationObj?.areaId ?? selectedAreaId,
       stationId: selectedStationId,
       startMs,
       endMs,
@@ -365,20 +383,20 @@ function IpadEFormPage() {
       const created = store.addStop(stopPayload);
       if (isOpenStop) {
         toast.warning(
-          formType === "mtc" ? "Line Start Linestop tersimpan sebagai OPEN" : t("form.savedOpen")
+          formType === "mtc" ? "Line Start Linestop recorded as OPEN" : "Line-Stop incident recorded as OPEN"
         );
       } else {
         const dur = stopDurationMs(created, endMs ?? now);
         toast.success(
           formType === "mtc"
-            ? `Finish Linestop tersimpan. Durasi: ${fmtDuration(dur)}`
-            : t("form.savedWithDuration", { duration: fmtDuration(dur) })
+            ? `Finish Linestop saved. Duration: ${fmtDuration(dur)}`
+            : `Line-Stop incident resolved. Duration: ${fmtDuration(dur)}`
         );
       }
     } else {
       store.queueOfflineStop(stopPayload);
-      toast.info("Tersimpan dalam Antrean Offline", {
-        description: "Akan otomatis terkirim saat tersambung kembali ke jaringan.",
+      toast.info("Saved to Offline Queue", {
+        description: "Will automatically sync when network connection is restored.",
       });
     }
 
@@ -390,11 +408,12 @@ function IpadEFormPage() {
 
   const handleAddNewCategory = () => {
     if (!newCatName.trim()) {
-      toast.error(t("form.error.categoryName"));
+      toast.error("Please enter a category name.");
       return;
     }
     const created = store.addCategory({
       name: newCatName.trim(),
+      code: newCatCode.trim() || `CAT-${Date.now().toString().slice(-4)}`,
       countsAsBreakdown: false,
       countsAsDowntime: true,
       active: true,
@@ -402,19 +421,11 @@ function IpadEFormPage() {
       createdBy: operatorBadge,
     });
     setSelectedCategoryId(created.id);
-    toast.success(t("form.newCategorySaved", { name: created.name }));
+    toast.success(`New category saved: ${created.name}`);
     setNewCatName("");
+    setNewCatCode("");
     setNewCatModalOpen(false);
   };
-
-  const handleCloseRecentStop = (stopId: string) => {
-    store.closeStop(stopId, Date.now());
-    toast.success("Stop berhasil ditutup (CLOSED)");
-  };
-
-  const recentStops = useMemo(() => {
-    return appState.stops.slice(0, 5);
-  }, [appState.stops]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans select-none p-4 md:p-6 lg:p-8 transition-colors">
@@ -424,7 +435,7 @@ function IpadEFormPage() {
           <Link
             to="/web"
             className="p-2.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-2xs"
-            title="Kembali ke Web"
+            title="Back to Web Dashboard"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
@@ -436,11 +447,11 @@ function IpadEFormPage() {
                 <Tablet className="h-5 w-5 text-cyan-500" />
               )}
               <h1 className="font-display text-xl md:text-2xl font-bold tracking-tight text-foreground uppercase">
-                {formType === "mtc" ? "E-Form MTC (Maintenance)" : "E-Form Line Stop"}
+                {formType === "mtc" ? "MTC Maintenance E-Form" : "Linestop Maintenance E-Form"}
               </h1>
             </div>
             <p className="text-xs text-muted-foreground font-mono">
-              Mode Tablet Operator Lapangan • {currentShift.name}
+              Floor Operator Tablet Mode • {currentShift.name}
             </p>
           </div>
         </div>
@@ -450,8 +461,8 @@ function IpadEFormPage() {
           {/* Theme Switcher Toggle */}
           <button
             onClick={toggleTheme}
-            className="p-2.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-2xs"
-            title={theme === "dark" ? "Mode Terang (Light Mode)" : "Mode Gelap (Dark Mode)"}
+            className="p-2.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-2xs cursor-pointer"
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
             {theme === "dark" ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-500" />}
           </button>
@@ -459,11 +470,12 @@ function IpadEFormPage() {
           {/* Network Simulator Button */}
           <button
             onClick={handleToggleOfflineMode}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border font-mono text-xs font-bold transition-all shadow-2xs ${effectiveOnline
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border font-mono text-xs font-bold transition-all shadow-2xs cursor-pointer ${
+              effectiveOnline
                 ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                 : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-300 animate-pulse"
-              }`}
-            title="Klik untuk simulasi online/offline"
+            }`}
+            title="Click to toggle simulated online/offline"
           >
             {effectiveOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
             <span className="hidden sm:inline">{effectiveOnline ? "ONLINE" : "OFFLINE QUEUE"}</span>
@@ -476,57 +488,70 @@ function IpadEFormPage() {
         </div>
       </header>
 
-      {/* Main Grid: Form on Left (60%), Recent on Right (40%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
-        {/* Form Container (7 cols) */}
-        <div className="lg:col-span-7 rounded-2xl border-2 border-border bg-card p-6 shadow-md flex flex-col justify-between">
+      {/* Main Container - Centered without Recent Entries Section */}
+      <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col justify-start">
+        {/* Offline Queue Strip if items waiting */}
+        {effectiveOnline === false && (appState?.offlineQueue || []).length > 0 && (
+          <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/30 p-3.5 flex items-center justify-between text-xs font-mono text-amber-600 dark:text-amber-300 shadow-sm">
+            <div className="flex items-center gap-2 font-bold">
+              <WifiOff className="h-4 w-4" />
+              <span>Offline Queue: {(appState?.offlineQueue || []).length} report(s) pending synchronization</span>
+            </div>
+            <span className="text-[10px] text-amber-700 dark:text-amber-400">Will automatically sync upon reconnection</span>
+          </div>
+        )}
+
+        {/* Form Container */}
+        <div className="rounded-2xl border-2 border-border bg-card p-6 md:p-8 shadow-md">
           <form onSubmit={handleSaveStop} className="space-y-6">
             {/* 0. Form Type Selector (Linestop vs MTC) */}
             <div>
               <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold mb-2">
-                Jenis E-Form:
+                E-Form Type:
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => handleFormTypeChange("linestop")}
-                  className={`p-3.5 rounded-xl border-2 font-display text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2.5 cursor-pointer ${formType === "linestop"
+                  className={`p-3.5 rounded-xl border-2 font-display text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2.5 cursor-pointer ${
+                    formType === "linestop"
                       ? "border-red-500 bg-red-600 text-white shadow-md shadow-red-600/30 scale-[1.01]"
                       : "border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
+                  }`}
                 >
                   <AlertTriangle className="h-5 w-5 shrink-0" />
                   <div className="text-left">
-                    <span className="block leading-none">E-Form Linestop</span>
-                    <span className="text-[10px] font-sans font-normal opacity-85">Stop Operasional & Proses (5 Area)</span>
+                    <span className="block leading-none">Linestop Maintenance E-Form</span>
+                    <span className="text-[10px] font-sans font-normal opacity-85">Operational & Process Stops (6 Areas)</span>
                   </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleFormTypeChange("mtc")}
-                  className={`p-3.5 rounded-xl border-2 font-display text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2.5 cursor-pointer ${formType === "mtc"
+                  className={`p-3.5 rounded-xl border-2 font-display text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2.5 cursor-pointer ${
+                    formType === "mtc"
                       ? "border-blue-500 bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.01]"
                       : "border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
+                  }`}
                 >
                   <Wrench className="h-5 w-5 shrink-0" />
                   <div className="text-left">
-                    <span className="block leading-none">E-Form Linestop Maintenance</span>
-                    <span className="text-[10px] font-sans font-normal opacity-85">Oven CED & Mezzanine (2 Area)</span>
+                    <span className="block leading-none">MTC Maintenance E-Form</span>
+                    <span className="text-[10px] font-sans font-normal opacity-85">Oven CED & Mezzanine Maintenance (2 Areas)</span>
                   </div>
                 </button>
               </div>
             </div>
 
-            {/* 1. Tablist Area (Linestop: 5 Area, Maintenance: 2 Area) */}
+            {/* 1. Tablist Area (Linestop: 6 Areas, MTC: 2 Areas) */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                  1. Tablist Area ({formType === "mtc" ? "Oven CED & Mezzanine" : "5 Area Produksi"}):
+                  1. Work Area Tablist ({formType === "mtc" ? "Oven CED & Mezzanine" : "6 Production Areas"}):
                 </label>
                 <span className="font-mono text-[11px] text-muted-foreground">
-                  {currentAreaConfig?.name} • {areaStations.length} Stasiun
+                  {currentAreaConfig?.name} • {areaStations.length} Station(s)
                 </span>
               </div>
 
@@ -534,7 +559,7 @@ function IpadEFormPage() {
                 className={`grid gap-2 ${
                   formType === "mtc"
                     ? "grid-cols-2"
-                    : "grid-cols-2 sm:grid-cols-3 md:grid-cols-5"
+                    : "grid-cols-2 sm:grid-cols-3 md:grid-cols-6"
                 }`}
               >
                 {ipadAreaConfigs.map((area) => {
@@ -545,19 +570,21 @@ function IpadEFormPage() {
                       type="button"
                       key={area.id}
                       onClick={() => handleSelectArea(area.id)}
-                      className={`px-3 py-2.5 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${isAreaSelected
+                      className={`px-3 py-2.5 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                        isAreaSelected
                           ? formType === "mtc"
                             ? "border-blue-500 bg-blue-600 text-white font-bold shadow-sm"
                             : "border-primary bg-primary text-primary-foreground font-bold shadow-sm"
                           : "border-border bg-card hover:bg-muted text-foreground"
-                        }`}
+                      }`}
                     >
                       <span className="text-xs font-bold truncate block">{area.name}</span>
                       <span
-                        className={`text-[10px] font-mono ${isAreaSelected ? "text-white/80" : "text-muted-foreground"
-                          }`}
+                        className={`text-[10px] font-mono ${
+                          isAreaSelected ? "text-white/80" : "text-muted-foreground"
+                        }`}
                       >
-                        {count} Station
+                        {count} Station{count !== 1 ? "s" : ""}
                       </span>
                     </button>
                   );
@@ -565,11 +592,11 @@ function IpadEFormPage() {
               </div>
             </div>
 
-            {/* 2. Stasiun di Area Terpilih (Hanya Nama Stasiun Saja, Tanpa Waktu m/min) */}
+            {/* 2. Stations in Selected Area */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                  2. Pilih Stasiun ({currentAreaConfig?.name}):
+                  2. Select Affected Station ({currentAreaConfig?.name}):
                 </label>
                 <span className="text-[11px] font-mono text-muted-foreground">
                   {targetStation ? `${targetStation.name} (${targetStation.code || `#${targetStation.sequence}`})` : ""}
@@ -578,7 +605,7 @@ function IpadEFormPage() {
 
               {areaStations.length === 0 ? (
                 <div className="p-4 rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground font-mono">
-                  Tidak ada stasiun terdaftar di area ini.
+                  No stations registered in this area.
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -621,12 +648,12 @@ function IpadEFormPage() {
               )}
             </div>
 
-            {/* 3. Stop / MTC Status & Timing: Line Start Linestop dan Finish Linestop */}
+            {/* 3. Stop / MTC Status & Timing */}
             <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
               <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
                 {formType === "mtc"
                   ? "3. Line Start Linestop & Finish Linestop:"
-                  : "3. Status & Waktu Berhenti:"}
+                  : "3. Stop Status & Timing:"}
               </label>
 
               {/* Toggle Still Stopped vs Closed */}
@@ -644,7 +671,7 @@ function IpadEFormPage() {
                 >
                   {formType === "mtc"
                     ? "Line Start Linestop (OPEN)"
-                    : "Masih Berhenti (Simpan OPEN)"}
+                    : "Still Stopped (Save as OPEN)"}
                 </button>
 
                 <button
@@ -658,7 +685,7 @@ function IpadEFormPage() {
                 >
                   {formType === "mtc"
                     ? "Finish Linestop (CLOSED)"
-                    : "Sudah Selesai (CLOSED)"}
+                    : "Resolved / Completed (CLOSED)"}
                 </button>
               </div>
 
@@ -666,7 +693,7 @@ function IpadEFormPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <span className="block font-mono text-[11px] text-muted-foreground mb-1">
-                    {formType === "mtc" ? "Line Start Linestop:" : t("form.startTime")}:
+                    {formType === "mtc" ? "Line Start Linestop:" : "Incident Start Time:"}
                   </span>
                   <input
                     type="datetime-local"
@@ -679,13 +706,13 @@ function IpadEFormPage() {
                 {!isOpenStop && (
                   <div>
                     <span className="block font-mono text-[11px] text-muted-foreground mb-1">
-                      {formType === "mtc" ? "Finish Linestop:" : t("form.endTime")}:
+                      {formType === "mtc" ? "Finish Linestop:" : "Incident End Time:"}
                     </span>
                     <input
                       type="datetime-local"
                       value={endTimeVal}
                       onChange={(e) => setEndTimeVal(e.target.value)}
-                      placeholder="Waktu Selesai"
+                      placeholder="Completion Time"
                       className="w-full h-12 rounded-lg border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary"
                     />
                   </div>
@@ -697,20 +724,22 @@ function IpadEFormPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                  {formType === "mtc" ? "4. Kategori Pekerjaan MTC:" : "4. Kategori Penyebab Stop:"}
+                  {formType === "mtc"
+                    ? "4. MTC Work Category (with Category Code):"
+                    : "4. Incident Category (Linestop Maintenance):"}
                 </label>
                 <button
                   type="button"
                   onClick={() => setNewCatModalOpen(true)}
-                  className="font-mono text-xs text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 font-bold"
+                  className="font-mono text-xs text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 font-bold cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  {t("form.addCategory")}
+                  Add Category
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {(appState?.categories || []).map((c) => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {availableCategories.map((c) => {
                   if (!c) return null;
                   const isSelected = selectedCategoryId === c.id;
                   return (
@@ -718,20 +747,35 @@ function IpadEFormPage() {
                       type="button"
                       key={c.id}
                       onClick={() => setSelectedCategoryId(c.id)}
-                      className={`min-h-[46px] px-3 py-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between cursor-pointer ${isSelected
+                      className={`min-h-[48px] px-3.5 py-2.5 rounded-xl border text-left text-xs transition-all flex items-center justify-between cursor-pointer ${
+                        isSelected
                           ? formType === "mtc"
-                            ? "border-blue-500 bg-blue-600 text-white font-bold shadow-xs"
-                            : "border-primary bg-primary text-primary-foreground font-bold shadow-xs"
+                            ? "border-blue-500 bg-blue-600 text-white font-bold shadow-xs scale-[1.01]"
+                            : "border-primary bg-primary text-primary-foreground font-bold shadow-xs scale-[1.01]"
                           : "border-border bg-card text-foreground hover:bg-muted"
-                        }`}
+                      }`}
                     >
-                      <span className="truncate pr-1">{c.name}</span>
+                      <div className="flex items-center gap-2 truncate pr-1">
+                        {c.code && (
+                          <span
+                            className={`font-mono text-[10px] px-1.5 py-0.5 rounded font-bold uppercase shrink-0 ${
+                              isSelected
+                                ? "bg-white/20 text-white"
+                                : "bg-muted text-muted-foreground border border-border"
+                            }`}
+                          >
+                            {c.code}
+                          </span>
+                        )}
+                        <span className="truncate font-semibold">{c.name}</span>
+                      </div>
                       {c.countsAsBreakdown && (
                         <span
-                          className={`font-mono text-[9px] px-1 rounded uppercase ${isSelected
+                          className={`font-mono text-[9px] px-1.5 py-0.5 rounded uppercase font-bold shrink-0 ${
+                            isSelected
                               ? "bg-white/20 text-white"
                               : "bg-rose-500/20 text-rose-600 dark:text-rose-400"
-                            }`}
+                          }`}
                         >
                           Breakdown
                         </span>
@@ -742,24 +786,24 @@ function IpadEFormPage() {
               </div>
             </div>
 
-            {/* 5. Operator / Teknisi & Notes */}
+            {/* 5. Operator / Technician & Notes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-mono text-[11px] text-muted-foreground mb-1">
-                  {formType === "mtc" ? "Teknisi / No. Badge:" : "Operator / No. Badge:"}
+                  {formType === "mtc" ? "Technician / Badge No.:" : "Operator / Badge No.:"}
                 </label>
                 <input
                   type="text"
                   value={operatorBadge}
                   onChange={(e) => setOperatorBadge(e.target.value)}
-                  placeholder={formType === "mtc" ? "Contoh: Teknisi Maintenance (EMP-108)" : "Contoh: Rian Hidayat (EMP-215)"}
+                  placeholder={formType === "mtc" ? "e.g. Maintenance Tech (EMP-108)" : "e.g. Floor Operator (EMP-215)"}
                   className="w-full h-11 rounded-lg border border-input bg-background px-3 font-mono text-xs text-foreground focus:outline-none focus:border-primary"
                 />
               </div>
 
               <div>
                 <label className="block font-mono text-[11px] text-muted-foreground mb-1">
-                  {formType === "mtc" ? "Deskripsi Pekerjaan MTC (Opsional):" : "Catatan Tambahan (Opsional):"}
+                  {formType === "mtc" ? "MTC Work Description (Optional):" : "Additional Notes / Actions (Optional):"}
                 </label>
                 <input
                   type="text"
@@ -767,157 +811,37 @@ function IpadEFormPage() {
                   onChange={(e) => setNote(e.target.value)}
                   placeholder={
                     formType === "mtc"
-                      ? "Contoh: Penggantian bearing roll conveyor, overhaul motor drive..."
-                      : "Contoh: Benda kerja macet di conveyor feeder, gate sensor trip..."
+                      ? "e.g. Replaced conveyor roller bearing, overhauled motor drive..."
+                      : "e.g. Workpiece jammed on feeder conveyor, safety gate sensor tripped..."
                   }
                   className="w-full h-11 rounded-lg border border-input bg-background px-3 font-sans text-xs text-foreground focus:outline-none focus:border-primary"
                 />
               </div>
             </div>
 
-            {/* Big Action Submit Button */}
+            {/* Submit Button */}
             <button
               type="submit"
-              className={`w-full h-14 rounded-xl font-display text-base font-bold tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${formType === "mtc"
+              className={`w-full h-14 rounded-xl font-display text-base font-bold tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
+                formType === "mtc"
                   ? isOpenStop
                     ? "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30"
                     : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30"
                   : isOpenStop
                     ? "bg-red-600 hover:bg-red-500 text-white shadow-red-600/30"
                     : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
-                }`}
+              }`}
             >
               {formType === "mtc" ? <Wrench className="h-5 w-5" /> : <Send className="h-5 w-5" />}
               {formType === "mtc"
                 ? isOpenStop
-                  ? "Simpan Line Start Linestop (OPEN)"
-                  : "Simpan Finish Linestop (CLOSED)"
+                  ? "Save Line Start Linestop (OPEN)"
+                  : "Save Finish Linestop (CLOSED)"
                 : isOpenStop
-                  ? t("form.saveOpen")
-                  : t("form.submit")}
+                  ? "Save Line-Stop as OPEN (Still Stopped)"
+                  : "Submit Line-Stop Incident Report (CLOSED)"}
             </button>
           </form>
-        </div>
-
-        {/* Recent Entries & Offline Queue (5 cols) */}
-        <div className="lg:col-span-5 space-y-6 flex flex-col justify-between">
-          {/* Offline Queue Strip if items waiting */}
-          {(appState?.offlineQueue || []).length > 0 && (
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/30 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-300 flex items-center gap-2">
-                  <WifiOff className="h-4 w-4" />
-                  Antrean Offline ({(appState?.offlineQueue || []).length})
-                </span>
-                <span className="font-mono text-[10px] text-amber-700 dark:text-amber-400">Menunggu jaringan</span>
-              </div>
-              <div className="space-y-1.5 font-mono text-xs">
-                {(appState?.offlineQueue || []).map((item) => (
-                  <div key={item.id} className="p-2 rounded bg-card border border-amber-500/30 text-foreground flex justify-between">
-                    <span>{item.stationId}</span>
-                    <span className="text-amber-600 dark:text-amber-300">{fmtTime(item.startMs)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Recent Entries Box */}
-          <div className="rounded-2xl border border-border bg-card p-5 flex-1 flex flex-col justify-between shadow-md">
-            <div>
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="font-display text-sm font-bold text-foreground uppercase tracking-wider">
-                    {t("form.recent")}
-                  </h3>
-                </div>
-                <span className="font-mono text-[10px] text-muted-foreground">5 Terakhir</span>
-              </div>
-
-              <div className="space-y-3">
-                {recentStops.map((stop) => {
-                  if (!stop) return null;
-                  const st = (appState?.stations || []).find((x) => x && x.id === stop.stationId);
-                  const area = (appState?.areas || []).find((a) => a && a.id === (st?.areaId || stop.areaId));
-                  const cat = (appState?.categories || []).find((c) => c && c.id === stop.categoryId);
-                  const isOpen = stop.status === "open";
-                  const dur = stopDurationMs(stop, nowMs);
-                  const isMtc = stop.formType === "mtc" || cat?.id === "cat-3";
-
-                  return (
-                    <div
-                      key={stop.id}
-                      className={`p-3.5 rounded-xl border text-xs font-mono transition-colors ${isOpen
-                          ? isMtc
-                            ? "border-blue-500/50 bg-blue-500/10 shadow-xs"
-                            : "border-red-500/50 bg-red-500/10 shadow-xs"
-                          : "border-border bg-muted/20"
-                        }`}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isMtc
-                                ? "bg-blue-600 text-white"
-                                : "bg-red-600 text-white"
-                              }`}
-                          >
-                            {isMtc ? "MTC" : "LINESTOP"}
-                          </span>
-                          <span className="font-bold text-foreground text-sm">
-                            {st?.name ?? stop.stationId}
-                          </span>
-                        </div>
-                        {isOpen ? (
-                          <span
-                            className={`px-2 py-0.5 rounded text-white font-bold text-[10px] animate-pulse ${isMtc ? "bg-blue-600" : "bg-red-600"
-                              }`}
-                          >
-                            OPEN
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground text-[10px]">
-                            CLOSED
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="text-muted-foreground text-[11px] font-sans line-clamp-1 mb-2">
-                        {area?.name ?? "Area"} • {cat?.name ?? stop.categoryId} • {stop.reportedBy}
-                      </div>
-
-                      {stop.note && (
-                        <p className="text-[11px] text-foreground/80 italic font-sans mb-2 px-2 py-1 rounded bg-muted/40 border border-border/40">
-                          "{stop.note}"
-                        </p>
-                      )}
-
-                      <div className="flex items-center justify-between pt-2 border-t border-border">
-                        <span className="text-foreground font-bold">
-                          {isOpen ? `Sedang jalan: ${fmtDuration(dur)}` : `Durasi: ${fmtDuration(dur)}`}
-                        </span>
-
-                        {isOpen && (
-                          <button
-                            type="button"
-                            onClick={() => handleCloseRecentStop(stop.id)}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-xs"
-                          >
-                            {t("form.closeStop")}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-border text-center font-mono text-[11px] text-muted-foreground">
-              Entri langsung tersinkronisasi ke papan Andon TV & Dashboard Web.
-            </div>
-          </div>
         </div>
       </div>
 
@@ -926,39 +850,54 @@ function IpadEFormPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
           <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
             <h3 className="font-display text-base font-bold text-foreground mb-2">
-              {t("form.newCategoryTitle")}
+              Add New Category
             </h3>
             <p className="text-xs text-muted-foreground mb-4">
-              Kategori baru akan langsung dapat digunakan dan ditandai untuk review oleh supervisor.
+              New categories will be immediately available and flagged for supervisor review.
             </p>
 
-            <div className="mb-4">
-              <label className="block font-mono text-xs text-muted-foreground mb-1">
-                {t("form.newCategoryName")}:
-              </label>
-              <input
-                type="text"
-                placeholder="Contoh: Sensor Jamming"
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                className="w-full h-12 rounded-lg border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary"
-              />
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block font-mono text-xs text-muted-foreground mb-1">
+                  Category Name:
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sensor Jamming"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  className="w-full h-12 rounded-lg border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-mono text-xs text-muted-foreground mb-1">
+                  Category Code (Optional):
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. MTC-07 or LS-02"
+                  value={newCatCode}
+                  onChange={(e) => setNewCatCode(e.target.value)}
+                  className="w-full h-12 rounded-lg border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary"
+                />
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setNewCatModalOpen(false)}
-                className="px-4 py-2.5 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
+                className="px-4 py-2.5 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted cursor-pointer"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
                 onClick={handleAddNewCategory}
-                className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold font-mono text-xs hover:bg-primary/90 shadow-xs"
+                className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold font-mono text-xs hover:bg-primary/90 shadow-xs cursor-pointer"
               >
-                Simpan & Pilih
+                Save & Select
               </button>
             </div>
           </div>

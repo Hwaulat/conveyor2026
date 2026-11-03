@@ -157,6 +157,15 @@ export function createSeedData(): AppState {
       active: true,
       custom: false,
     },
+    {
+      id: "cat-dock-pin",
+      code: "LS-01",
+      name: "Dock pin stuck",
+      countsAsBreakdown: true,
+      countsAsDowntime: true,
+      active: true,
+      custom: false,
+    },
   ];
 
   const shifts: Shift[] = [
