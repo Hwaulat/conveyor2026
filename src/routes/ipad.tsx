@@ -109,6 +109,10 @@ function IpadEFormPage() {
     }
   }, [areaStations, selectedStationId]);
 
+  const targetStation = useMemo(() => {
+    return appState.stations.find((s) => s.id === selectedStationId);
+  }, [appState.stations, selectedStationId]);
+
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => appState.categories[0]?.id ?? "cat-1");
   const [isOpenStop, setIsOpenStop] = useState<boolean>(true);
   const [startTimeVal, setStartTimeVal] = useState<string>(() => toLocalInputValue(Date.now()));

@@ -698,6 +698,104 @@ export const store = {
     return newConveyor;
   },
 
+  updateConveyor: (conveyorId: string, updates: Partial<Conveyor>) => {
+    currentState = {
+      ...currentState,
+      conveyors: currentState.conveyors.map((c) => (c.id === conveyorId ? { ...c, ...updates } : c)),
+    };
+    emitChange();
+  },
+
+  toggleConveyorActive: (conveyorId: string): boolean => {
+    const conv = currentState.conveyors.find((c) => c.id === conveyorId);
+    const nextActive = conv ? conv.active === false : false;
+    currentState = {
+      ...currentState,
+      conveyors: currentState.conveyors.map((c) => (c.id === conveyorId ? { ...c, active: nextActive } : c)),
+      stations: currentState.stations.map((s) => (s.conveyorId === conveyorId ? { ...s, active: nextActive } : s)),
+    };
+    emitChange();
+    return nextActive;
+  },
+
+  deleteConveyor: (conveyorId: string) => {
+    const stationsToDelete = currentState.stations.filter((s) => s.conveyorId === conveyorId);
+    const deletedStationIds = new Set(stationsToDelete.map((s) => s.id));
+    const nextLive = { ...currentState.stationLive };
+    for (const sid of deletedStationIds) {
+      delete nextLive[sid];
+    }
+    currentState = {
+      ...currentState,
+      conveyors: currentState.conveyors.filter((c) => c.id !== conveyorId),
+      stations: currentState.stations.filter((s) => s.conveyorId !== conveyorId),
+      stationLive: nextLive,
+    };
+    emitChange();
+  },
+
+  syncConveyorStations: (
+    conveyorId: string,
+    areaId: string,
+    drafts: Array<{ id?: string; code: string; name: string }>
+  ) => {
+    const now = Date.now();
+    const existingStationMap = new Map(currentState.stations.map((s) => [s.id, s]));
+    const newLive = { ...currentState.stationLive };
+    const resultingStations: Station[] = [];
+
+    // Filter out stations for this conveyor from current stations
+    const otherStations = currentState.stations.filter((s) => s.conveyorId !== conveyorId);
+
+    drafts.forEach((d, idx) => {
+      const code = d.code.trim().toUpperCase() || `ST-${String(idx + 1).padStart(2, "0")}`;
+      const name = d.name.trim();
+      if (!name) return;
+
+      if (d.id && existingStationMap.has(d.id)) {
+        const existing = existingStationMap.get(d.id)!;
+        resultingStations.push({
+          ...existing,
+          code,
+          name,
+          areaId,
+          conveyorId,
+          sequence: idx + 1,
+        });
+      } else {
+        const newId = `st-${now + idx}-${Math.floor(Math.random() * 1000)}`;
+        resultingStations.push({
+          id: newId,
+          code,
+          name,
+          areaId,
+          conveyorId,
+          sequence: idx + 1,
+          speedUnit: "m/min",
+          runningThreshold: 0.1,
+          active: true,
+        });
+        newLive[newId] = {
+          stationId: newId,
+          state: "running",
+          speed: 1.2,
+          lastStartMs: now,
+          lastStopMs: now - 3600000,
+          totalRunMs: 0,
+          stoppedSinceMs: null,
+          lastSeenMs: now,
+        };
+      }
+    });
+
+    currentState = {
+      ...currentState,
+      stations: [...otherStations, ...resultingStations],
+      stationLive: newLive,
+    };
+    emitChange();
+  },
+
   // Station Actions
   addStation: (st: Omit<Station, "id"> & { id?: string }): Station => {
     const newStation: Station = {

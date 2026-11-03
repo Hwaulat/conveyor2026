@@ -40,6 +40,15 @@ interface StationDraftRow {
   name: string;
 }
 
+interface ConveyorMasterRow {
+  conveyorId: string;
+  conveyorName: string;
+  areaId: string;
+  areaName: string;
+  stations: Station[];
+  isActive: boolean;
+}
+
 function MasterDataPage() {
   const { t } = useI18n();
   const appState = useAppStore();
@@ -70,7 +79,7 @@ function MasterDataPage() {
 
   const [stationPage, setStationPage] = useState(1);
   const [stationPageSize, setStationPageSize] = useState(10);
-  const [viewingStation, setViewingStation] = useState<Station | null>(null);
+  const [viewingConveyorRow, setViewingConveyorRow] = useState<ConveyorMasterRow | null>(null);
 
   // Modal: Batch Add Stations under Area & Conveyor
   const [batchModalOpen, setBatchModalOpen] = useState(false);
@@ -81,49 +90,90 @@ function MasterDataPage() {
     { id: "row-2", code: "", name: "" },
   ]);
 
-  // Modal: Edit Single Station
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editingStation, setEditingStation] = useState<Station | null>(null);
-  const [editCode, setEditCode] = useState("");
-  const [editName, setEditName] = useState("");
-  const [editAreaId, setEditAreaId] = useState("");
-  const [editConveyorId, setEditConveyorId] = useState("");
-  const [editSpeedUnit, setEditSpeedUnit] = useState("m/min");
-  const [editThreshold, setEditThreshold] = useState(0.1);
+  // Modal: Edit Conveyor & Stations (Requirement 1: Sama dengan pop up Tambah Data)
+  const [editConveyorModalOpen, setEditConveyorModalOpen] = useState(false);
+  const [editConveyorTarget, setEditConveyorTarget] = useState<ConveyorMasterRow | null>(null);
+  const [editAreaInput, setEditAreaInput] = useState("");
+  const [editConveyorInput, setEditConveyorInput] = useState("");
+  const [editStationRows, setEditStationRows] = useState<StationDraftRow[]>([]);
 
-  // Modal: Delete Station Confirmation
-  const [deleteStationTarget, setDeleteStationTarget] = useState<Station | null>(null);
+  // Modal: Delete Conveyor Confirmation
+  const [deleteConveyorTarget, setDeleteConveyorTarget] = useState<ConveyorMasterRow | null>(null);
 
-  // Filtered stations for display
-  const filteredStations = useMemo(() => {
-    return appState.stations.filter((st) => {
-      const area = appState.areas.find((a) => a.id === st.areaId);
-      const cv = appState.conveyors.find((c) => c.id === st.conveyorId);
+  // Group stations by conveyor for table view
+  const conveyorRows = useMemo<ConveyorMasterRow[]>(() => {
+    const rows: ConveyorMasterRow[] = appState.conveyors.map((c) => {
+      const area = appState.areas.find((a) => a.id === c.areaId);
+      const stList = appState.stations
+        .filter((s) => s.conveyorId === c.id)
+        .sort((a, b) => a.sequence - b.sequence);
+      const isActive = c.active !== false && (stList.length === 0 || stList.some((s) => s.active !== false));
+      return {
+        conveyorId: c.id,
+        conveyorName: c.name,
+        areaId: c.areaId,
+        areaName: area?.name ?? c.areaId,
+        stations: stList,
+        isActive,
+      };
+    });
 
-      const matchArea = selectedAreaFilter === "all" || st.areaId === selectedAreaFilter;
+    // Also include any orphan stations whose conveyorId is not in conveyors list
+    const registeredCvIds = new Set(appState.conveyors.map((c) => c.id));
+    const orphanMap = new Map<string, Station[]>();
+    for (const st of appState.stations) {
+      if (!registeredCvIds.has(st.conveyorId)) {
+        const list = orphanMap.get(st.conveyorId) || [];
+        list.push(st);
+        orphanMap.set(st.conveyorId, list);
+      }
+    }
 
+    for (const [cvId, stList] of orphanMap.entries()) {
+      const first = stList[0]!;
+      const area = appState.areas.find((a) => a.id === first.areaId);
+      stList.sort((a, b) => a.sequence - b.sequence);
+      rows.push({
+        conveyorId: cvId,
+        conveyorName: cvId,
+        areaId: first.areaId,
+        areaName: area?.name ?? first.areaId,
+        stations: stList,
+        isActive: stList.some((s) => s.active !== false),
+      });
+    }
+
+    return rows;
+  }, [appState.conveyors, appState.areas, appState.stations]);
+
+  // Filtered conveyor rows for display
+  const filteredConveyorRows = useMemo(() => {
+    return conveyorRows.filter((row) => {
+      const matchArea = selectedAreaFilter === "all" || row.areaId === selectedAreaFilter;
       if (!stationSearchQuery.trim()) return matchArea;
 
       const q = stationSearchQuery.toLowerCase();
       const matchSearch =
-        (st.code && st.code.toLowerCase().includes(q)) ||
-        st.name.toLowerCase().includes(q) ||
-        (area && area.name.toLowerCase().includes(q)) ||
-        (cv && cv.name.toLowerCase().includes(q)) ||
-        st.id.toLowerCase().includes(q);
+        row.conveyorName.toLowerCase().includes(q) ||
+        row.areaName.toLowerCase().includes(q) ||
+        row.stations.some(
+          (st) =>
+            (st.code && st.code.toLowerCase().includes(q)) ||
+            st.name.toLowerCase().includes(q)
+        );
 
       return matchArea && matchSearch;
     });
-  }, [appState.stations, appState.areas, appState.conveyors, selectedAreaFilter, stationSearchQuery]);
+  }, [conveyorRows, selectedAreaFilter, stationSearchQuery]);
 
-  const paginatedStations = useMemo(() => {
+  const paginatedConveyorRows = useMemo(() => {
     const start = (stationPage - 1) * stationPageSize;
-    return filteredStations.slice(start, start + stationPageSize);
-  }, [filteredStations, stationPage, stationPageSize]);
+    return filteredConveyorRows.slice(start, start + stationPageSize);
+  }, [filteredConveyorRows, stationPage, stationPageSize]);
 
   // Batch Add Station Handlers
   const handleOpenBatchModal = () => {
-    const defaultArea = appState.areas[0]?.name ?? "Main Assembly Line";
+    const defaultArea = appState.areas[0]?.name ?? "PTED";
     const defaultCv = appState.conveyors[0]?.name ?? "Conveyor CV-01";
     setAreaInput(defaultArea);
     setConveyorInput(defaultCv);
@@ -144,7 +194,7 @@ function MasterDataPage() {
     const nextCode = `ST-${String(nextNum).padStart(2, "0")}`;
     setStationRows((prev) => [
       ...prev,
-      { id: `row-${Date.now()}-${Math.random()}`, code: nextCode, name: "" },
+      { id: `row-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, code: nextCode, name: "" },
     ]);
   };
 
@@ -189,6 +239,7 @@ function MasterDataPage() {
       sequence: appState.stations.length + idx + 1,
       speedUnit: "m/min",
       runningThreshold: 0.1,
+      active: true,
     }));
 
     store.addStationsBatch(stationsToAdd);
@@ -196,44 +247,81 @@ function MasterDataPage() {
     setBatchModalOpen(false);
   };
 
-  // Edit Single Station Handlers
-  const handleOpenEditStation = (st: Station) => {
-    setEditingStation(st);
-    setEditCode(st.code || st.name.split(" ")[0] || `ST-${st.sequence}`);
-    setEditName(st.name.replace(/^ST-\d+\s*/i, ""));
-    setEditAreaId(st.areaId);
-    setEditConveyorId(st.conveyorId);
-    setEditSpeedUnit(st.speedUnit || "m/min");
-    setEditThreshold(st.runningThreshold ?? 0.1);
-    setEditModalOpen(true);
+  // Edit Conveyor & Stations Handlers (Requirement 1: Sama dengan pop up Tambah Data)
+  const handleOpenEditConveyor = (row: ConveyorMasterRow) => {
+    setEditConveyorTarget(row);
+    setEditAreaInput(row.areaName);
+    setEditConveyorInput(row.conveyorName);
+    const mappedRows: StationDraftRow[] =
+      row.stations.length > 0
+        ? row.stations.map((st) => ({
+            id: st.id,
+            code: st.code || `ST-${String(st.sequence).padStart(2, "0")}`,
+            name: st.name,
+          }))
+        : [{ id: `row-${Date.now()}-1`, code: "ST-01", name: "" }];
+    setEditStationRows(mappedRows);
+    setEditConveyorModalOpen(true);
   };
 
-  const handleSaveEditStation = () => {
-    if (!editingStation) return;
-    if (!editName.trim()) {
-      toast.error("Nama stasiun wajib diisi");
+  const handleAddEditStationRow = () => {
+    const nextNum = editStationRows.length + 1;
+    const nextCode = `ST-${String(nextNum).padStart(2, "0")}`;
+    setEditStationRows((prev) => [
+      ...prev,
+      { id: `row-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, code: nextCode, name: "" },
+    ]);
+  };
+
+  const handleRemoveEditStationRow = (rowId: string) => {
+    if (editStationRows.length <= 1) {
+      toast.warning("Minimal harus ada satu stasiun");
+      return;
+    }
+    setEditStationRows((prev) => prev.filter((r) => r.id !== rowId));
+  };
+
+  const handleUpdateEditRow = (rowId: string, field: "code" | "name", val: string) => {
+    setEditStationRows((prev) =>
+      prev.map((r) => (r.id === rowId ? { ...r, [field]: val } : r)),
+    );
+  };
+
+  const handleSaveEditConveyor = () => {
+    if (!editConveyorTarget) return;
+    if (!editAreaInput.trim()) {
+      toast.error("Nama Area wajib diisi");
+      return;
+    }
+    if (!editConveyorInput.trim()) {
+      toast.error("Nama Konveyor wajib diisi");
       return;
     }
 
-    store.updateStation(editingStation.id, {
-      code: editCode.trim().toUpperCase() || undefined,
-      name: editName.trim(),
-      areaId: editAreaId,
-      conveyorId: editConveyorId,
-      speedUnit: editSpeedUnit.trim() || "m/min",
-      runningThreshold: editThreshold,
+    const validRows = editStationRows.filter((r) => r.name.trim().length > 0);
+    if (validRows.length === 0) {
+      toast.error("Minimal satu baris nama stasiun harus diisi");
+      return;
+    }
+
+    const area = store.ensureArea(editAreaInput);
+    store.updateConveyor(editConveyorTarget.conveyorId, {
+      name: editConveyorInput.trim(),
+      areaId: area.id,
     });
 
-    toast.success("Data stasiun berhasil diperbarui");
-    setEditModalOpen(false);
-    setEditingStation(null);
+    store.syncConveyorStations(editConveyorTarget.conveyorId, area.id, validRows);
+
+    toast.success(`Berhasil memperbarui data stasiun dan jalur konveyor pada ${editConveyorInput.trim()}`);
+    setEditConveyorModalOpen(false);
+    setEditConveyorTarget(null);
   };
 
-  const handleConfirmDeleteStation = () => {
-    if (!deleteStationTarget) return;
-    store.deleteStation(deleteStationTarget.id);
-    toast.success(`Stasiun ${deleteStationTarget.name} berhasil dihapus`);
-    setDeleteStationTarget(null);
+  const handleConfirmDeleteConveyor = () => {
+    if (!deleteConveyorTarget) return;
+    store.deleteConveyor(deleteConveyorTarget.conveyorId);
+    toast.success(`Jalur konveyor "${deleteConveyorTarget.conveyorName}" beserta stasiunnya berhasil dihapus`);
+    setDeleteConveyorTarget(null);
   };
 
   // ==========================================
@@ -440,8 +528,8 @@ function MasterDataPage() {
       {/* ======================================================== */}
       {activeTab === "stations" && (
         <div className="space-y-6">
-          {/* Summary KPI Strip */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Summary KPI Strip: Total Area & Total Stasiun Saja (Requirement 6) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Card 1: Total Areas */}
             <div className="rounded-xl border border-border bg-card p-4 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -459,24 +547,7 @@ function MasterDataPage() {
               </div>
             </div>
 
-            {/* Card 2: Total Conveyors */}
-            <div className="rounded-xl border border-border bg-card p-4 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  <Workflow className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="font-mono text-xs text-muted-foreground block uppercase font-bold">
-                    Jalur Konveyor
-                  </span>
-                  <span className="font-mono text-2xl font-black text-foreground">
-                    {appState.conveyors.length} Jalur
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3: Total Stations */}
+            {/* Card 2: Total Stations */}
             <div className="rounded-xl border border-border bg-card p-4 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
@@ -484,7 +555,7 @@ function MasterDataPage() {
                 </div>
                 <div>
                   <span className="font-mono text-xs text-muted-foreground block uppercase font-bold">
-                    Stasiun Terdaftar
+                    Total Stasiun Terdaftar
                   </span>
                   <span className="font-mono text-2xl font-black text-foreground">
                     {appState.stations.length} Stasiun
@@ -500,7 +571,7 @@ function MasterDataPage() {
             <div className="p-4 border-b border-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs text-muted-foreground font-semibold">
-                  Menampilkan {filteredStations.length} dari {appState.stations.length} stasiun
+                  Menampilkan {filteredConveyorRows.length} dari {conveyorRows.length} jalur konveyor ({appState.stations.length} total stasiun)
                 </span>
               </div>
 
@@ -544,7 +615,7 @@ function MasterDataPage() {
               </div>
             </div>
 
-            {/* Table */}
+            {/* Table: ACTION, NAMA AREA, NAMA KONVEYOR, NAMA STASIUN, STATUS */}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-sans border-collapse">
                 <thead>
@@ -552,7 +623,13 @@ function MasterDataPage() {
                     <th className="py-3.5 px-4 w-28 whitespace-nowrap">ACTION</th>
                     <th className="py-3.5 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
-                        KODE STASIUN
+                        NAMA AREA
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      </span>
+                    </th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1">
+                        NAMA KONVEYOR
                         <ArrowUpDown className="h-3 w-3 text-slate-400" />
                       </span>
                     </th>
@@ -562,60 +639,49 @@ function MasterDataPage() {
                         <ArrowUpDown className="h-3 w-3 text-slate-400" />
                       </span>
                     </th>
-                    <th className="py-3.5 px-4 whitespace-nowrap">
+                    <th className="py-3.5 px-4 text-center w-36 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
-                        NAMA AREA
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                      </span>
-                    </th>
-                    <th className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1">
-                        KONVEYOR
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                      </span>
-                    </th>
-                    <th className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1">
-                        THRESHOLD
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                      </span>
-                    </th>
-                    <th className="py-3.5 px-4 text-center w-28 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1">
-                        STATUS LIVE
+                        STATUS
                         <ArrowUpDown className="h-3 w-3 text-slate-400" />
                       </span>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
-                  {paginatedStations.length === 0 ? (
+                  {paginatedConveyorRows.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-muted-foreground font-mono">
+                      <td colSpan={5} className="py-12 text-center text-muted-foreground font-mono">
                         <Layers className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        <p className="font-medium text-sm">Tidak ada data stasiun ditemukan</p>
+                        <p className="font-medium text-sm">Tidak ada data stasiun atau konveyor ditemukan</p>
                         <p className="text-xs mt-1">Coba sesuaikan kata kunci pencarian atau filter area Anda.</p>
                       </td>
                     </tr>
                   ) : (
-                    paginatedStations.map((st) => {
-                      const area = appState.areas.find((a) => a.id === st.areaId);
-                      const cv = appState.conveyors.find((c) => c.id === st.conveyorId);
-                      const live = appState.stationLive[st.id];
-                      const isRunning = live?.state === "running";
-                      const stationCode = st.code || st.name.split(" ")[0] || `ST-${st.sequence}`;
+                    paginatedConveyorRows.map((row) => {
+                      const stationText =
+                        row.stations.length === 0
+                          ? "-"
+                          : row.stations
+                              .map(
+                                (st) =>
+                                  `(${st.code || `ST-${String(st.sequence).padStart(2, "0")}`} - ${st.name})`,
+                              )
+                              .join(", ");
 
                       return (
-                        <tr key={st.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
-                          {/* Action Column on Left (Sesuai Referensi Visual) */}
+                        <tr
+                          key={row.conveyorId}
+                          className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
+                        >
+                          {/* Action Column on Left */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
                               {/* View Button [ 👁 ] */}
                               <button
                                 type="button"
-                                onClick={() => setViewingStation(st)}
+                                onClick={() => setViewingConveyorRow(row)}
                                 className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
-                                title="Lihat Detail Stasiun"
+                                title="Lihat Detail Jalur Konveyor & Stasiun"
                               >
                                 <Eye className="h-3.5 w-3.5" />
                               </button>
@@ -623,9 +689,9 @@ function MasterDataPage() {
                               {/* Edit Button [ ✏ ] */}
                               <button
                                 type="button"
-                                onClick={() => handleOpenEditStation(st)}
+                                onClick={() => handleOpenEditConveyor(row)}
                                 className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
-                                title="Ubah Stasiun"
+                                title="Ubah Stasiun & Jalur Konveyor"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
@@ -633,68 +699,69 @@ function MasterDataPage() {
                               {/* Delete Button [ 🗑 ] */}
                               <button
                                 type="button"
-                                onClick={() => setDeleteStationTarget(st)}
+                                onClick={() => setDeleteConveyorTarget(row)}
                                 className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-red-600 hover:border-red-400 dark:hover:text-red-400 shadow-2xs transition-colors"
-                                title="Hapus Stasiun"
+                                title="Hapus Jalur Konveyor & Stasiun"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
                             </div>
                           </td>
 
-                          {/* Kode Stasiun */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className="inline-block px-2.5 py-0.5 rounded font-mono font-bold bg-muted text-foreground border border-border text-xs">
-                              {stationCode}
-                            </span>
-                          </td>
-
-                          {/* Nama Stasiun */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <div className="font-semibold text-foreground text-[13px]">
-                              {st.name}
-                            </div>
-                            <span className="text-[10px] text-muted-foreground block font-mono">
-                              ID: {st.id} • Urutan: {st.sequence}
-                            </span>
-                          </td>
-
                           {/* Nama Area */}
-                          <td className="py-3.5 px-4 text-foreground font-medium whitespace-nowrap">
-                            {area?.name ?? st.areaId}
+                          <td className="py-3.5 px-4 text-foreground font-semibold whitespace-nowrap">
+                            {row.areaName}
                           </td>
 
                           {/* Nama Konveyor */}
                           <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Workflow className="h-3.5 w-3.5 text-cyan-500" />
-                              {cv?.name ?? st.conveyorId}
+                            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+                              <Workflow className="h-3.5 w-3.5 text-cyan-500 shrink-0" />
+                              {row.conveyorName}
                             </span>
                           </td>
 
-                          {/* Threshold */}
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                            <span className="text-foreground font-semibold font-mono">
-                              {st.runningThreshold} {st.speedUnit}
-                            </span>
+                          {/* Nama Stasiun (Format: (ST-001 - Station Name), koma jika > 1) */}
+                          <td className="py-3.5 px-4 text-foreground">
+                            <div className="font-mono text-xs leading-relaxed max-w-xl">
+                              {stationText}
+                            </div>
                           </td>
 
-                          {/* Status Live */}
+                          {/* Status Live diganti jadi Toggle Switch Active & Inactive */}
                           <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                                isRunning
-                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                  : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 animate-pulse"
-                              }`}
-                            >
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  isRunning ? "bg-emerald-500" : "bg-rose-500"
+                            <div className="inline-flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={row.isActive}
+                                onClick={() => {
+                                  store.toggleConveyorActive(row.conveyorId);
+                                  toast.success(
+                                    `Status konveyor "${row.conveyorName}" diubah menjadi ${!row.isActive ? "Aktif" : "Nonaktif"}`,
+                                  );
+                                }}
+                                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                                  row.isActive ? "bg-emerald-600 dark:bg-emerald-500" : "bg-slate-300 dark:bg-zinc-700"
                                 }`}
-                              />
-                              {isRunning ? "RUNNING" : "STOPPED"}
-                            </span>
+                                title={row.isActive ? "Klik untuk menonaktifkan" : "Klik untuk mengaktifkan"}
+                              >
+                                <span className="sr-only">Toggle status konveyor</span>
+                                <span
+                                  aria-hidden="true"
+                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                                    row.isActive ? "translate-x-5" : "translate-x-0"
+                                  }`}
+                                />
+                              </button>
+                              <span
+                                className={`text-[11px] font-bold font-mono ${
+                                  row.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+                                }`}
+                              >
+                                {row.isActive ? "Active" : "Inactive"}
+                              </span>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -708,7 +775,7 @@ function MasterDataPage() {
             <TablePagination
               page={stationPage}
               pageSize={stationPageSize}
-              totalItems={filteredStations.length}
+              totalItems={filteredConveyorRows.length}
               onPageChange={setStationPage}
               onPageSizeChange={setStationPageSize}
             />
@@ -1154,104 +1221,158 @@ function MasterDataPage() {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: EDIT SINGLE STATION                               */}
+      {/* MODAL: EDIT CONVEYOR & STATIONS (SAMA DENGAN TAMBAH DATA) */}
       {/* ======================================================== */}
-      {editModalOpen && editingStation && (
+      {editConveyorModalOpen && editConveyorTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
-            <h3 className="font-display text-base font-semibold text-foreground mb-4">
-              Ubah Data Stasiun ({editingStation.code || editingStation.id})
-            </h3>
+          <div className="w-full max-w-xl rounded-xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+              <div className="flex items-center gap-2">
+                <Workflow className="h-5 w-5 text-primary" />
+                <h3 className="font-display text-base font-bold text-foreground">
+                  Ubah Data Stasiun & Jalur Konveyor
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditConveyorModalOpen(false);
+                  setEditConveyorTarget(null);
+                }}
+                className="text-muted-foreground hover:text-foreground p-1 rounded"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-            <div className="space-y-3.5 text-xs font-mono">
+            <div className="space-y-4 text-xs font-mono">
+              {/* Field 1: Nama Area */}
               <div>
-                <label className="block text-muted-foreground mb-1">Kode Stasiun:</label>
+                <label className="block text-foreground font-semibold mb-1">
+                  1. Nama Area:
+                </label>
                 <input
                   type="text"
-                  value={editCode}
-                  onChange={(e) => setEditCode(e.target.value)}
-                  placeholder="Contoh: ST-01"
-                  className="w-full rounded border border-border bg-background p-2 text-foreground font-bold uppercase focus:outline-none focus:border-ring"
+                  list="edit-area-suggestions"
+                  placeholder="Contoh: Main Assembly Line"
+                  value={editAreaInput}
+                  onChange={(e) => setEditAreaInput(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
                 />
+                <datalist id="edit-area-suggestions">
+                  {appState.areas.map((a) => (
+                    <option key={a.id} value={a.name} />
+                  ))}
+                </datalist>
+                <span className="text-[10px] text-muted-foreground mt-1 block">
+                  Ketik nama area baru atau pilih dari area yang sudah ada.
+                </span>
               </div>
 
+              {/* Field 2: Nama Conveyor */}
               <div>
-                <label className="block text-muted-foreground mb-1">Nama Stasiun:</label>
+                <label className="block text-foreground font-semibold mb-1">
+                  2. Nama Konveyor:
+                </label>
                 <input
                   type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Contoh: Stamping & Press"
-                  className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
+                  list="edit-conveyor-suggestions"
+                  placeholder="Contoh: Conveyor CV-01"
+                  value={editConveyorInput}
+                  onChange={(e) => setEditConveyorInput(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
                 />
+                <datalist id="edit-conveyor-suggestions">
+                  {appState.conveyors.map((c) => (
+                    <option key={c.id} value={c.name} />
+                  ))}
+                </datalist>
+                <span className="text-[10px] text-muted-foreground mt-1 block">
+                  Ketik nama jalur konveyor yang berada di dalam area tersebut.
+                </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <SelectInput
-                    label="Nama Area:"
-                    value={editAreaId}
-                    onChange={(val) => setEditAreaId(val ?? "")}
-                    datalist={appState.areas.map((a) => ({
-                      value: a.id,
-                      label: a.name,
-                    }))}
-                    hideClear
-                    placeholder="Pilih Area"
-                  />
+              {/* Field 3: Dynamic Station List */}
+              <div className="pt-2 border-t border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <label className="block text-foreground font-semibold">
+                      3. Daftar Stasiun ({editStationRows.length} baris):
+                    </label>
+                    <span className="text-[10px] text-muted-foreground">
+                      Tambah, edit, atau hapus stasiun dalam jalur konveyor ini.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddEditStationRow}
+                    className="flex items-center gap-1 rounded bg-muted hover:bg-muted/80 text-foreground px-2.5 py-1 text-[11px] font-semibold border border-border transition-colors shadow-2xs"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Tambah Baris</span>
+                  </button>
                 </div>
 
-                <div>
-                  <SelectInput
-                    label="Nama Konveyor:"
-                    value={editConveyorId}
-                    onChange={(val) => setEditConveyorId(val ?? "")}
-                    datalist={appState.conveyors.map((c) => ({
-                      value: c.id,
-                      label: c.name,
-                    }))}
-                    hideClear
-                    placeholder="Pilih Konveyor"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-muted-foreground mb-1">Satuan Kecepatan:</label>
-                  <input
-                    type="text"
-                    value={editSpeedUnit}
-                    onChange={(e) => setEditSpeedUnit(e.target.value)}
-                    className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-muted-foreground mb-1">Threshold Berhenti:</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editThreshold}
-                    onChange={(e) => setEditThreshold(+e.target.value)}
-                    className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
-                  />
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {editStationRows.map((row, index) => (
+                    <div
+                      key={row.id}
+                      className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/20"
+                    >
+                      <span className="w-6 text-center font-bold text-muted-foreground text-[11px]">
+                        #{index + 1}
+                      </span>
+                      {/* Station Code */}
+                      <div className="w-1/3">
+                        <input
+                          type="text"
+                          placeholder="Kode (ST-01)"
+                          value={row.code}
+                          onChange={(e) => handleUpdateEditRow(row.id, "code", e.target.value)}
+                          className="w-full rounded border border-border bg-background px-2.5 py-1.5 text-foreground font-bold uppercase focus:outline-none focus:border-ring"
+                        />
+                      </div>
+                      {/* Station Name */}
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          placeholder="Nama Stasiun"
+                          value={row.name}
+                          onChange={(e) => handleUpdateEditRow(row.id, "name", e.target.value)}
+                          className="w-full rounded border border-border bg-background px-2.5 py-1.5 text-foreground focus:outline-none focus:border-ring"
+                        />
+                      </div>
+                      {/* Delete Row Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveEditStationRow(row.id)}
+                        disabled={editStationRows.length <= 1}
+                        className="p-1.5 rounded text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                        title="Hapus Baris"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 mt-5 border-t border-border">
+            <div className="flex justify-end gap-2 pt-4 mt-6 border-t border-border">
               <button
                 type="button"
-                onClick={() => setEditModalOpen(false)}
-                className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
+                onClick={() => {
+                  setEditConveyorModalOpen(false);
+                  setEditConveyorTarget(null);
+                }}
+                className="px-4 py-2 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
               >
                 Batal
               </button>
               <button
                 type="button"
-                onClick={handleSaveEditStation}
-                className="px-4 py-2 rounded bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs"
+                onClick={handleSaveEditConveyor}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs transition-colors"
               >
                 Simpan Perubahan
               </button>
@@ -1261,32 +1382,34 @@ function MasterDataPage() {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: DELETE CONFIRMATION (STATION)                     */}
+      {/* MODAL: DELETE CONFIRMATION (CONVEYOR)                    */}
       {/* ======================================================== */}
-      {deleteStationTarget && (
+      {deleteConveyorTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-xs p-4">
           <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-center gap-3 mb-3 text-rose-600 dark:text-rose-400">
               <AlertTriangle className="h-6 w-6 shrink-0" />
               <h3 className="font-display text-base font-bold text-foreground">
-                Hapus Stasiun?
+                Hapus Jalur Konveyor?
               </h3>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-              Apakah Anda yakin ingin menghapus stasiun <strong className="text-foreground">{deleteStationTarget.name} ({deleteStationTarget.code || deleteStationTarget.id})</strong>? Data telemetri live untuk stasiun ini juga akan dihapus.
+              Apakah Anda yakin ingin menghapus jalur konveyor <strong className="text-foreground">{deleteConveyorTarget.conveyorName}</strong> di area <strong className="text-foreground">{deleteConveyorTarget.areaName}</strong> beserta <strong className="text-foreground">{deleteConveyorTarget.stations.length} stasiun</strong> di dalamnya?
             </p>
             <div className="flex justify-end gap-2 pt-4 border-t border-border">
               <button
-                onClick={() => setDeleteStationTarget(null)}
+                type="button"
+                onClick={() => setDeleteConveyorTarget(null)}
                 className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
               >
                 Batal
               </button>
               <button
-                onClick={handleConfirmDeleteStation}
+                type="button"
+                onClick={handleConfirmDeleteConveyor}
                 className="px-4 py-2 rounded bg-rose-600 text-white font-semibold font-mono text-xs hover:bg-rose-500 shadow-2xs"
               >
-                Ya, Hapus Stasiun
+                Ya, Hapus Konveyor & Stasiun
               </button>
             </div>
           </div>
@@ -1558,8 +1681,8 @@ function MasterDataPage() {
         </div>
       )}
 
-      {/* Modal: View Detail Stasiun [ 👁 ] */}
-      {viewingStation && (
+      {/* Modal: View Detail Konveyor & Stasiun [ 👁 ] */}
+      {viewingConveyorRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl space-y-4 font-sans text-xs">
             <div className="flex items-center justify-between pb-3 border-b border-border">
@@ -1568,12 +1691,13 @@ function MasterDataPage() {
                   <Eye className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm text-foreground">Detail Data Stasiun</h3>
-                  <p className="text-[11px] text-muted-foreground font-mono">ID: {viewingStation.id}</p>
+                  <h3 className="font-semibold text-sm text-foreground">Detail Jalur Konveyor & Stasiun</h3>
+                  <p className="text-[11px] text-muted-foreground font-mono">ID: {viewingConveyorRow.conveyorId}</p>
                 </div>
               </div>
               <button
-                onClick={() => setViewingStation(null)}
+                type="button"
+                onClick={() => setViewingConveyorRow(null)}
                 className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted"
               >
                 <X className="h-4 w-4" />
@@ -1582,42 +1706,56 @@ function MasterDataPage() {
 
             <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Kode Stasiun</span>
-                <span className="text-foreground font-bold text-xs">{viewingStation.code || viewingStation.id}</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Nama Area</span>
+                <span className="text-foreground font-bold text-xs">{viewingConveyorRow.areaName}</span>
               </div>
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Nama Stasiun</span>
-                <span className="text-foreground font-bold text-xs">{viewingStation.name}</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Nama Konveyor</span>
+                <span className="text-foreground font-bold text-xs">{viewingConveyorRow.conveyorName}</span>
               </div>
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Area</span>
-                <span className="text-foreground font-semibold">
-                  {appState.areas.find((a) => a.id === viewingStation.areaId)?.name ?? viewingStation.areaId}
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Status Konveyor</span>
+                <span className={`font-bold text-xs ${viewingConveyorRow.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                  {viewingConveyorRow.isActive ? "Aktif (Active)" : "Nonaktif (Inactive)"}
                 </span>
               </div>
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Konveyor</span>
-                <span className="text-foreground font-semibold">
-                  {appState.conveyors.find((c) => c.id === viewingStation.conveyorId)?.name ?? viewingStation.conveyorId}
-                </span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Total Stasiun</span>
+                <span className="text-foreground font-bold text-xs">{viewingConveyorRow.stations.length} Stasiun</span>
               </div>
-              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Ambang Kecepatan</span>
-                <span className="text-foreground font-bold text-xs">
-                  {viewingStation.runningThreshold} {viewingStation.speedUnit}
-                </span>
-              </div>
-              <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Urutan Konveyor</span>
-                <span className="text-foreground font-semibold">#{viewingStation.sequence}</span>
+            </div>
+
+            <div className="pt-2">
+              <label className="block text-foreground font-semibold mb-2 font-mono text-xs">
+                Daftar Stasiun ({viewingConveyorRow.stations.length}):
+              </label>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {viewingConveyorRow.stations.length === 0 ? (
+                  <p className="text-muted-foreground italic font-mono text-[11px]">Belum ada stasiun terdaftar pada konveyor ini.</p>
+                ) : (
+                  viewingConveyorRow.stations.map((st, idx) => (
+                    <div key={st.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/60 font-mono text-[11px]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground font-semibold">#{idx + 1}</span>
+                        <span className="px-2 py-0.5 rounded bg-muted text-foreground font-bold border border-border">
+                          {st.code || `ST-${String(st.sequence).padStart(2, "0")}`}
+                        </span>
+                        <span className="text-foreground font-semibold">{st.name}</span>
+                      </div>
+                      <span className={`text-[10px] font-bold ${st.active !== false ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                        {st.active !== false ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
             <div className="flex justify-end pt-2 border-t border-border">
               <button
                 type="button"
-                onClick={() => setViewingStation(null)}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors shadow-2xs"
+                onClick={() => setViewingConveyorRow(null)}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors shadow-2xs font-mono text-xs"
               >
                 Tutup
               </button>
