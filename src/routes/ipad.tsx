@@ -126,7 +126,7 @@ function IpadEFormPage() {
   const [formType, setFormType] = useState<"linestop" | "mtc">("linestop");
 
   // Tablist Area Configuration for iPad:
-  // - Linestop: 6 Areas (Sanding, Sealing, Topcoat, Touch Up, Drop Cabin CED, Cooling Tunnel)
+  // - Linestop: 8 Areas (Sanding, Sealing, Topcoat, Touch Up, Drop Cabin CED, Cooling Tunnel, Oven CED, Mezzanine)
   // - Linestop Maintenance: 2 Areas (Oven CED, Mezzanine)
   const ipadAreaConfigs = useMemo(() => {
     const list =
@@ -142,6 +142,8 @@ function IpadEFormPage() {
             { key: "area-touch-up", name: "Touch Up Area", code: "TOUCH-UP" },
             { key: "area-drop-ced", name: "Drop Cabin CED", code: "DROP-CED" },
             { key: "area-cooling-tunnel", name: "Cooling Tunnel", code: "COOLING-TUNNEL" },
+            { key: "area-oven-ced", name: "Oven CED", code: "OVEN-CED" },
+            { key: "area-mezzanine", name: "Mezzanine", code: "MEZZANINE" },
           ];
     const areas = appState?.areas || [];
     return list.map((item) => {
@@ -167,8 +169,12 @@ function IpadEFormPage() {
     if (ipadAreaConfigs.length > 0 && !ipadAreaConfigs.some((a) => a.id === selectedAreaId)) {
       const firstArea = ipadAreaConfigs[0]!;
       setSelectedAreaId(firstArea.id);
-      const st = (appState?.stations || []).filter((s) => s && s.areaId === firstArea.id);
-      if (st.length > 0) setSelectedStationId(st[0]!.id);
+      if (firstArea.id === "area-oven-ced" || firstArea.id === "area-mezzanine") {
+        setSelectedStationId("");
+      } else {
+        const st = (appState?.stations || []).filter((s) => s && s.areaId === firstArea.id);
+        if (st.length > 0) setSelectedStationId(st[0]!.id);
+      }
     }
   }, [ipadAreaConfigs, selectedAreaId, appState?.stations]);
 
@@ -176,8 +182,11 @@ function IpadEFormPage() {
     return ipadAreaConfigs.find((a) => a.id === selectedAreaId) ?? ipadAreaConfigs[0] ?? { id: "area-sanding", name: "Sanding Area", code: "SANDING" };
   }, [ipadAreaConfigs, selectedAreaId]);
 
-  // Stations associated with the selected area
+  // Stations associated with the selected area (Oven CED and Mezzanine have no stations for now)
   const areaStations = useMemo(() => {
+    if (selectedAreaId === "area-oven-ced" || selectedAreaId === "area-mezzanine") {
+      return [];
+    }
     const stations = appState?.stations || [];
     return stations.filter((s) => s && s.areaId === selectedAreaId);
   }, [appState?.stations, selectedAreaId]);
@@ -192,6 +201,8 @@ function IpadEFormPage() {
   useEffect(() => {
     if (areaStations.length > 0 && !areaStations.some((s) => s.id === selectedStationId)) {
       setSelectedStationId(areaStations[0]!.id);
+    } else if (areaStations.length === 0) {
+      setSelectedStationId("");
     }
   }, [areaStations, selectedStationId]);
 
@@ -252,9 +263,15 @@ function IpadEFormPage() {
   // Select Area & automatically pick first station
   const handleSelectArea = (areaId: string) => {
     setSelectedAreaId(areaId);
+    if (areaId === "area-oven-ced" || areaId === "area-mezzanine") {
+      setSelectedStationId("");
+      return;
+    }
     const stationsInArea = (appState?.stations || []).filter((s) => s && s.areaId === areaId);
     if (stationsInArea.length > 0) {
       setSelectedStationId(stationsInArea[0]!.id);
+    } else {
+      setSelectedStationId("");
     }
   };
 
@@ -274,6 +291,8 @@ function IpadEFormPage() {
             { key: "area-touch-up", name: "Touch Up Area", code: "TOUCH-UP" },
             { key: "area-drop-ced", name: "Drop Cabin CED", code: "DROP-CED" },
             { key: "area-cooling-tunnel", name: "Cooling Tunnel", code: "COOLING-TUNNEL" },
+            { key: "area-oven-ced", name: "Oven CED", code: "OVEN-CED" },
+            { key: "area-mezzanine", name: "Mezzanine", code: "MEZZANINE" },
           ];
 
     const areas = appState?.areas || [];
@@ -288,9 +307,15 @@ function IpadEFormPage() {
     const targetAreaId = foundFirstArea?.id ?? firstTarget.key;
     setSelectedAreaId(targetAreaId);
 
-    const st = (appState?.stations || []).filter((s) => s && s.areaId === targetAreaId);
-    if (st.length > 0) {
-      setSelectedStationId(st[0]!.id);
+    if (targetAreaId === "area-oven-ced" || targetAreaId === "area-mezzanine") {
+      setSelectedStationId("");
+    } else {
+      const st = (appState?.stations || []).filter((s) => s && s.areaId === targetAreaId);
+      if (st.length > 0) {
+        setSelectedStationId(st[0]!.id);
+      } else {
+        setSelectedStationId("");
+      }
     }
 
     if (type === "linestop") {
@@ -352,7 +377,7 @@ function IpadEFormPage() {
   const handleSaveStop = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedStationId || !selectedCategoryId || !operatorBadge.trim()) {
+    if ((areaStations.length > 0 && !selectedStationId) || !selectedCategoryId || !operatorBadge.trim()) {
       toast.error("Please fill in all required fields (Station, Category, Technician/Operator).");
       return;
     }
@@ -400,7 +425,7 @@ function IpadEFormPage() {
 
     const stopPayload: Omit<LineStop, "id"> = {
       areaId: targetStationObj?.areaId ?? selectedAreaId,
-      stationId: selectedStationId,
+      stationId: selectedStationId || `${selectedAreaId}-main`,
       startMs,
       endMs,
       categoryId: selectedCategoryId,
@@ -555,7 +580,7 @@ function IpadEFormPage() {
                   <AlertTriangle className="h-5 w-5 shrink-0" />
                   <div className="text-left">
                     <span className="block leading-none text-base font-bold">Linestop</span>
-                    <span className="text-[10px] font-sans font-normal opacity-85">Operational & Production Stops (6 Areas)</span>
+                    <span className="text-[10px] font-sans font-normal opacity-85">Operational & Production Stops (8 Areas)</span>
                   </div>
                 </button>
 
@@ -577,11 +602,11 @@ function IpadEFormPage() {
               </div>
             </div>
 
-            {/* 1. Tablist Area (Linestop: 6 Areas, Linestop Maintenance: 2 Areas) */}
+            {/* 1. Tablist Area (Linestop: 8 Areas, Linestop Maintenance: 2 Areas) */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                  1. Work Area Tablist ({formType === "mtc" ? "Oven CED & Mezzanine" : "6 Production Areas"}):
+                  1. Work Area Tablist ({formType === "mtc" ? "Oven CED & Mezzanine" : "8 Production Areas"}):
                 </label>
                 <span className="font-mono text-[11px] text-muted-foreground">
                   {currentAreaConfig?.name} • {areaStations.length} Station(s)
@@ -592,12 +617,15 @@ function IpadEFormPage() {
                 className={`grid gap-2 ${
                   formType === "mtc"
                     ? "grid-cols-2"
-                    : "grid-cols-2 sm:grid-cols-3 md:grid-cols-6"
+                    : "grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8"
                 }`}
               >
                 {ipadAreaConfigs.map((area) => {
                   const isAreaSelected = selectedAreaId === area.id;
-                  const count = (appState?.stations || []).filter((s) => s && s.areaId === area.id).length;
+                  const isAreaWithoutStations = area.id === "area-oven-ced" || area.id === "area-mezzanine";
+                  const count = isAreaWithoutStations
+                    ? 0
+                    : (appState?.stations || []).filter((s) => s && s.areaId === area.id).length;
                   return (
                     <button
                       type="button"
@@ -632,13 +660,17 @@ function IpadEFormPage() {
                   2. Select Affected Station ({currentAreaConfig?.name}):
                 </label>
                 <span className="text-[11px] font-mono text-muted-foreground">
-                  {targetStation ? `${targetStation.name} (${targetStation.code || `#${targetStation.sequence}`})` : ""}
+                  {targetStation
+                    ? `${targetStation.name} (${targetStation.code || `#${targetStation.sequence}`})`
+                    : areaStations.length === 0
+                    ? "No stations for now"
+                    : ""}
                 </span>
               </div>
 
               {areaStations.length === 0 ? (
                 <div className="p-4 rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground font-mono">
-                  No stations registered in this area.
+                  Belum ada stasiun terdaftar di area ini (No station for now).
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">

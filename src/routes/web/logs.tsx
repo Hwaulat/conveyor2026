@@ -217,17 +217,15 @@ function LogHistoryPage() {
         <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 font-mono text-xs shadow-2xs">
           <button
             onClick={() => setViewMode("list")}
-            className={`px-3 py-1.5 rounded transition-colors ${
-              viewMode === "list" ? "bg-primary text-primary-foreground font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`px-3 py-1.5 rounded transition-colors ${viewMode === "list" ? "bg-primary text-primary-foreground font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             {t("logs.listView")}
           </button>
           <button
             onClick={() => setViewMode("summary")}
-            className={`px-3 py-1.5 rounded transition-colors ${
-              viewMode === "summary" ? "bg-primary text-primary-foreground font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`px-3 py-1.5 rounded transition-colors ${viewMode === "summary" ? "bg-primary text-primary-foreground font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             {t("logs.summaryView")}
           </button>

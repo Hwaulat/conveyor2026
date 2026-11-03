@@ -82,11 +82,8 @@ export function createSeedData(): AppState {
     // 2. CED Area
     { id: "st-ced-1", code: "CED-01", areaId: "area-ced", conveyorId: "cv-ced-1", name: "CED Main Tank", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 3. Oven CED Area
-    { id: "st-oven-1", code: "OVEN-01", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "CED Baking Zone", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-
-    // 4. Mezzanine Area
-    { id: "st-mez-1", code: "MEZ-01", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Mezzanine Buffer", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    // 3. Oven CED Area (No stations for now)
+    // 4. Mezzanine Area (No stations for now)
 
     // 5. Drop Cabin CED Area
     { id: "st-drop-1", code: "DROP-01", areaId: "area-drop-ced", conveyorId: "cv-drop-1", name: "Drop Cabin CED", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
