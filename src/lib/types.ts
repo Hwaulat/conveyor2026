@@ -41,6 +41,7 @@ export type LineStop = {
   status: "open" | "closed";
   source: "form" | "plc"; // form = E-form entry, plc = detected without E-form
   note?: string | undefined;
+  formType?: "linestop" | "mtc" | undefined;
 };
 
 export type Shift = { id: string; name: string; startHour: number; startMinute: number };

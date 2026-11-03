@@ -533,6 +533,10 @@ function LogHistoryPage() {
                             <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold">
                               PLC
                             </span>
+                          ) : stop.formType === "mtc" ? (
+                            <span className="px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-bold">
+                              E-form (MTC)
+                            </span>
                           ) : (
                             <span className="px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border">
                               E-form

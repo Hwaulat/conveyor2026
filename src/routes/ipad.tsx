@@ -16,6 +16,8 @@ import {
   History,
   Sun,
   Moon,
+  Wrench,
+  Layers,
 } from "lucide-react";
 import { useI18n } from "../lib/i18n";
 import { useTheme } from "../lib/theme";
@@ -52,8 +54,61 @@ function IpadEFormPage() {
   const [isOnline, setIsOnline] = useState(true);
   const [simulatedOffline, setSimulatedOffline] = useState(false);
 
-  // Form State
-  const [selectedStationId, setSelectedStationId] = useState<string>(() => appState.stations[0]?.id ?? "st-pted-1");
+  // Form Type: "linestop" | "mtc"
+  const [formType, setFormType] = useState<"linestop" | "mtc">("linestop");
+
+  // Tablist Area Khusus iPad (5 Area yang direlasikan ke Stasiun):
+  // 1. Sanding Area
+  // 2. Sealing Area
+  // 3. Topcoat Area
+  // 4. Touch Up Area
+  // 5. Drop Cabin CED
+  const ipadAreaConfigs = useMemo(() => {
+    const list = [
+      { key: "area-sanding", name: "Sanding Area", code: "SANDING" },
+      { key: "area-sealing", name: "Sealing Area", code: "SEALING" },
+      { key: "area-topcoat", name: "Topcoat Area", code: "TOPCOAT" },
+      { key: "area-touch-up", name: "Touch Up Area", code: "TOUCH-UP" },
+      { key: "area-drop-ced", name: "Drop Cabin CED", code: "DROP-CED" },
+    ];
+    return list.map((item) => {
+      const found = appState.areas.find(
+        (a) =>
+          a.id === item.key ||
+          a.code?.toUpperCase() === item.code ||
+          a.name.toLowerCase().includes(item.code.toLowerCase().slice(0, 4))
+      );
+      return {
+        id: found?.id ?? item.key,
+        name: item.name,
+        code: found?.code ?? item.code,
+      };
+    });
+  }, [appState.areas]);
+
+  const [selectedAreaId, setSelectedAreaId] = useState<string>(() => ipadAreaConfigs[0]?.id ?? "area-sanding");
+
+  const currentAreaConfig = useMemo(() => {
+    return ipadAreaConfigs.find((a) => a.id === selectedAreaId) ?? ipadAreaConfigs[0];
+  }, [ipadAreaConfigs, selectedAreaId]);
+
+  // Stasiun yang terelasi dengan area terpilih
+  const areaStations = useMemo(() => {
+    return appState.stations.filter((s) => s.areaId === selectedAreaId);
+  }, [appState.stations, selectedAreaId]);
+
+  const [selectedStationId, setSelectedStationId] = useState<string>(() => {
+    const initialStations = appState.stations.filter((s) => s.areaId === (ipadAreaConfigs[0]?.id ?? "area-sanding"));
+    return initialStations[0]?.id ?? appState.stations[0]?.id ?? "st-sand-1";
+  });
+
+  // Pastikan stasiun terpilih selalu berada di area aktif
+  useEffect(() => {
+    if (areaStations.length > 0 && !areaStations.some((s) => s.id === selectedStationId)) {
+      setSelectedStationId(areaStations[0]!.id);
+    }
+  }, [areaStations, selectedStationId]);
+
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => appState.categories[0]?.id ?? "cat-1");
   const [isOpenStop, setIsOpenStop] = useState<boolean>(true);
   const [startTimeVal, setStartTimeVal] = useState<string>(() => toLocalInputValue(Date.now()));
@@ -69,6 +124,31 @@ function IpadEFormPage() {
   // Add Category Modal
   const [newCatModalOpen, setNewCatModalOpen] = useState(false);
   const [newCatName, setNewCatName] = useState("");
+
+  // Ganti Area & Otomatis Pilih Stasiun Pertama di Area Tersebut
+  const handleSelectArea = (areaId: string) => {
+    setSelectedAreaId(areaId);
+    const stationsInArea = appState.stations.filter((s) => s.areaId === areaId);
+    if (stationsInArea.length > 0) {
+      setSelectedStationId(stationsInArea[0]!.id);
+    }
+  };
+
+  // Ganti Jenis Form (Linestop vs MTC)
+  const handleFormTypeChange = (type: "linestop" | "mtc") => {
+    setFormType(type);
+    if (type === "mtc") {
+      const mtcCat = appState.categories.find(
+        (c) => c.id === "cat-3" || c.name.toLowerCase().includes("maint")
+      );
+      if (mtcCat) setSelectedCategoryId(mtcCat.id);
+    } else {
+      const procCat = appState.categories.find(
+        (c) => c.id === "cat-1" || c.name.toLowerCase().includes("process")
+      );
+      if (procCat) setSelectedCategoryId(procCat.id);
+    }
+  };
 
   // Live timer tick
   useEffect(() => {
@@ -164,7 +244,7 @@ function IpadEFormPage() {
     const targetStation = appState.stations.find((s) => s.id === selectedStationId);
 
     const stopPayload: Omit<LineStop, "id"> = {
-      areaId: targetStation?.areaId ?? "area-1",
+      areaId: targetStation?.areaId ?? selectedAreaId,
       stationId: selectedStationId,
       startMs,
       endMs,
@@ -173,15 +253,22 @@ function IpadEFormPage() {
       status: isOpenStop ? "open" : "closed",
       source: "form",
       note: note.trim() || undefined,
+      formType,
     };
 
     if (effectiveOnline) {
       const created = store.addStop(stopPayload);
       if (isOpenStop) {
-        toast.warning(t("form.savedOpen"));
+        toast.warning(
+          formType === "mtc" ? "Pekerjaan MTC tersimpan sebagai OPEN" : t("form.savedOpen")
+        );
       } else {
         const dur = stopDurationMs(created, endMs ?? now);
-        toast.success(t("form.savedWithDuration", { duration: fmtDuration(dur) }));
+        toast.success(
+          formType === "mtc"
+            ? `Laporan MTC tersimpan. Durasi: ${fmtDuration(dur)}`
+            : t("form.savedWithDuration", { duration: fmtDuration(dur) })
+        );
       }
     } else {
       store.queueOfflineStop(stopPayload);
@@ -238,9 +325,13 @@ function IpadEFormPage() {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <Tablet className="h-5 w-5 text-cyan-500" />
+              {formType === "mtc" ? (
+                <Wrench className="h-5 w-5 text-blue-500" />
+              ) : (
+                <Tablet className="h-5 w-5 text-cyan-500" />
+              )}
               <h1 className="font-display text-xl md:text-2xl font-bold tracking-tight text-foreground uppercase">
-                {t("form.title")}
+                {formType === "mtc" ? "E-Form MTC (Maintenance)" : "E-Form Line Stop"}
               </h1>
             </div>
             <p className="text-xs text-muted-foreground font-mono">
@@ -263,11 +354,10 @@ function IpadEFormPage() {
           {/* Network Simulator Button */}
           <button
             onClick={handleToggleOfflineMode}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border font-mono text-xs font-bold transition-all shadow-2xs ${
-              effectiveOnline
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border font-mono text-xs font-bold transition-all shadow-2xs ${effectiveOnline
                 ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                 : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-300 animate-pulse"
-            }`}
+              }`}
             title="Klik untuk simulasi online/offline"
           >
             {effectiveOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
@@ -286,47 +376,148 @@ function IpadEFormPage() {
         {/* Form Container (7 cols) */}
         <div className="lg:col-span-7 rounded-2xl border-2 border-border bg-card p-6 shadow-md flex flex-col justify-between">
           <form onSubmit={handleSaveStop} className="space-y-6">
-            {/* 1. Station Selector */}
+            {/* 0. Form Type Selector (Linestop vs MTC) */}
             <div>
               <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold mb-2">
-                1. Pilih Stasiun Line Stop:
+                Jenis E-Form:
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {appState.stations.map((station) => {
-                  const isSelected = selectedStationId === station.id;
-                  const live = appState.stationLive[station.id];
-                  const isStopped = live?.state === "stopped";
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleFormTypeChange("linestop")}
+                  className={`p-3.5 rounded-xl border-2 font-display text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2.5 cursor-pointer ${formType === "linestop"
+                      ? "border-red-500 bg-red-600 text-white shadow-md shadow-red-600/30 scale-[1.01]"
+                      : "border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                >
+                  <AlertTriangle className="h-5 w-5 shrink-0" />
+                  <div className="text-left">
+                    <span className="block leading-none">E-Form Linestop</span>
+                    <span className="text-[10px] font-sans font-normal opacity-85">Stop Operasional & Proses</span>
+                  </div>
+                </button>
 
+                <button
+                  type="button"
+                  onClick={() => handleFormTypeChange("mtc")}
+                  className={`p-3.5 rounded-xl border-2 font-display text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2.5 cursor-pointer ${formType === "mtc"
+                      ? "border-blue-500 bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.01]"
+                      : "border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                >
+                  <Wrench className="h-5 w-5 shrink-0" />
+                  <div className="text-left">
+                    <span className="block leading-none">E-Form MTC</span>
+                    <span className="text-[10px] font-sans font-normal opacity-85">Maintenance & Perbaikan</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* 1. Tablist Area */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                  1. Tablist Area:
+                </label>
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  {currentAreaConfig?.name} • {areaStations.length} Stasiun
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                {ipadAreaConfigs.map((area) => {
+                  const isAreaSelected = selectedAreaId === area.id;
+                  const count = appState.stations.filter((s) => s.areaId === area.id).length;
                   return (
                     <button
                       type="button"
-                      key={station.id}
-                      onClick={() => setSelectedStationId(station.id)}
-                      className={`min-h-[58px] p-3 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex flex-col justify-between ${
-                        isSelected
-                          ? "border-primary bg-primary text-primary-foreground font-bold shadow-md scale-[1.02]"
-                          : isStopped
-                          ? "border-red-500/60 bg-red-500/10 text-red-600 dark:text-red-400"
-                          : "border-border bg-muted/30 text-foreground hover:border-primary/40 hover:bg-muted/60"
-                      }`}
+                      key={area.id}
+                      onClick={() => handleSelectArea(area.id)}
+                      className={`px-3 py-2.5 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${isAreaSelected
+                          ? formType === "mtc"
+                            ? "border-blue-500 bg-blue-600 text-white font-bold shadow-sm"
+                            : "border-primary bg-primary text-primary-foreground font-bold shadow-sm"
+                          : "border-border bg-card hover:bg-muted text-foreground"
+                        }`}
                     >
-                      <span className="text-xs font-bold truncate block">{station.name.split(" ")[0]}</span>
-                      <div className="flex items-center justify-between text-[10px] opacity-80 mt-1">
-                        <span>#{station.sequence}</span>
-                        <span className={isStopped ? "text-red-600 dark:text-red-400 font-bold" : ""}>
-                          {isStopped ? "STOPPED" : "RUNNING"}
-                        </span>
-                      </div>
+                      <span className="text-xs font-bold truncate block">{area.name}</span>
+                      <span
+                        className={`text-[10px] font-mono ${isAreaSelected ? "text-white/80" : "text-muted-foreground"
+                          }`}
+                      >
+                        {count} Station
+                      </span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* 2. Stop Status & Timing */}
+            {/* 2. Stasiun di Area Terpilih */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                  2. Pilih Stasiun ({currentAreaConfig?.name}):
+                </label>
+                <span className="text-[11px] font-mono text-muted-foreground">
+                  {targetStation ? `${targetStation.name} (${targetStation.code || `#${targetStation.sequence}`})` : ""}
+                </span>
+              </div>
+
+              {areaStations.length === 0 ? (
+                <div className="p-4 rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground font-mono">
+                  Tidak ada stasiun terdaftar di area ini.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {areaStations.map((station) => {
+                    const isSelected = selectedStationId === station.id;
+                    const live = appState.stationLive[station.id];
+                    const isStopped = live?.state === "stopped";
+
+                    return (
+                      <button
+                        type="button"
+                        key={station.id}
+                        onClick={() => setSelectedStationId(station.id)}
+                        className={`min-h-[64px] p-3 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex flex-col justify-between ${isSelected
+                            ? formType === "mtc"
+                              ? "border-blue-500 bg-blue-600 text-white font-bold shadow-md scale-[1.02]"
+                              : "border-primary bg-primary text-primary-foreground font-bold shadow-md scale-[1.02]"
+                            : isStopped
+                              ? "border-red-500/60 bg-red-500/10 text-red-600 dark:text-red-400 hover:border-red-500"
+                              : "border-border bg-muted/30 text-foreground hover:border-primary/40 hover:bg-muted/60"
+                          }`}
+                      >
+                        <div className="flex items-start justify-between gap-1">
+                          <span className="text-xs font-bold leading-tight block">
+                            {station.name}
+                          </span>
+                          <span className="text-[9px] px-1 py-0.5 rounded bg-muted/50 border border-border/50 shrink-0">
+                            {station.code || `#${station.sequence}`}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] opacity-90 mt-2 pt-1 border-t border-border/30">
+                          <span className="text-[9px] truncate">
+                            {live && !isStopped ? `${live.speed.toFixed(2)} ${station.speedUnit}` : `Thr: ${station.runningThreshold}`}
+                          </span>
+                          <span className={isStopped ? "text-red-600 dark:text-red-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
+                            {isStopped ? "STOPPED" : "RUNNING"}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 3. Stop / MTC Status & Timing */}
             <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
               <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                2. Status & Waktu Berhenti:
+                {formType === "mtc" ? "3. Status & Waktu Pekerjaan MTC:" : "3. Status & Waktu Berhenti:"}
               </label>
 
               {/* Toggle Still Stopped vs Closed */}
@@ -334,25 +525,25 @@ function IpadEFormPage() {
                 <button
                   type="button"
                   onClick={() => setIsOpenStop(true)}
-                  className={`p-3.5 rounded-xl border-2 font-mono text-xs font-bold text-center transition-all ${
-                    isOpenStop
-                      ? "border-red-500 bg-red-600 text-white shadow-md shadow-red-600/30"
+                  className={`p-3.5 rounded-xl border-2 font-mono text-xs font-bold text-center transition-all cursor-pointer ${isOpenStop
+                      ? formType === "mtc"
+                        ? "border-blue-500 bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                        : "border-red-500 bg-red-600 text-white shadow-md shadow-red-600/30"
                       : "border-border bg-card text-muted-foreground hover:text-foreground"
-                  }`}
+                    }`}
                 >
-                  Masih Berhenti (Simpan OPEN)
+                  {formType === "mtc" ? "Sedang Dikerjakan (MTC OPEN)" : "Masih Berhenti (Simpan OPEN)"}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setIsOpenStop(false)}
-                  className={`p-3.5 rounded-xl border-2 font-mono text-xs font-bold text-center transition-all ${
-                    !isOpenStop
+                  className={`p-3.5 rounded-xl border-2 font-mono text-xs font-bold text-center transition-all cursor-pointer ${!isOpenStop
                       ? "border-emerald-500 bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
                       : "border-border bg-card text-muted-foreground hover:text-foreground"
-                  }`}
+                    }`}
                 >
-                  Sudah Selesai (CLOSED)
+                  {formType === "mtc" ? "Pekerjaan Selesai (CLOSED)" : "Sudah Selesai (CLOSED)"}
                 </button>
               </div>
 
@@ -360,7 +551,7 @@ function IpadEFormPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <span className="block font-mono text-[11px] text-muted-foreground mb-1">
-                    {t("form.startTime")}:
+                    {formType === "mtc" ? "Waktu Mulai Pekerjaan:" : t("form.startTime")}:
                   </span>
                   <input
                     type="datetime-local"
@@ -373,7 +564,7 @@ function IpadEFormPage() {
                 {!isOpenStop && (
                   <div>
                     <span className="block font-mono text-[11px] text-muted-foreground mb-1">
-                      {t("form.endTime")}:
+                      {formType === "mtc" ? "Waktu Selesai Pekerjaan:" : t("form.endTime")}:
                     </span>
                     <input
                       type="datetime-local"
@@ -387,11 +578,11 @@ function IpadEFormPage() {
               </div>
             </div>
 
-            {/* 3. Category Selector */}
+            {/* 4. Category Selector */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                  3. Kategori Penyebab Stop:
+                  {formType === "mtc" ? "4. Kategori Pekerjaan MTC:" : "4. Kategori Penyebab Stop:"}
                 </label>
                 <button
                   type="button"
@@ -411,20 +602,20 @@ function IpadEFormPage() {
                       type="button"
                       key={c.id}
                       onClick={() => setSelectedCategoryId(c.id)}
-                      className={`min-h-[46px] px-3 py-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between ${
-                        isSelected
-                          ? "border-primary bg-primary text-primary-foreground font-bold shadow-xs"
+                      className={`min-h-[46px] px-3 py-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between cursor-pointer ${isSelected
+                          ? formType === "mtc"
+                            ? "border-blue-500 bg-blue-600 text-white font-bold shadow-xs"
+                            : "border-primary bg-primary text-primary-foreground font-bold shadow-xs"
                           : "border-border bg-card text-foreground hover:bg-muted"
-                      }`}
+                        }`}
                     >
                       <span className="truncate pr-1">{c.name}</span>
                       {c.countsAsBreakdown && (
                         <span
-                          className={`font-mono text-[9px] px-1 rounded uppercase ${
-                            isSelected
-                              ? "bg-primary-foreground/20 text-primary-foreground"
+                          className={`font-mono text-[9px] px-1 rounded uppercase ${isSelected
+                              ? "bg-white/20 text-white"
                               : "bg-rose-500/20 text-rose-600 dark:text-rose-400"
-                          }`}
+                            }`}
                         >
                           Breakdown
                         </span>
@@ -435,30 +626,34 @@ function IpadEFormPage() {
               </div>
             </div>
 
-            {/* 4. Operator & Notes */}
+            {/* 5. Operator / Teknisi & Notes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-mono text-[11px] text-muted-foreground mb-1">
-                  Operator / No. Badge:
+                  {formType === "mtc" ? "Teknisi / No. Badge:" : "Operator / No. Badge:"}
                 </label>
                 <input
                   type="text"
                   value={operatorBadge}
                   onChange={(e) => setOperatorBadge(e.target.value)}
-                  placeholder="Contoh: Rian Hidayat (EMP-215)"
+                  placeholder={formType === "mtc" ? "Contoh: Teknisi Maintenance (EMP-108)" : "Contoh: Rian Hidayat (EMP-215)"}
                   className="w-full h-11 rounded-lg border border-input bg-background px-3 font-mono text-xs text-foreground focus:outline-none focus:border-primary"
                 />
               </div>
 
               <div>
                 <label className="block font-mono text-[11px] text-muted-foreground mb-1">
-                  Catatan Tambahan (Opsional):
+                  {formType === "mtc" ? "Deskripsi Pekerjaan MTC (Opsional):" : "Catatan Tambahan (Opsional):"}
                 </label>
                 <input
                   type="text"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Contoh: Benda kerja macet di conveyor feeder"
+                  placeholder={
+                    formType === "mtc"
+                      ? "Contoh: Penggantian bearing roll conveyor, overhaul motor drive..."
+                      : "Contoh: Benda kerja macet di conveyor feeder, gate sensor trip..."
+                  }
                   className="w-full h-11 rounded-lg border border-input bg-background px-3 font-sans text-xs text-foreground focus:outline-none focus:border-primary"
                 />
               </div>
@@ -467,14 +662,23 @@ function IpadEFormPage() {
             {/* Big Action Submit Button */}
             <button
               type="submit"
-              className={`w-full h-14 rounded-xl font-display text-base font-bold tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 ${
-                isOpenStop
-                  ? "bg-red-600 hover:bg-red-500 text-white shadow-red-600/30"
-                  : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
-              }`}
+              className={`w-full h-14 rounded-xl font-display text-base font-bold tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${formType === "mtc"
+                  ? isOpenStop
+                    ? "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30"
+                    : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30"
+                  : isOpenStop
+                    ? "bg-red-600 hover:bg-red-500 text-white shadow-red-600/30"
+                    : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+                }`}
             >
-              <Send className="h-5 w-5" />
-              {isOpenStop ? t("form.saveOpen") : t("form.submit")}
+              {formType === "mtc" ? <Wrench className="h-5 w-5" /> : <Send className="h-5 w-5" />}
+              {formType === "mtc"
+                ? isOpenStop
+                  ? "Simpan Pekerjaan MTC (OPEN)"
+                  : "Simpan Laporan MTC (CLOSED)"
+                : isOpenStop
+                  ? t("form.saveOpen")
+                  : t("form.submit")}
             </button>
           </form>
         </div>
@@ -518,25 +722,41 @@ function IpadEFormPage() {
               <div className="space-y-3">
                 {recentStops.map((stop) => {
                   const st = appState.stations.find((x) => x.id === stop.stationId);
+                  const area = appState.areas.find((a) => a.id === (st?.areaId || stop.areaId));
                   const cat = appState.categories.find((c) => c.id === stop.categoryId);
                   const isOpen = stop.status === "open";
                   const dur = stopDurationMs(stop, nowMs);
+                  const isMtc = stop.formType === "mtc" || cat?.id === "cat-3";
 
                   return (
                     <div
                       key={stop.id}
-                      className={`p-3.5 rounded-xl border text-xs font-mono transition-colors ${
-                        isOpen
-                          ? "border-red-500/50 bg-red-500/10 shadow-xs"
+                      className={`p-3.5 rounded-xl border text-xs font-mono transition-colors ${isOpen
+                          ? isMtc
+                            ? "border-blue-500/50 bg-blue-500/10 shadow-xs"
+                            : "border-red-500/50 bg-red-500/10 shadow-xs"
                           : "border-border bg-muted/20"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <span className="font-bold text-foreground text-sm">
-                          {st?.name ?? stop.stationId}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isMtc
+                                ? "bg-blue-600 text-white"
+                                : "bg-red-600 text-white"
+                              }`}
+                          >
+                            {isMtc ? "MTC" : "LINESTOP"}
+                          </span>
+                          <span className="font-bold text-foreground text-sm">
+                            {st?.name ?? stop.stationId}
+                          </span>
+                        </div>
                         {isOpen ? (
-                          <span className="px-2 py-0.5 rounded bg-red-600 text-white font-bold text-[10px] animate-pulse">
+                          <span
+                            className={`px-2 py-0.5 rounded text-white font-bold text-[10px] animate-pulse ${isMtc ? "bg-blue-600" : "bg-red-600"
+                              }`}
+                          >
                             OPEN
                           </span>
                         ) : (
@@ -547,8 +767,14 @@ function IpadEFormPage() {
                       </div>
 
                       <div className="text-muted-foreground text-[11px] font-sans line-clamp-1 mb-2">
-                        {cat?.name ?? stop.categoryId} • {stop.reportedBy}
+                        {area?.name ?? "Area"} • {cat?.name ?? stop.categoryId} • {stop.reportedBy}
                       </div>
+
+                      {stop.note && (
+                        <p className="text-[11px] text-foreground/80 italic font-sans mb-2 px-2 py-1 rounded bg-muted/40 border border-border/40">
+                          "{stop.note}"
+                        </p>
+                      )}
 
                       <div className="flex items-center justify-between pt-2 border-t border-border">
                         <span className="text-foreground font-bold">
