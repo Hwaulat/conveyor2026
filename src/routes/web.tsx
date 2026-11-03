@@ -20,7 +20,11 @@ import {
   PanelLeft,
   Bell,
   ChevronDown,
+  ChevronUp,
   Radio,
+  Layers,
+  Settings,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useI18n } from "../lib/i18n";
 import { useTheme } from "../lib/theme";
@@ -52,7 +56,9 @@ interface NavItem {
   exact?: boolean | undefined;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string | undefined;
-  badgeVariant?: "destructive" | "default" | undefined;
+  badgeVariant?: "destructive" | "default" | "pill" | undefined;
+  hasChevron?: boolean | undefined;
+  isMasterData?: boolean | undefined;
 }
 
 interface NavGroup {
@@ -68,6 +74,7 @@ function WebLayout() {
   const [nowMs, setNowMs] = useState(Date.now());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [masterDataExpanded, setMasterDataExpanded] = useState(true);
 
   // Live clock WIB ticking every second
   useEffect(() => {
@@ -92,15 +99,14 @@ function WebLayout() {
 
   const navGroups: NavGroup[] = [
     {
-      label: t("nav.group.core"),
+      label: "CORE FUNCTIONS",
       items: [
         {
           label: t("nav.dashboard"),
           to: "/web",
           exact: true,
           icon: LayoutDashboard,
-          badge: stoppedStationsCount > 0 ? `${stoppedStationsCount} STOP` : undefined,
-          badgeVariant: "destructive",
+          hasChevron: true,
         },
         {
           label: t("nav.stationLive"),
@@ -113,17 +119,19 @@ function WebLayout() {
           label: t("nav.logs"),
           to: "/web/logs",
           icon: History,
-          badge: `${appState.stops.length}`,
+          badge: `${appState.stops.length > 99 ? "99+" : appState.stops.length}`,
+          badgeVariant: "pill",
         },
       ],
     },
     {
-      label: t("nav.group.production"),
+      label: "REPORT & DOCUMENTATION",
       items: [
         {
           label: t("nav.production"),
           to: "/web/production",
           icon: BarChart3,
+          hasChevron: true,
         },
         {
           label: t("nav.reports"),
@@ -133,12 +141,13 @@ function WebLayout() {
       ],
     },
     {
-      label: t("nav.group.setup"),
+      label: "SETUP SYSTEM",
       items: [
         {
           label: t("nav.masterData"),
           to: "/web/master-data",
-          icon: Database,
+          icon: Layers,
+          isMasterData: true,
         },
       ],
     },
@@ -186,68 +195,149 @@ function WebLayout() {
       <aside
         className={`${
           sidebarCollapsed ? "hidden" : "hidden lg:flex"
-        } w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground sticky top-0 h-screen select-none transition-all duration-200`}
+        } w-60 flex-col border-r border-[#152a47] bg-[#0d1b2e] text-white sticky top-0 h-screen select-none transition-all duration-200 z-40`}
       >
-        {/* Brand */}
-        <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-5">
-          <Link to="/web" className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-sidebar-border bg-sidebar-accent font-mono text-xs font-black tracking-wider text-sidebar-foreground">
-              KRM
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="font-display text-xs font-bold tracking-tight text-sidebar-foreground truncate" title="PT. Krama Yudha Ratu Motor Indonesia">
-                PT. KRAMA YUDHA RATU MOTOR
-              </span>
-              <span className="font-mono text-[9px] text-muted-foreground truncate">
-                LINE-STOP & OEE MONITOR
-              </span>
-            </div>
-          </Link>
-          <span className="inline-flex items-center rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-            v2.6
-          </span>
+        {/* Brand Header */}
+        <div className="flex h-16 items-center px-4 gap-3 border-b border-[#152a47] bg-[#0d1b2e] shrink-0">
+          <img
+            src="/brand-orb.png"
+            alt="JSGI"
+            className="h-8 w-8 object-contain shrink-0 drop-shadow-[0_0_8px_rgba(31,90,166,0.6)]"
+          />
+          <div className="flex flex-col min-w-0">
+            <span className="text-[13px] font-bold text-white tracking-tight leading-tight truncate">
+              JSGI - Maintenance
+            </span>
+            <span className="text-[10px] text-sky-400 font-medium leading-tight truncate">
+              Management System
+            </span>
+          </div>
         </div>
 
-        {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+        {/* Navigation Links Scroll Container */}
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
           {navGroups.map((group) => (
             <div key={group.label} className="space-y-1">
-              <p className="px-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/80 font-bold">
-                {group.label}
-              </p>
-              <div className="space-y-0.5 pt-1">
+              {/* Section Header with Horizontal Rule */}
+              <div className="flex items-center gap-2 px-2 pt-2 pb-1 select-none">
+                <span className="text-[10px] font-bold tracking-widest text-[#4d6c8f] uppercase whitespace-nowrap">
+                  {group.label}
+                </span>
+                <div className="h-px flex-1 bg-[#152a47]" />
+              </div>
+
+              {/* Section Nav Items */}
+              <div className="space-y-1">
                 {group.items.map((item) => {
                   const active = isActive(item.to, item.exact);
                   const Icon = item.icon;
+
+                  // If item is Master Data (expandable parent with tree submenu)
+                  if (item.isMasterData) {
+                    return (
+                      <div key={item.label} className="space-y-1">
+                        <button
+                          onClick={() => setMasterDataExpanded(!masterDataExpanded)}
+                          className={`group relative w-full flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors cursor-pointer ${
+                            active
+                              ? "bg-[#102846] text-white font-semibold shadow-xs"
+                              : "text-[#8ea3be] hover:bg-[#132742] hover:text-white"
+                          }`}
+                        >
+                          {active && (
+                            <span className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-[#2b7fff] rounded-r" />
+                          )}
+                          <div className="flex items-center gap-2.5">
+                            <Icon
+                              className={`h-4 w-4 shrink-0 transition-colors ${
+                                active ? "text-white" : "text-[#6582a6] group-hover:text-sky-300"
+                              }`}
+                            />
+                            <span>{item.label}</span>
+                          </div>
+                          {masterDataExpanded ? (
+                            <ChevronUp className="h-3.5 w-3.5 text-sky-400" />
+                          ) : (
+                            <ChevronDown className="h-3.5 w-3.5 text-[#527299] group-hover:text-[#8ea3be] transition-colors" />
+                          )}
+                        </button>
+
+                        {/* Tree Guide Line & Child Submenu Items */}
+                        {masterDataExpanded && (
+                          <div className="ml-5 pl-2.5 my-1 space-y-1 border-l border-[#1d3554]">
+                            <Link
+                              to="/web/master-data"
+                              className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                                active
+                                  ? "bg-[#1f5aa6] text-white shadow-xs font-medium"
+                                  : "text-[#8ea3be] hover:bg-white/[0.04] hover:text-white"
+                              }`}
+                            >
+                              <Settings className={`h-3.5 w-3.5 shrink-0 ${active ? "text-white" : "text-[#6582a6]"}`} />
+                              <span>Stasiun & Area</span>
+                            </Link>
+                            <Link
+                              to="/web/master-data"
+                              className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#8ea3be] hover:bg-white/[0.04] hover:text-white transition-colors"
+                            >
+                              <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-[#6582a6]" />
+                              <span>Line Conveyor</span>
+                            </Link>
+                            <Link
+                              to="/web/master-data"
+                              className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#8ea3be] hover:bg-white/[0.04] hover:text-white transition-colors"
+                            >
+                              <Radio className="h-3.5 w-3.5 shrink-0 text-[#6582a6]" />
+                              <span>Maintenance Setup</span>
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Normal Nav Item
                   return (
                     <Link
                       key={item.to}
                       to={item.to}
-                      className={`group flex items-center justify-between rounded-md px-2.5 py-2 text-xs font-medium transition-colors ${
+                      className={`group relative flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${
                         active
-                          ? "bg-primary text-primary-foreground font-semibold shadow-sm"
-                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          ? "bg-[#102846] text-white font-semibold shadow-xs"
+                          : "text-[#8ea3be] hover:bg-[#132742] hover:text-white"
                       }`}
                     >
+                      {active && (
+                        <span className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-[#2b7fff] rounded-r" />
+                      )}
                       <div className="flex items-center gap-2.5">
-                        <Icon className={`h-4 w-4 shrink-0 ${active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-sidebar-accent-foreground"}`} />
+                        <Icon
+                          className={`h-4 w-4 shrink-0 transition-colors ${
+                            active ? "text-white" : "text-[#6582a6] group-hover:text-sky-300"
+                          }`}
+                        />
                         <span>{item.label}</span>
                       </div>
-                      {item.badge && (
-                        <span
-                          className={`font-mono text-[9px] px-1.5 py-0.5 rounded ${
-                            item.badgeVariant === "destructive"
-                              ? active
-                                ? "bg-destructive text-destructive-foreground font-bold"
-                                : "bg-destructive/15 text-destructive border border-destructive/30"
-                              : active
-                              ? "bg-primary-foreground/20 text-primary-foreground font-medium"
-                              : "bg-muted text-muted-foreground border border-border"
-                          }`}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {item.badge && (
+                          <span
+                            className={`font-mono text-[9px] px-2 py-0.5 rounded-full ${
+                              item.badgeVariant === "destructive"
+                                ? "bg-red-500/20 text-red-400 border border-red-500/30 font-bold"
+                                : "bg-[#1f66b0] text-white font-bold shadow-xs"
+                            }`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                        {item.hasChevron && (
+                          <ChevronDown
+                            className={`h-3.5 w-3.5 transition-colors ${
+                              active ? "text-sky-400" : "text-[#527299] group-hover:text-[#8ea3be]"
+                            }`}
+                          />
+                        )}
+                      </div>
                     </Link>
                   );
                 })}
@@ -256,51 +346,54 @@ function WebLayout() {
           ))}
 
           {/* Quick Dedicated External Routes Launchers */}
-          <div className="pt-2 border-t border-sidebar-border space-y-2">
-            <p className="px-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/80 font-bold">
-              Dedicated Displays
-            </p>
+          <div className="pt-2 border-t border-[#152a47] space-y-2">
+            <div className="flex items-center gap-2 px-2 pt-1 pb-1 select-none">
+              <span className="text-[10px] font-bold tracking-widest text-[#4d6c8f] uppercase whitespace-nowrap">
+                DEDICATED DISPLAYS
+              </span>
+              <div className="h-px flex-1 bg-[#152a47]" />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <Link
                 to="/andon"
                 target="_blank"
                 rel="noreferrer"
-                className="group flex flex-col items-center justify-center rounded-lg border border-sidebar-border bg-card p-2.5 text-center transition-all hover:border-primary/30 hover:bg-muted/50 shadow-xs"
+                className="group flex flex-col items-center justify-center rounded-lg border border-[#152a47] bg-[#091524] p-2 text-center transition-all hover:border-blue-500/40 hover:bg-[#0e2138] shadow-xs"
               >
-                <Tv className="h-4 w-4 text-emerald-500 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
-                  Andon TV <ExternalLink className="h-2.5 w-2.5 text-muted-foreground" />
+                <Tv className="h-4 w-4 text-emerald-400 mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-medium text-slate-200 flex items-center gap-1">
+                  Andon TV <ExternalLink className="h-2.5 w-2.5 text-[#527299]" />
                 </span>
-                <span className="text-[9px] font-mono text-muted-foreground">Fullscreen</span>
+                <span className="text-[9px] font-mono text-[#4d6c8f]">Fullscreen</span>
               </Link>
 
               <Link
                 to="/ipad"
                 target="_blank"
                 rel="noreferrer"
-                className="group flex flex-col items-center justify-center rounded-lg border border-sidebar-border bg-card p-2.5 text-center transition-all hover:border-primary/30 hover:bg-muted/50 shadow-xs"
+                className="group flex flex-col items-center justify-center rounded-lg border border-[#152a47] bg-[#091524] p-2 text-center transition-all hover:border-blue-500/40 hover:bg-[#0e2138] shadow-xs"
               >
-                <Tablet className="h-4 w-4 text-cyan-500 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
-                  E-form <ExternalLink className="h-2.5 w-2.5 text-muted-foreground" />
+                <Tablet className="h-4 w-4 text-cyan-400 mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-medium text-slate-200 flex items-center gap-1">
+                  E-form <ExternalLink className="h-2.5 w-2.5 text-[#527299]" />
                 </span>
-                <span className="text-[9px] font-mono text-muted-foreground">Tablet Mode</span>
+                <span className="text-[9px] font-mono text-[#4d6c8f]">Tablet Mode</span>
               </Link>
             </div>
           </div>
         </div>
 
-        {/* Sidebar Footer — Simulation Controls */}
-        <div className="border-t border-sidebar-border p-3 bg-muted/20 space-y-2">
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+        {/* Simulation Controls */}
+        <div className="border-t border-[#122744] p-3 bg-[#091524] space-y-2 shrink-0">
+          <div className="flex items-center justify-between text-[11px] text-[#4d7ca8]">
             <span className="flex items-center gap-1.5 font-mono">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Simulasi PLC Live
             </span>
             <button
               onClick={handleResetData}
               title="Reset data demo ke awal"
-              className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors"
+              className="text-[#6582a6] hover:text-white p-1 rounded hover:bg-[#132742] transition-colors"
             >
               <RotateCcwIcon className="h-3.5 w-3.5" />
             </button>
@@ -308,19 +401,28 @@ function WebLayout() {
           <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={handleSimulateRandomStop}
-              className="flex items-center justify-center gap-1 rounded border border-red-500/30 bg-red-500/10 px-2 py-1.5 font-mono text-[10px] text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors"
+              className="flex items-center justify-center gap-1 rounded border border-red-500/40 bg-red-500/10 px-2 py-1.5 font-mono text-[10px] text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
             >
               <Square className="h-3 w-3 fill-current" />
               Sim Stop
             </button>
             <button
               onClick={handleResumeAll}
-              className="flex items-center justify-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 font-mono text-[10px] text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+              className="flex items-center justify-center gap-1 rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1.5 font-mono text-[10px] text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
             >
               <Play className="h-3 w-3 fill-current" />
               Resume All
             </button>
           </div>
+        </div>
+
+        {/* Sidenav Footer */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#122744] bg-[#0a172a] shrink-0 text-xs">
+          <div className="flex items-center gap-2 text-[11px] text-[#4d7ca8]">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            <span className="font-medium">System Online</span>
+          </div>
+          <span className="text-[11px] font-mono text-[#385577] font-semibold">v2.4.1</span>
         </div>
       </aside>
 
@@ -502,13 +604,16 @@ function WebLayout() {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-b border-border bg-card px-4 py-4 space-y-4">
+          <div className="lg:hidden border-b border-[#152a47] bg-[#0d1b2e] text-white px-4 py-4 space-y-4">
             {navGroups.map((group) => (
               <div key={group.label} className="space-y-1">
-                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                  {group.label}
-                </p>
-                <div className="grid grid-cols-2 gap-1 pt-1">
+                <div className="flex items-center gap-2 pb-1">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#4d6c8f] font-bold">
+                    {group.label}
+                  </span>
+                  <div className="h-px flex-1 bg-[#152a47]" />
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
                   {group.items.map((item) => {
                     const active = isActive(item.to, item.exact);
                     return (
@@ -516,8 +621,10 @@ function WebLayout() {
                         key={item.to}
                         to={item.to}
                         onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-2 rounded px-2.5 py-2 text-xs font-medium ${
-                          active ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${
+                          active
+                            ? "bg-[#1f5aa6] text-white font-semibold"
+                            : "text-[#8ea3be] hover:bg-[#132742] hover:text-white"
                         }`}
                       >
                         <item.icon className="h-4 w-4" />
@@ -528,18 +635,18 @@ function WebLayout() {
                 </div>
               </div>
             ))}
-            <div className="flex gap-2 pt-2 border-t border-border">
+            <div className="flex gap-2 pt-2 border-t border-[#152a47]">
               <Link
                 to="/andon"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex-1 text-center py-2 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-bold"
+                className="flex-1 text-center py-2 rounded-lg bg-[#091524] border border-[#152a47] text-emerald-400 text-xs font-mono font-bold hover:bg-[#0e2138]"
               >
                 Buka Andon (TV)
               </Link>
               <Link
                 to="/ipad"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex-1 text-center py-2 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 text-xs font-mono font-bold"
+                className="flex-1 text-center py-2 rounded-lg bg-[#091524] border border-[#152a47] text-cyan-400 text-xs font-mono font-bold hover:bg-[#0e2138]"
               >
                 Buka Tablet (E-form)
               </Link>
