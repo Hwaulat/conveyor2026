@@ -63,7 +63,7 @@ function UserManagementPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 w-full">
       {/* Title & Action */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -85,49 +85,49 @@ function UserManagementPage() {
       </div>
 
       {/* Users Table */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
-        <div className="p-4 border-b border-border flex items-center justify-between text-xs font-mono text-muted-foreground">
-          <span>{appState.users.length} Akun terdaftar</span>
+      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400 bg-white dark:bg-[#0b1320]">
+          <span className="font-medium">{appState.users.length} Akun terdaftar</span>
           <span className="text-amber-600 dark:text-amber-400 font-medium">{t("users.auditNote")}</span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-sans">
-            <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+          <table className="w-full text-left text-xs font-sans border-collapse">
+            <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
               <tr>
-                <th className="py-3.5 px-4 w-20 whitespace-nowrap">ACTION</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">
+                <th className="py-3 px-4 w-20 whitespace-nowrap">ACTION</th>
+                <th className="py-3 px-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
-                    {t("users.name")} <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    {t("users.name")} <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                   </span>
                 </th>
-                <th className="py-3.5 px-4 whitespace-nowrap">
+                <th className="py-3 px-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
-                    {t("users.email")} <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    {t("users.email")} <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                   </span>
                 </th>
-                <th className="py-3.5 px-4 whitespace-nowrap">
+                <th className="py-3 px-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
-                    {t("users.badge")} <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    {t("users.badge")} <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                   </span>
                 </th>
-                <th className="py-3.5 px-4 whitespace-nowrap">
+                <th className="py-3 px-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
-                    {t("users.role")} <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                    {t("users.role")} <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                   </span>
                 </th>
-                <th className="py-3.5 px-4 text-right whitespace-nowrap">Ubah Peran</th>
+                <th className="py-3 px-4 text-right whitespace-nowrap">Ubah Peran</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
               {paginatedUsers.map((u) => (
-                <tr key={u.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                <tr key={u.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/30 transition-colors">
                   {/* Action on Left */}
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <button
                       type="button"
                       onClick={() => setViewingUser(u)}
-                      className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
+                      className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 shadow-2xs transition-colors"
                       title="Lihat Detail Pengguna"
                     >
                       <Eye className="h-3.5 w-3.5" />
@@ -136,10 +136,10 @@ function UserManagementPage() {
 
                   {/* Name */}
                   <td className="py-3.5 px-4 font-medium text-foreground flex items-center gap-2.5 whitespace-nowrap">
-                    <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center font-mono text-xs font-bold text-foreground border border-border">
+                    <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center font-mono text-xs font-bold text-foreground border border-slate-200 dark:border-zinc-700">
                       {u.name.slice(0, 2).toUpperCase()}
                     </div>
-                    <span>{u.name}</span>
+                    <span className="text-[13px] text-slate-700 dark:text-zinc-200">{u.name}</span>
                   </td>
 
                   {/* Email */}
@@ -149,18 +149,18 @@ function UserManagementPage() {
                   <td className="py-3.5 px-4 font-mono text-foreground font-bold whitespace-nowrap">{u.badge}</td>
 
                   {/* Role */}
-                  <td className="py-3.5 px-4 font-mono whitespace-nowrap">
+                  <td className="py-3.5 px-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold border uppercase ${
+                      className={`inline-flex px-3 py-0.5 rounded-full text-xs font-medium border uppercase ${
                         u.role === "admin"
-                          ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30"
+                          ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/60"
                           : u.role === "manager"
-                          ? "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/30"
+                          ? "bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800/60"
                           : u.role === "supervisor"
-                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                          ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60"
                           : u.role === "operator"
-                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
-                          : "bg-muted text-muted-foreground border-border"
+                          ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60"
+                          : "bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-zinc-700"
                       }`}
                     >
                       {u.role}

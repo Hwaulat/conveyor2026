@@ -201,7 +201,7 @@ function LogHistoryPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 w-full">
       {/* Page Title & View Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -279,141 +279,138 @@ function LogHistoryPage() {
         </div>
       )}
 
-      {/* Filter Toolbar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 rounded-xl border border-border bg-card p-4 shadow-xs items-center">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Cari operator, catatan…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-[40px] rounded-lg border border-gray-200 dark:border-gray-700 bg-neutral-3 dark:bg-gray-800 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary font-sans"
-          />
-        </div>
-
-        {/* Station Filter */}
-        <div>
-          <SelectInput
-            hideClear
-            value={selectedStation}
-            onChange={(val) => setSelectedStation(val ?? "all")}
-            datalist={[
-              { value: "all", label: "Semua Stasiun" },
-              ...appState.stations.map((st) => ({
-                value: st.id,
-                label: st.name,
-              })),
-            ]}
-            placeholder="Pilih Stasiun"
-          />
-        </div>
-
-        {/* Category Filter */}
-        <div>
-          <SelectInput
-            hideClear
-            value={selectedCategory}
-            onChange={(val) => setSelectedCategory(val ?? "all")}
-            datalist={[
-              { value: "all", label: "Semua Kategori" },
-              ...appState.categories.map((c) => ({
-                value: c.id,
-                label: `${c.name}${c.countsAsBreakdown ? " (Breakdown)" : ""}`,
-              })),
-            ]}
-            placeholder="Pilih Kategori"
-          />
-        </div>
-
-        {/* Status Filter */}
-        <div>
-          <SelectInput
-            hideClear
-            value={selectedStatus}
-            onChange={(val) => setSelectedStatus(val ?? "all")}
-            datalist={[
-              { value: "all", label: "All Status" },
-              { value: "open", label: "Sedang Berhenti (OPEN)" },
-              { value: "closed", label: "Selesai (CLOSED)" },
-              { value: "unrecorded", label: "Stop PLC (Unrecorded)" },
-            ]}
-            placeholder="Pilih Status"
-          />
-        </div>
-
-        {/* Reset Filters */}
-        <div className="flex items-center">
-          <button
-            onClick={() => {
-              setSelectedStation("all");
-              setSelectedCategory("all");
-              setSelectedStatus("all");
-              setSearchQuery("");
-            }}
-            className="text-xs font-mono text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors w-full sm:w-auto text-center"
-          >
-            Reset Filter
-          </button>
-        </div>
-      </div>
-
       {/* Main View Content */}
       {viewMode === "list" ? (
-        /* LIST VIEW TABLE */
-        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
+        /* LIST VIEW TABLE - Unified Card matching Reference Style */
+        <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
+          {/* Top Filter Toolbar */}
+          <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
+            {/* Search on Left */}
+            <div className="relative flex-1 lg:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search by operator, note, station..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-9 rounded-lg border border-slate-200 dark:border-zinc-700/80 bg-background pl-9 pr-3 text-xs text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs font-sans"
+              />
+            </div>
+
+            {/* Filters on Right */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="w-36 sm:w-44">
+                <SelectInput
+                  hideClear
+                  value={selectedStation}
+                  onChange={(val) => setSelectedStation(val ?? "all")}
+                  datalist={[
+                    { value: "all", label: "All Stations" },
+                    ...appState.stations.map((st) => ({
+                      value: st.id,
+                      label: st.name,
+                    })),
+                  ]}
+                  placeholder="All Stations"
+                />
+              </div>
+
+              <div className="w-36 sm:w-44">
+                <SelectInput
+                  hideClear
+                  value={selectedCategory}
+                  onChange={(val) => setSelectedCategory(val ?? "all")}
+                  datalist={[
+                    { value: "all", label: "All Categories" },
+                    ...appState.categories.map((c) => ({
+                      value: c.id,
+                      label: `${c.name}${c.countsAsBreakdown ? " (Breakdown)" : ""}`,
+                    })),
+                  ]}
+                  placeholder="All Categories"
+                />
+              </div>
+
+              <div className="w-32 sm:w-36">
+                <SelectInput
+                  hideClear
+                  value={selectedStatus}
+                  onChange={(val) => setSelectedStatus(val ?? "all")}
+                  datalist={[
+                    { value: "all", label: "All Status" },
+                    { value: "open", label: "Open (Running)" },
+                    { value: "closed", label: "Closed" },
+                    { value: "unrecorded", label: "Stop PLC" },
+                  ]}
+                  placeholder="All Status"
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  setSelectedStation("all");
+                  setSelectedCategory("all");
+                  setSelectedStatus("all");
+                  setSearchQuery("");
+                }}
+                className="text-xs font-sans text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 px-3 h-9 rounded-lg border border-slate-200 dark:border-zinc-700/80 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs shrink-0 cursor-pointer"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-sans">
-              <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+            <table className="w-full text-left text-xs font-sans border-collapse">
+              <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
-                  <th className="py-3.5 px-4 w-28 whitespace-nowrap">ACTION</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
+                  <th className="py-3 px-4 w-28 whitespace-nowrap">ACTION</th>
+                  <th className="py-3 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
                       START TIME (WIB)
-                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                     </span>
                   </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
+                  <th className="py-3 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
                       END TIME
-                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                     </span>
                   </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
+                  <th className="py-3 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
                       STATION
-                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                     </span>
                   </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
+                  <th className="py-3 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
                       CATEGORY
-                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                     </span>
                   </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
+                  <th className="py-3 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
                       DURATION
-                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                     </span>
                   </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
+                  <th className="py-3 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
                       SOURCE
-                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                     </span>
                   </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
+                  <th className="py-3 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
                       OPERATOR
-                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                     </span>
                   </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
+                  <th className="py-3 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
                       STATUS
-                      <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                     </span>
                   </th>
                 </tr>
@@ -433,15 +430,15 @@ function LogHistoryPage() {
                     const duration = stopDurationMs(stop, nowMs);
 
                     return (
-                      <tr key={stop.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
-                        {/* Action Column on Left (Sesuai Referensi Visual) */}
+                      <tr key={stop.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/30 transition-colors">
+                        {/* Action Column on Left */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             {/* View Button [ 👁 ] */}
                             <button
                               type="button"
                               onClick={() => setViewingStop(stop)}
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
+                              className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 shadow-2xs transition-colors"
                               title="Lihat Detail Log"
                             >
                               <Eye className="h-3.5 w-3.5" />
@@ -451,7 +448,7 @@ function LogHistoryPage() {
                             <button
                               type="button"
                               onClick={() => handleOpenCorrectModal(stop)}
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
+                              className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-blue-600 hover:border-blue-300 dark:hover:text-blue-400 shadow-2xs transition-colors"
                               title="Koreksi / Edit Log"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
@@ -464,7 +461,7 @@ function LogHistoryPage() {
                                 setVoidingStop(stop);
                                 setVoidReason("");
                               }}
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-red-600 hover:border-red-400 dark:hover:text-red-400 shadow-2xs transition-colors"
+                              className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 shadow-2xs transition-colors"
                               title="Batalkan / Hapus (Void)"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -474,7 +471,7 @@ function LogHistoryPage() {
                               <button
                                 type="button"
                                 onClick={() => handleCloseStop(stop)}
-                                className="px-2 h-8 inline-flex items-center rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-2xs transition-colors"
+                                className="px-2 h-7 inline-flex items-center rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-2xs transition-colors"
                                 title="Tutup Status Stop"
                               >
                                 Tutup
@@ -550,15 +547,15 @@ function LogHistoryPage() {
                         </td>
 
                         {/* Status */}
-                        <td className="py-3.5 px-4 font-mono whitespace-nowrap">
+                        <td className="py-3.5 px-4 font-sans whitespace-nowrap">
                           {isOpen ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-600 dark:text-red-400 font-bold border border-red-500/30 text-[11px]">
-                              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-ping" />
-                              OPEN
+                            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full border border-rose-300 dark:border-rose-700/60 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-medium">
+                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
+                              Open
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border text-[11px]">
-                              CLOSED
+                            <span className="inline-flex items-center px-3 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+                              Closed
                             </span>
                           )}
                         </td>

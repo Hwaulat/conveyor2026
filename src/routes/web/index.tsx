@@ -396,7 +396,7 @@ function DashboardPage() {
   const chartAxisStroke = isDark ? "#666" : "#71717a";
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 w-full">
       {/* Top Banner: Title & Filter Row */}
       <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>

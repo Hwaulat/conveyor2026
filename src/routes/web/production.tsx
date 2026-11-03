@@ -263,7 +263,7 @@ function ProductionPage() {
   }, [sortedRecords, prodPage, prodPageSize]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 w-full">
       {/* Page Title & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -405,140 +405,138 @@ function ProductionPage() {
       </div>
 
       {/* Production Records & OEE Calculation Table */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-xs">
-        <div>
+      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 bg-white dark:bg-[#0b1320]">
           <h3 className="font-display text-sm font-semibold text-foreground">
             {t("prod.oeeResults")} & Data Produksi
           </h3>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Downtime stop otomatis diambil dari log stop pada tanggal & shift terkait untuk menghitung Availability, Performance, Quality, dan OEE.
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-sans">
-              <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs font-sans border-collapse">
+            <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+              <tr>
+                <th className="py-3 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    {t("common.date")} <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                  </span>
+                </th>
+                <th className="py-3 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    SHIFT & AREA <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                  </span>
+                </th>
+                <th className="py-3 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    WAKTU TERENCANA <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                  </span>
+                </th>
+                <th className="py-3 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    DOWNTIME STOP <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                  </span>
+                </th>
+                <th className="py-3 px-4 text-center whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    TOTAL / GOOD <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                  </span>
+                </th>
+                <th className="py-3 px-4 text-right whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    AVAIL. (A) <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                  </span>
+                </th>
+                <th className="py-3 px-4 text-right whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    PERF. (P) <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                  </span>
+                </th>
+                <th className="py-3 px-4 text-right whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    QUAL. (Q) <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                  </span>
+                </th>
+                <th className="py-3 px-4 text-center whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    OEE FINAL <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+              {paginatedRecords.length === 0 ? (
                 <tr>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      {t("common.date")} <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      SHIFT & AREA <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      WAKTU TERENCANA <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      DOWNTIME STOP <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      TOTAL / GOOD <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      AVAIL. (A) <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      PERF. (P) <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      QUAL. (Q) <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      OEE FINAL <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
+                  <td colSpan={9} className="py-12 text-center text-muted-foreground font-mono">
+                    {t("common.empty")}
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
-                {paginatedRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="py-12 text-center text-muted-foreground font-mono">
-                      {t("common.empty")}
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedRecords.map((rec) => {
-                    const shift = appState.shifts.find((s) => s.id === rec.shiftId);
-                    const area = appState.areas.find((a) => a.id === rec.areaId);
+              ) : (
+                paginatedRecords.map((rec) => {
+                  const shift = appState.shifts.find((s) => s.id === rec.shiftId);
+                  const area = appState.areas.find((a) => a.id === rec.areaId);
 
-                    const recDateStart = Date.parse(`${rec.date}T00:00:00+07:00`);
-                    const recDateEnd = recDateStart + 86_400_000;
-                    const stopsOnDate = appState.stops.filter((s) => s.startMs >= recDateStart && s.startMs < recDateEnd);
-                    const dtMs = stopsOnDate.reduce((sum, s) => sum + stopDurationMs(s, recDateEnd), 0);
+                  const recDateStart = Date.parse(`${rec.date}T00:00:00+07:00`);
+                  const recDateEnd = recDateStart + 86_400_000;
+                  const stopsOnDate = appState.stops.filter((s) => s.startMs >= recDateStart && s.startMs < recDateEnd);
+                  const dtMs = stopsOnDate.reduce((sum, s) => sum + stopDurationMs(s, recDateEnd), 0);
 
-                    const oee = computeOee(rec, dtMs);
+                  const oee = computeOee(rec, dtMs);
 
-                    return (
-                      <tr key={rec.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
-                        <td className="py-3.5 px-4 text-foreground font-bold font-mono whitespace-nowrap">{rec.date}</td>
-                        <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                          <div className="text-foreground font-medium">{shift?.name ?? rec.shiftId}</div>
-                          <div className="text-[11px] text-muted-foreground">{area?.name ?? rec.areaId}</div>
-                        </td>
-                        <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">{rec.plannedMin} min</td>
-                        <td className="py-3.5 px-4 text-amber-600 dark:text-amber-400 font-semibold whitespace-nowrap">
-                          {Math.round(dtMs / 60_000)} min ({stopsOnDate.length} stops)
-                        </td>
-                        <td className="py-3.5 px-4 text-foreground text-center whitespace-nowrap font-mono">
-                          {rec.goodCount} / {rec.totalCount} pcs
-                        </td>
-                        <td className="py-3.5 px-4 text-right text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap">
-                          {(oee.availability * 100).toFixed(1)}%
-                        </td>
-                        <td className="py-3.5 px-4 text-right text-cyan-600 dark:text-cyan-400 font-bold whitespace-nowrap">
-                          {(oee.performance * 100).toFixed(1)}%
-                        </td>
-                        <td className="py-3.5 px-4 text-right text-purple-600 dark:text-purple-400 font-bold whitespace-nowrap">
-                          {(oee.quality * 100).toFixed(1)}%
-                        </td>
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-bold text-xs ${
-                              oee.oee >= 0.85
-                                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                                : oee.oee >= 0.7
-                                ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
-                                : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
-                            }`}
-                          >
-                            {(oee.oee * 100).toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <TablePagination
-            page={prodPage}
-            pageSize={prodPageSize}
-            totalItems={sortedRecords.length}
-            onPageChange={setProdPage}
-            onPageSizeChange={setProdPageSize}
-          />
+                  return (
+                    <tr key={rec.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/30 transition-colors">
+                      <td className="py-3.5 px-4 text-foreground font-bold font-mono whitespace-nowrap">{rec.date}</td>
+                      <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
+                        <div className="text-foreground font-medium">{shift?.name ?? rec.shiftId}</div>
+                        <div className="text-[11px] text-muted-foreground">{area?.name ?? rec.areaId}</div>
+                      </td>
+                      <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">{rec.plannedMin} min</td>
+                      <td className="py-3.5 px-4 text-amber-600 dark:text-amber-400 font-semibold whitespace-nowrap">
+                        {Math.round(dtMs / 60_000)} min ({stopsOnDate.length} stops)
+                      </td>
+                      <td className="py-3.5 px-4 text-foreground text-center whitespace-nowrap font-mono">
+                        {rec.goodCount} / {rec.totalCount} pcs
+                      </td>
+                      <td className="py-3.5 px-4 text-right text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap">
+                        {(oee.availability * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-3.5 px-4 text-right text-cyan-600 dark:text-cyan-400 font-bold whitespace-nowrap">
+                        {(oee.performance * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-3.5 px-4 text-right text-purple-600 dark:text-purple-400 font-bold whitespace-nowrap">
+                        {(oee.quality * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-3 py-0.5 rounded-full font-medium text-xs border ${
+                            oee.oee >= 0.85
+                              ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800/60"
+                              : oee.oee >= 0.7
+                              ? "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800/60"
+                              : "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800/60"
+                          }`}
+                        >
+                          {(oee.oee * 100).toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
+
+        {/* Pagination */}
+        <TablePagination
+          page={prodPage}
+          pageSize={prodPageSize}
+          totalItems={sortedRecords.length}
+          onPageChange={setProdPage}
+          onPageSizeChange={setProdPageSize}
+        />
       </div>
 
       {/* Manual Input Dialog */}

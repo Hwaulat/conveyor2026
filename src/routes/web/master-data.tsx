@@ -497,7 +497,7 @@ function MasterDataPage() {
     : 0;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 w-full">
       {/* Page Title & Main Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -537,11 +537,11 @@ function MasterDataPage() {
       {activeView === "stations" && (
         <div className="space-y-6">
           {/* Main Station Master Table Card */}
-          <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs space-y-0">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs space-y-0">
             {/* Toolbar: Search & Area Filter */}
-            <div className="p-4 border-b border-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card">
+            <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-muted-foreground font-semibold">
+                <span className="font-sans text-xs text-slate-500 dark:text-zinc-400 font-medium">
                   Menampilkan {filteredConveyorRows.length} dari {conveyorRows.length} jalur konveyor ({appState.stations.length} total stasiun)
                 </span>
               </div>
@@ -566,18 +566,18 @@ function MasterDataPage() {
 
                 {/* Search Bar */}
                 <div className="relative flex-1 sm:w-64">
-                  <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   <input
                     type="text"
                     value={stationSearchQuery}
                     onChange={(e) => setStationSearchQuery(e.target.value)}
                     placeholder="Cari kode, nama stasiun, konveyor..."
-                    className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground text-xs font-mono focus:outline-none focus:border-ring"
+                    className="w-full h-9 pl-9 pr-8 rounded-lg border border-slate-200 dark:border-zinc-700/80 bg-background text-foreground placeholder:text-slate-400 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
                   />
                   {stationSearchQuery && (
                     <button
                       onClick={() => setStationSearchQuery("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-foreground"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -590,30 +590,30 @@ function MasterDataPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-sans border-collapse">
                 <thead>
-                  <tr className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
-                    <th className="py-3.5 px-4 w-28 whitespace-nowrap">ACTION</th>
-                    <th className="py-3.5 px-4 whitespace-nowrap">
+                  <tr className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
+                    <th className="py-3 px-4 w-28 whitespace-nowrap">ACTION</th>
+                    <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         NAMA AREA
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
-                    <th className="py-3.5 px-4 whitespace-nowrap">
+                    <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         NAMA KONVEYOR
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
-                    <th className="py-3.5 px-4 whitespace-nowrap">
+                    <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         NAMA STASIUN
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
-                    <th className="py-3.5 px-4 text-center w-36 whitespace-nowrap">
+                    <th className="py-3 px-4 text-center w-36 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         STATUS
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
                   </tr>
@@ -642,7 +642,7 @@ function MasterDataPage() {
                       return (
                         <tr
                           key={row.conveyorId}
-                          className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
+                          className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/30 transition-colors"
                         >
                           {/* Action Column on Left */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
@@ -651,7 +651,7 @@ function MasterDataPage() {
                               <button
                                 type="button"
                                 onClick={() => setViewingConveyorRow(row)}
-                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
+                                className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 shadow-2xs transition-colors"
                                 title="Lihat Detail Jalur Konveyor & Stasiun"
                               >
                                 <Eye className="h-3.5 w-3.5" />
@@ -661,7 +661,7 @@ function MasterDataPage() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditConveyor(row)}
-                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors"
+                                className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-blue-600 hover:border-blue-300 dark:hover:text-blue-400 shadow-2xs transition-colors"
                                 title="Ubah Stasiun & Jalur Konveyor"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
@@ -671,7 +671,7 @@ function MasterDataPage() {
                               <button
                                 type="button"
                                 onClick={() => setDeleteConveyorTarget(row)}
-                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-red-600 hover:border-red-400 dark:hover:text-red-400 shadow-2xs transition-colors"
+                                className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 shadow-2xs transition-colors"
                                 title="Hapus Jalur Konveyor & Stasiun"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -760,11 +760,11 @@ function MasterDataPage() {
       {activeView === "categories" && (
         <div className="space-y-6">
           {/* Main Category Table Card */}
-          <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs space-y-0">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs space-y-0">
             {/* Toolbar */}
-            <div className="p-4 border-b border-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card">
+            <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-muted-foreground font-semibold">
+                <span className="font-sans text-xs text-slate-500 dark:text-zinc-400 font-medium">
                   Menampilkan {filteredCategories.length} dari {appState.categories.length} category problem
                 </span>
               </div>
@@ -803,18 +803,18 @@ function MasterDataPage() {
 
                 {/* Search Bar */}
                 <div className="relative flex-1 sm:w-64">
-                  <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   <input
                     type="text"
                     value={categorySearchQuery}
                     onChange={(e) => setCategorySearchQuery(e.target.value)}
                     placeholder="Cari kode atau nama category problem..."
-                    className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground text-xs font-mono focus:outline-none focus:border-ring"
+                    className="w-full h-9 pl-9 pr-8 rounded-lg border border-slate-200 dark:border-zinc-700/80 bg-background text-foreground placeholder:text-slate-400 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
                   />
                   {categorySearchQuery && (
                     <button
                       onClick={() => setCategorySearchQuery("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-foreground"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -827,36 +827,36 @@ function MasterDataPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-sans border-collapse">
                 <thead>
-                  <tr className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
-                    <th className="py-3.5 px-4 w-24 whitespace-nowrap">ACTION</th>
-                    <th className="py-3.5 px-4 whitespace-nowrap">
+                  <tr className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
+                    <th className="py-3 px-4 w-24 whitespace-nowrap">ACTION</th>
+                    <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         KODE KATEGORI
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
-                    <th className="py-3.5 px-4 whitespace-nowrap">
+                    <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         NAMA CATEGORY PROBLEM
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
-                    <th className="py-3.5 px-4 whitespace-nowrap">
+                    <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         TIPE E-FORM
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
-                    <th className="py-3.5 px-4 whitespace-nowrap">
+                    <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         PERHITUNGAN MTTR & MTBF
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
-                    <th className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <th className="py-3 px-4 text-center whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         STATUS
-                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
                   </tr>
@@ -874,7 +874,7 @@ function MasterDataPage() {
                     paginatedCategories.map((cat) => {
                       const catCode = cat.code || `CAT-${cat.name.slice(0, 4).toUpperCase().replace(/\s/g, "")}`;
                       return (
-                        <tr key={cat.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                        <tr key={cat.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/30 transition-colors">
                           {/* Action Column on Left */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
@@ -882,7 +882,7 @@ function MasterDataPage() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditCategory(cat)}
-                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 shadow-2xs transition-colors cursor-pointer"
+                                className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-blue-600 hover:border-blue-300 dark:hover:text-blue-400 shadow-2xs transition-colors cursor-pointer"
                                 title="Ubah Category Problem"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
@@ -892,7 +892,7 @@ function MasterDataPage() {
                               <button
                                 type="button"
                                 onClick={() => setDeleteCatTarget(cat)}
-                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-red-600 hover:border-red-400 dark:hover:text-red-400 shadow-2xs transition-colors cursor-pointer"
+                                className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 shadow-2xs transition-colors cursor-pointer"
                                 title="Hapus Category Problem"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -921,13 +921,13 @@ function MasterDataPage() {
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <div className="flex flex-wrap items-center gap-1.5">
                               {cat.forLinestop !== false && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800/60">
                                   <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                                   Linestop
                                 </span>
                               )}
                               {cat.forLinestopMaintenance === true && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800/60">
                                   <span className="h-1.5 w-1.5 rounded-full bg-cyan-500" />
                                   Linestop Maintenance
                                 </span>
@@ -941,13 +941,13 @@ function MasterDataPage() {
                           {/* MTTR / MTBF Breakdown */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             {cat.countsAsBreakdown ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
-                                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                                <span>Breakdown (MTTR/MTBF)</span>
+                              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60">
+                                <AlertTriangle className="h-3 w-3 shrink-0" />
+                                <span>Breakdown</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-muted text-muted-foreground border border-border">
-                                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-slate-50 dark:bg-zinc-800/50 text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700">
+                                <CheckCircle2 className="h-3 w-3 shrink-0 text-slate-400" />
                                 <span>Non-Breakdown</span>
                               </span>
                             )}

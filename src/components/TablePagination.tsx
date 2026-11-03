@@ -49,7 +49,7 @@ export function TablePagination({
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-card border-t border-border font-sans text-xs text-muted-foreground select-none",
+        "flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-card border-t border-slate-100 dark:border-zinc-800/80 font-sans text-xs text-slate-500 dark:text-zinc-400 select-none",
         className
       )}
     >
@@ -64,7 +64,7 @@ export function TablePagination({
                 onPageSizeChange(Number(e.target.value));
                 onPageChange(1);
               }}
-              className="h-8 px-2 rounded-lg border border-border bg-background text-foreground font-medium text-xs focus:outline-none focus:border-ring cursor-pointer"
+              className="h-7 px-2 rounded-md border border-slate-200 dark:border-zinc-700 bg-background text-slate-700 dark:text-zinc-200 font-medium text-xs focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs"
             >
               {pageSizeOptions.map((opt) => (
                 <option key={opt} value={opt}>
@@ -74,7 +74,7 @@ export function TablePagination({
             </select>
           </div>
         )}
-        <span className="font-medium text-slate-600 dark:text-zinc-300">
+        <span className="font-medium text-slate-500 dark:text-zinc-400">
           {startItem}-{endItem} of {totalItems}
         </span>
       </div>
@@ -87,9 +87,9 @@ export function TablePagination({
           onClick={() => onPageChange(1)}
           disabled={currentPage <= 1}
           title="Halaman Pertama"
-          className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border bg-background hover:bg-muted text-slate-500 dark:text-zinc-400 hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
-          <ChevronsLeft className="h-4 w-4" />
+          <ChevronsLeft className="h-3.5 w-3.5" />
         </button>
 
         {/* Prev Page < */}
@@ -98,9 +98,9 @@ export function TablePagination({
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
           title="Halaman Sebelumnya"
-          className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border bg-background hover:bg-muted text-slate-500 dark:text-zinc-400 hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-3.5 w-3.5" />
         </button>
 
         {/* Page numbers */}
@@ -112,10 +112,10 @@ export function TablePagination({
               type="button"
               onClick={() => onPageChange(p)}
               className={cn(
-                "h-8 min-w-[32px] px-2 inline-flex items-center justify-center rounded-lg font-medium text-xs transition-colors",
+                "h-7 min-w-[28px] px-2 inline-flex items-center justify-center rounded-md font-semibold text-xs transition-colors shadow-2xs",
                 isActive
-                  ? "bg-blue-600 text-white shadow-2xs hover:bg-blue-700"
-                  : "border border-transparent hover:border-border hover:bg-muted text-slate-600 dark:text-zinc-300"
+                  ? "bg-[#1d4ed8] dark:bg-blue-600 text-white"
+                  : "border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300"
               )}
             >
               {p}
@@ -129,9 +129,9 @@ export function TablePagination({
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
           title="Halaman Berikutnya"
-          className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border bg-background hover:bg-muted text-slate-500 dark:text-zinc-400 hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-3.5 w-3.5" />
         </button>
 
         {/* Last Page >> */}
@@ -140,9 +140,9 @@ export function TablePagination({
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage >= totalPages}
           title="Halaman Terakhir"
-          className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border bg-background hover:bg-muted text-slate-500 dark:text-zinc-400 hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
-          <ChevronsRight className="h-4 w-4" />
+          <ChevronsRight className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>

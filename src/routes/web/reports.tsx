@@ -324,7 +324,7 @@ function ReportsPage() {
   }, [activeReport, filteredStopSummary.length, filteredMttr.length, filteredOee.length, filteredLogDetail.length]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 w-full">
       {/* Page Title & Period Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -515,9 +515,9 @@ function ReportsPage() {
       </div>
 
       {/* Main Table Preview Section with Search & Download Button */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
         {/* Table Toolbar */}
-        <div className="p-4 border-b border-border flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-card">
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div>
               <div className="flex items-center gap-2">
@@ -540,13 +540,13 @@ function ReportsPage() {
           <div className="flex items-center gap-2.5">
             {/* Search Input */}
             <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
                 type="text"
                 placeholder={t("rep.search")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-1.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring shadow-2xs"
+                className="w-full rounded-lg border border-slate-200 dark:border-zinc-700/80 bg-background pl-8 pr-3 py-1.5 font-sans text-xs text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
               />
             </div>
 
@@ -566,8 +566,8 @@ function ReportsPage() {
         <div className="overflow-x-auto">
           {/* 1. Stop Summary Table */}
           {activeReport === "stop-summary" && (
-            <table className="w-full text-left text-xs font-sans">
-              <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+            <table className="w-full text-left text-xs font-sans border-collapse">
+              <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 w-12 text-center">NO</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
@@ -664,8 +664,8 @@ function ReportsPage() {
 
           {/* 2. MTTR & MTBF Table */}
           {activeReport === "mttr-mtbf" && (
-            <table className="w-full text-left text-xs font-sans">
-              <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+            <table className="w-full text-left text-xs font-sans border-collapse">
+              <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 w-12 text-center">NO</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
@@ -767,8 +767,8 @@ function ReportsPage() {
 
           {/* 3. OEE Table */}
           {activeReport === "oee" && (
-            <table className="w-full text-left text-xs font-sans">
-              <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+            <table className="w-full text-left text-xs font-sans border-collapse">
+              <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 w-12 text-center">NO</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
@@ -878,8 +878,8 @@ function ReportsPage() {
 
           {/* 4. Log Detail Table */}
           {activeReport === "log-detail" && (
-            <table className="w-full text-left text-xs font-sans">
-              <thead className="border-b border-border bg-slate-50/80 dark:bg-zinc-800/60 font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+            <table className="w-full text-left text-xs font-sans border-collapse">
+              <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 w-12 text-center">NO</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
