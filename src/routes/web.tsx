@@ -41,7 +41,7 @@ import {
 export const Route = createFileRoute("/web")({
   head: () => ({
     meta: [
-      { title: "JSGI - Maintenance Management System" },
+      { title: "Conveyor System — PT. Krama Yudha Ratu Motor Indonesia" },
       { name: "description", content: "Management console for line-stop monitoring, OEE analysis, and master data." },
     ],
   }),
@@ -201,20 +201,16 @@ export function WebLayout() {
         } w-[210px] flex-col border-r border-[#152a47] bg-[#0d1b2e] text-white sticky top-0 h-screen select-none transition-all duration-200 z-40 shrink-0`}
       >
         {/* Brand Header */}
-        <div className="flex h-14 items-center px-3.5 gap-2.5 border-b border-[#152a47] bg-[#0d1b2e] shrink-0">
-          <img
-            src="/brand-orb.png"
-            alt="JSGI"
-            className="h-7 w-7 object-contain shrink-0 drop-shadow-[0_0_8px_rgba(31,90,166,0.6)]"
-          />
-          <div className="flex flex-col min-w-0">
-            <span className="text-[13px] font-bold text-white tracking-tight leading-tight truncate">
-              JSGI - Maintenance
+        <div className="flex h-14 items-center px-4 border-b border-[#152a47] bg-[#0d1b2e] shrink-0">
+          <Link
+            to="/web"
+            className="flex items-center min-w-0 hover:opacity-90 transition-opacity"
+            title="Conveyor System"
+          >
+            <span className="text-[15px] font-bold text-white tracking-tight leading-tight font-display truncate">
+              Conveyor System
             </span>
-            <span className="text-[10px] text-sky-400 font-medium leading-tight truncate">
-              Management System
-            </span>
-          </div>
+          </Link>
         </div>
 
         {/* Navigation Links Scroll Container */}

@@ -1308,14 +1308,14 @@ function MasterDataPage() {
                     type="button"
                     onClick={() => setCatForLinestop(!catForLinestop)}
                     className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${catForLinestop
-                        ? "border-amber-500 bg-amber-500/10 shadow-2xs"
-                        : "border-border bg-card hover:bg-muted"
+                      ? "border-amber-500 bg-amber-500/10 shadow-2xs"
+                      : "border-border bg-card hover:bg-muted"
                       }`}
                   >
                     <div
                       className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${catForLinestop
-                          ? "bg-amber-500 border-amber-500 text-white"
-                          : "border-muted-foreground"
+                        ? "bg-amber-500 border-amber-500 text-white"
+                        : "border-muted-foreground"
                         }`}
                     >
                       {catForLinestop && <Check className="h-3 w-3 stroke-[3]" />}
@@ -1335,14 +1335,14 @@ function MasterDataPage() {
                     type="button"
                     onClick={() => setCatForLinestopMtc(!catForLinestopMtc)}
                     className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${catForLinestopMtc
-                        ? "border-cyan-500 bg-cyan-500/10 shadow-2xs"
-                        : "border-border bg-card hover:bg-muted"
+                      ? "border-cyan-500 bg-cyan-500/10 shadow-2xs"
+                      : "border-border bg-card hover:bg-muted"
                       }`}
                   >
                     <div
                       className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${catForLinestopMtc
-                          ? "bg-cyan-500 border-cyan-500 text-white"
-                          : "border-muted-foreground"
+                        ? "bg-cyan-500 border-cyan-500 text-white"
+                        : "border-muted-foreground"
                         }`}
                     >
                       {catForLinestopMtc && <Check className="h-3 w-3 stroke-[3]" />}
@@ -1455,14 +1455,14 @@ function MasterDataPage() {
                     type="button"
                     onClick={() => setEditCatForLinestop(!editCatForLinestop)}
                     className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${editCatForLinestop
-                        ? "border-amber-500 bg-amber-500/10 shadow-2xs"
-                        : "border-border bg-card hover:bg-muted"
+                      ? "border-amber-500 bg-amber-500/10 shadow-2xs"
+                      : "border-border bg-card hover:bg-muted"
                       }`}
                   >
                     <div
                       className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${editCatForLinestop
-                          ? "bg-amber-500 border-amber-500 text-white"
-                          : "border-muted-foreground"
+                        ? "bg-amber-500 border-amber-500 text-white"
+                        : "border-muted-foreground"
                         }`}
                     >
                       {editCatForLinestop && <Check className="h-3 w-3 stroke-[3]" />}
@@ -1482,14 +1482,14 @@ function MasterDataPage() {
                     type="button"
                     onClick={() => setEditCatForLinestopMtc(!editCatForLinestopMtc)}
                     className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${editCatForLinestopMtc
-                        ? "border-cyan-500 bg-cyan-500/10 shadow-2xs"
-                        : "border-border bg-card hover:bg-muted"
+                      ? "border-cyan-500 bg-cyan-500/10 shadow-2xs"
+                      : "border-border bg-card hover:bg-muted"
                       }`}
                   >
                     <div
                       className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${editCatForLinestopMtc
-                          ? "bg-cyan-500 border-cyan-500 text-white"
-                          : "border-muted-foreground"
+                        ? "bg-cyan-500 border-cyan-500 text-white"
+                        : "border-muted-foreground"
                         }`}
                     >
                       {editCatForLinestopMtc && <Check className="h-3 w-3 stroke-[3]" />}
