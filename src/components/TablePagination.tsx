@@ -86,7 +86,7 @@ export function TablePagination({
           type="button"
           onClick={() => onPageChange(1)}
           disabled={currentPage <= 1}
-          title="Halaman Pertama"
+          title="First Page"
           className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
           <ChevronsLeft className="h-3.5 w-3.5" />
@@ -97,7 +97,7 @@ export function TablePagination({
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          title="Halaman Sebelumnya"
+          title="Previous Page"
           className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -128,7 +128,7 @@ export function TablePagination({
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          title="Halaman Berikutnya"
+          title="Next Page"
           className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
           <ChevronRight className="h-3.5 w-3.5" />
@@ -139,7 +139,7 @@ export function TablePagination({
           type="button"
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage >= totalPages}
-          title="Halaman Terakhir"
+          title="Last Page"
           className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
           <ChevronsRight className="h-3.5 w-3.5" />

@@ -2,14 +2,10 @@ import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-rout
 import { useEffect, useState, useMemo } from "react";
 import {
   LayoutGrid,
-  Settings2,
-  FileText,
-  Calendar,
-  PlusCircle,
-  Package,
-  CheckCircle2,
+  Radio,
+  History,
+  BarChart3,
   FileSpreadsheet,
-  BookOpen,
   Layers,
   Workflow,
   SlidersHorizontal,
@@ -27,7 +23,6 @@ import {
   Tablet,
   ExternalLink,
   Globe,
-  Radio,
 } from "lucide-react";
 import { useI18n } from "../lib/i18n";
 import { useTheme } from "../lib/theme";
@@ -56,11 +51,12 @@ export const Route = createFileRoute("/web")({
 interface NavItem {
   label: string;
   to: string;
-  exact?: boolean;
+  exact?: boolean | undefined;
   icon: React.ComponentType<{ className?: string }>;
-  badge?: string;
-  hasChevron?: boolean;
-  isExternal?: boolean;
+  badge?: string | undefined;
+  badgeVariant?: "destructive" | "pill" | "default" | undefined;
+  hasChevron?: boolean | undefined;
+  isExternal?: boolean | undefined;
 }
 
 interface NavGroup {
@@ -80,9 +76,13 @@ export function WebLayout() {
   const [activeSubItem, setActiveSubItem] = useState("stations");
 
   const currentView = useMemo(() => {
+    const s = location.search as { view?: string };
+    if (s?.view === "categories") return "categories";
+    if (s?.view === "stations") return "stations";
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search);
       if (sp.get("view") === "categories") return "categories";
+      if (sp.get("view") === "stations") return "stations";
     }
     return activeSubItem || "stations";
   }, [location.search, activeSubItem]);
@@ -107,66 +107,50 @@ export function WebLayout() {
     }).format(new Date(nowMs));
   }, [nowMs]);
 
-  // Sidebar navigation structure exactly matching JSGI Maintenance Management System
+  // Sidebar navigation features matching actual app features
   const coreFunctions: NavItem[] = [
     {
       label: "Dashboard",
       to: "/web",
       exact: true,
       icon: LayoutGrid,
-      hasChevron: true,
     },
     {
-      label: "Workflow Approval",
+      label: "Station Live",
       to: "/web/station-live",
-      icon: Settings2,
+      icon: Radio,
+      badge: stoppedStationsCount > 0 ? `${stoppedStationsCount} STOP` : undefined,
+      badgeVariant: "destructive",
     },
     {
-      label: "Trouble Report",
+      label: "Log History",
       to: "/web/logs",
-      icon: FileText,
-    },
-    {
-      label: "Maintenance Plan",
-      to: "/web/production",
-      icon: Calendar,
-    },
-    {
-      label: "Work Order",
-      to: "/ipad",
-      icon: PlusCircle,
-      isExternal: true,
-    },
-    {
-      label: "Sparepart",
-      to: "/web/master-data",
-      icon: Package,
-      hasChevron: true,
-    },
-    {
-      label: "Approval",
-      to: "/web/station-live",
-      icon: CheckCircle2,
-      badge: "99+",
+      icon: History,
+      badge: `${appState.stops.length > 99 ? "99+" : appState.stops.length}`,
+      badgeVariant: "pill",
     },
   ];
 
   const reportDocs: NavItem[] = [
     {
+      label: "Production OEE",
+      to: "/web/production",
+      icon: BarChart3,
+    },
+    {
       label: "Reports",
       to: "/web/reports",
       icon: FileSpreadsheet,
-      hasChevron: true,
-    },
-    {
-      label: "Documentation",
-      to: "/web/reports",
-      icon: BookOpen,
     },
   ];
 
-  const masterDataSubItems = [
-    { name: "Stasiun & Area", icon: Workflow, key: "stations", view: "stations" },
+  const masterDataSubItems: Array<{
+    name: string;
+    icon: typeof Workflow;
+    key: "stations" | "categories";
+    view: "stations" | "categories";
+  }> = [
+    { name: "Stations & Area", icon: Workflow, key: "stations", view: "stations" },
     { name: "Category Problem", icon: SlidersHorizontal, key: "categories", view: "categories" },
   ];
 
@@ -182,13 +166,13 @@ export function WebLayout() {
   const handleSimulateRandomStop = () => {
     const runningStations = appState.stations.filter((s) => appState.stationLive[s.id]?.state === "running");
     if (runningStations.length === 0) {
-      toast.info("Semua stasiun sudah dalam keadaan berhenti");
+      toast.info("All stations are already stopped");
       return;
     }
     const target = runningStations[Math.floor(Math.random() * runningStations.length)]!;
     store.simulateStopTrigger(target.id, "cat-2", "form");
-    toast.error(`Stop disimulasikan pada ${target.name}`, {
-      description: "Sensor jam terdeteksi. Papan Andon & iPad otomatis diperbarui.",
+    toast.error(`Stop simulated on ${target.name}`, {
+      description: "Jam sensor detected. Andon board & iPad automatically updated.",
     });
   };
 
@@ -198,13 +182,13 @@ export function WebLayout() {
         store.simulateResumeStation(station.id);
       }
     }
-    toast.success("Semua stasiun kembali beroperasi normal (RUNNING)");
+    toast.success("All stations resumed normal operation (RUNNING)");
   };
 
   const handleResetData = () => {
-    if (confirm("Reset ulang seluruh data demo ke kondisi bawaan awal?")) {
+    if (confirm("Reset all demo data to initial default state?")) {
       store.resetToSeed();
-      toast.success("Data simulasi di-reset ke kondisi awal");
+      toast.success("Simulation data reset to initial state");
     }
   };
 
@@ -290,7 +274,13 @@ export function WebLayout() {
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {item.badge && (
-                        <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-[#4e8ff0] text-white font-bold leading-none shadow-xs">
+                        <span
+                          className={`font-mono text-[9px] px-2 py-0.5 rounded-full text-white font-bold leading-none shadow-xs ${
+                            item.badgeVariant === "destructive"
+                              ? "bg-rose-600 animate-pulse"
+                              : "bg-[#4e8ff0]"
+                          }`}
+                        >
                           {item.badge}
                         </span>
                       )}
@@ -422,27 +412,7 @@ export function WebLayout() {
                 )}
               </div>
 
-              {/* Users Management */}
-              <Link
-                to="/web/users"
-                className={`group relative flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  isActive("/web/users")
-                    ? "bg-[#102846] text-white font-semibold"
-                    : "text-[#8ea3be] hover:bg-[#132742] hover:text-white"
-                }`}
-              >
-                {isActive("/web/users") && (
-                  <span className="absolute left-0 top-1 bottom-1 w-1 bg-[#2b7fff] rounded-r" />
-                )}
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <User
-                    className={`h-4 w-4 shrink-0 transition-colors ${
-                      isActive("/web/users") ? "text-white" : "text-[#6582a6] group-hover:text-sky-300"
-                    }`}
-                  />
-                  <span className="truncate">Users Management</span>
-                </div>
-              </Link>
+              {/* Users Management hidden per user request */}
             </div>
           </div>
         </div>
@@ -526,10 +496,10 @@ export function WebLayout() {
               <DropdownMenuContent align="end" className="w-80 p-2">
                 <div className="flex items-center justify-between pb-2 border-b border-border px-2">
                   <span className="text-xs font-semibold text-foreground">
-                    Notifikasi Sistem
+                    System Notifications
                   </span>
                   <span className="text-[10px] bg-red-500/10 text-red-500 font-medium px-1.5 py-0.5 rounded">
-                    {stoppedStationsCount > 0 ? `${stoppedStationsCount} Line Stop` : "3 Baru"}
+                    {stoppedStationsCount > 0 ? `${stoppedStationsCount} Line Stop` : "3 New"}
                   </span>
                 </div>
                 <div className="py-2 space-y-1.5 text-xs">
@@ -539,22 +509,22 @@ export function WebLayout() {
                       .slice(0, 3)
                       .map(([id]) => (
                         <div key={id} className="p-2 rounded bg-destructive/10 border border-destructive/20 text-destructive text-[11px]">
-                          <span className="font-semibold">{id}</span> sedang mengalami kendala (STOP)
+                          <span className="font-semibold">{id}</span> is experiencing an issue (STOP)
                         </div>
                       ))
                   ) : (
                     <>
                       <div className="p-2 rounded bg-muted/60 text-[11px] text-foreground">
-                        <span className="font-semibold block text-primary">Sistem Normal</span>
-                        Seluruh stasiun aktif dan sinkronisasi conveyor berjalan lancar.
+                        <span className="font-semibold block text-primary">System Normal</span>
+                        All stations active and conveyor synchronization running smoothly.
                       </div>
                       <div className="p-2 rounded bg-muted/60 text-[11px] text-foreground">
-                        <span className="font-semibold block text-emerald-600 dark:text-emerald-400">Shift 1 Berjalan</span>
-                        Monitoring OEE dan line-stop aktif tercatat di database.
+                        <span className="font-semibold block text-emerald-600 dark:text-emerald-400">Shift 1 Running</span>
+                        OEE and active line-stop monitoring recorded in database.
                       </div>
                       <div className="p-2 rounded bg-muted/60 text-[11px] text-foreground">
-                        <span className="font-semibold block text-amber-600 dark:text-amber-400">Pemeriksaan Rutin</span>
-                        Jadwal inspeksi pencegahan terjadwal pukul 16:30 WIB.
+                        <span className="font-semibold block text-amber-600 dark:text-amber-400">Routine Inspection</span>
+                        Preventive inspection scheduled at 16:30 WIB.
                       </div>
                     </>
                   )}
@@ -564,7 +534,7 @@ export function WebLayout() {
                     to="/web/logs"
                     className="block text-center text-[11px] text-primary hover:underline py-1"
                   >
-                    Lihat Semua Riwayat Line Stop &rarr;
+                    View All Line Stop History &rarr;
                   </Link>
                 </div>
               </DropdownMenuContent>
@@ -604,41 +574,41 @@ export function WebLayout() {
                 <DropdownMenuItem asChild>
                   <Link to="/andon" target="_blank" className="flex items-center gap-2 text-xs cursor-pointer">
                     <Tv className="h-3.5 w-3.5 text-emerald-500" />
-                    <span>Buka Display Andon (TV)</span>
+                    <span>Open Andon Display (TV)</span>
                     <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/ipad" target="_blank" className="flex items-center gap-2 text-xs cursor-pointer">
                     <Tablet className="h-3.5 w-3.5 text-sky-500" />
-                    <span>Buka Tablet E-Form (iPad)</span>
+                    <span>Open Tablet E-Form (iPad)</span>
                     <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSimulateRandomStop} className="flex items-center gap-2 text-xs text-red-500 cursor-pointer">
                   <Square className="h-3.5 w-3.5 fill-current" />
-                  <span>Simulasi PLC Stop Acak</span>
+                  <span>Simulate Random PLC Stop</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleResumeAll} className="flex items-center gap-2 text-xs text-emerald-500 cursor-pointer">
                   <Play className="h-3.5 w-3.5 fill-current" />
-                  <span>Resume Semua Stasiun</span>
+                  <span>Resume All Stations</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleResetData} className="flex items-center gap-2 text-xs text-amber-500 cursor-pointer">
                   <RotateCcw className="h-3.5 w-3.5" />
-                  <span>Reset Data Simulasi</span>
+                  <span>Reset Simulation Data</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => {
                     const nextLang = lang === "id" ? "en" : "id";
                     setLang(nextLang);
-                    toast.success(nextLang === "id" ? "Bahasa diubah ke Indonesia" : "Language changed to English");
+                    toast.success(nextLang === "id" ? "Language changed to Indonesian" : "Language changed to English");
                   }}
                   className="cursor-pointer text-xs"
                 >
                   <Globe className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span>Bahasa: <strong>{lang.toUpperCase()}</strong> ({lang === "id" ? "Indonesia" : "English"})</span>
+                  <span>Language: <strong>{lang.toUpperCase()}</strong> ({lang === "id" ? "Indonesian" : "English"})</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -670,20 +640,65 @@ export function WebLayout() {
               </div>
             </div>
 
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-[#4d6c8f] font-bold">
+                  REPORT & DOCUMENTATION
+                </span>
+                <div className="h-px flex-1 bg-[#152a47]" />
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 pt-1">
+                {reportDocs.map((item) => (
+                  <Link
+                    key={item.label}
+                    to={item.to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[#8ea3be] hover:bg-[#132742] hover:text-white"
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-[#4d6c8f] font-bold">
+                  SETUP SYSTEM
+                </span>
+                <div className="h-px flex-1 bg-[#152a47]" />
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 pt-1">
+                {masterDataSubItems.map((sub) => (
+                  <Link
+                    key={sub.name}
+                    to="/web/master-data"
+                    search={{ view: sub.view }}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[#8ea3be] hover:bg-[#132742] hover:text-white"
+                  >
+                    <sub.icon className="h-4 w-4" />
+                    <span className="truncate">{sub.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
             <div className="flex gap-2 pt-2 border-t border-[#152a47]">
               <Link
                 to="/andon"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex-1 text-center py-2 rounded-lg bg-[#091524] border border-[#152a47] text-emerald-400 text-xs font-mono font-bold hover:bg-[#0e2138]"
               >
-                Buka Andon (TV)
+                Open Andon (TV)
               </Link>
               <Link
                 to="/ipad"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex-1 text-center py-2 rounded-lg bg-[#091524] border border-[#152a47] text-cyan-400 text-xs font-mono font-bold hover:bg-[#0e2138]"
               >
-                Buka Tablet (E-form)
+                Open Tablet (E-form)
               </Link>
             </div>
           </div>

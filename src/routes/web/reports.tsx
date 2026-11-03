@@ -8,8 +8,10 @@ import {
   Layers,
   Activity,
   TrendingDown,
-  Search,
   Check,
+  Eye,
+  X,
+  ArrowUpDown,
 } from "lucide-react";
 import { useI18n } from "../../lib/i18n";
 import { useAppStore } from "../../lib/store";
@@ -20,22 +22,23 @@ import {
   stopDurationMs,
   neutralizeExcelCell,
 } from "../../lib/calc";
-import { fmtDateTime, fmtDateKey, fmtDuration, dayStartMs } from "../../lib/format";
+import { fmtDateTime, fmtDateKey, fmtDuration, dayStartMs, fmtTime } from "../../lib/format";
 import { toast } from "sonner";
 import { TablePagination } from "../../components/TablePagination";
-import { ArrowUpDown } from "lucide-react";
+import { Search } from "../../components/ui/search";
+import { Tabs } from "../../components/ui/tablist";
+import { DateRangePicker } from "../../components/DateRangePicker";
 
 export const Route = createFileRoute("/web/reports")({
   head: () => ({
     meta: [
       { title: "PT. Krama Yudha Ratu Motor Indonesia — Reports & Excel Export" },
-      { name: "description", content: "Pratinjau data laporan produksi, MTTR, MTBF, dan Line-Stop serta ekspor ke Excel." },
+      { name: "description", content: "Production reports, MTTR, MTBF, and Line-Stop data preview and Excel export." },
     ],
   }),
   component: ReportsPage,
 });
 
-type ReportPeriod = "today" | "7d" | "30d" | "all";
 type ReportType = "stop-summary" | "mttr-mtbf" | "oee" | "log-detail";
 
 function ReportsPage() {
@@ -43,22 +46,47 @@ function ReportsPage() {
   const appState = useAppStore();
   const nowMs = Date.now();
 
-  const [period, setPeriod] = useState<ReportPeriod>("7d");
+  // Date Range state matching Dashboard
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date(Date.now() - 6 * 86_400_000);
+    return d.toISOString().slice(0, 10);
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    return new Date().toISOString().slice(0, 10);
+  });
+
   const [activeReport, setActiveReport] = useState<ReportType>("stop-summary");
   const [searchQuery, setSearchQuery] = useState("");
   const [reportPage, setReportPage] = useState(1);
   const [reportPageSize, setReportPageSize] = useState(10);
+  const [viewingStationStopSummary, setViewingStationStopSummary] = useState<{
+    stationId: string;
+    stationName: string;
+    conveyorId: string;
+    totalStops: number;
+    breakdownStops: number;
+    totalDowntimeMs: number;
+    avgDurationMs: number;
+    thresholdSpeed: string;
+  } | null>(null);
 
-  const periodStartMs = useMemo(() => {
-    if (period === "today") return dayStartMs(nowMs);
-    if (period === "7d") return nowMs - 7 * 86_400_000;
-    if (period === "30d") return nowMs - 30 * 86_400_000;
-    return 0;
-  }, [period, nowMs]);
+  const { rangeStartMs, rangeEndMs, daysCount } = useMemo(() => {
+    const sDate = startDate || new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10);
+    const eDate = endDate || new Date().toISOString().slice(0, 10);
+    const start = Date.parse(`${sDate}T00:00:00+07:00`) || (nowMs - 7 * 86_400_000);
+    const end = Date.parse(`${eDate}T23:59:59.999+07:00`) || nowMs;
+    const days = Math.max(1, Math.round((end - start) / 86_400_000));
+    return { rangeStartMs: start, rangeEndMs: end, daysCount: days };
+  }, [startDate, endDate, nowMs]);
 
   const filteredStops = useMemo(() => {
-    return appState.stops.filter((s) => s.startMs >= periodStartMs);
-  }, [appState.stops, periodStartMs]);
+    return appState.stops.filter((s) => s.startMs >= rangeStartMs && s.startMs <= rangeEndMs);
+  }, [appState.stops, rangeStartMs, rangeEndMs]);
+
+  const stationDetailStops = useMemo(() => {
+    if (!viewingStationStopSummary) return [];
+    return filteredStops.filter((s) => s.stationId === viewingStationStopSummary.stationId);
+  }, [viewingStationStopSummary, filteredStops]);
 
   // --- 1. Dataset: Stop Summary ---
   const stopSummaryData = useMemo(() => {
@@ -97,8 +125,7 @@ function ReportsPage() {
 
   // --- 2. Dataset: MTTR & MTBF ---
   const mttrData = useMemo(() => {
-    const days = period === "today" ? 1 : period === "7d" ? 7 : period === "30d" ? 30 : 90;
-    const operatingMs = days * 16 * 3_600_000;
+    const operatingMs = daysCount * 16 * 3_600_000;
 
     return appState.stations.map((station) => {
       const stStops = filteredStops.filter((s) => s.stationId === station.id);
@@ -113,7 +140,7 @@ function ReportsPage() {
       return {
         stationId: station.id,
         stationName: station.name,
-        periodDays: days,
+        periodDays: daysCount,
         breakdownCount: breakdowns.length,
         totalDowntimeMs: totalDowntime,
         mttrMs: mttr,
@@ -121,7 +148,7 @@ function ReportsPage() {
         operatingHours: operatingMs / 3_600_000,
       };
     });
-  }, [appState.stations, filteredStops, appState.categories, period, nowMs]);
+  }, [appState.stations, filteredStops, appState.categories, daysCount, nowMs]);
 
   const filteredMttr = useMemo(() => {
     if (!searchQuery.trim()) return mttrData;
@@ -137,9 +164,8 @@ function ReportsPage() {
   const oeeData = useMemo(() => {
     return appState.productionRecords
       .filter((rec) => {
-        if (period === "all") return true;
         const recMs = Date.parse(`${rec.date}T00:00:00+07:00`);
-        return recMs >= periodStartMs;
+        return recMs >= rangeStartMs && recMs <= rangeEndMs;
       })
       .map((rec) => {
         const shift = appState.shifts.find((s) => s.id === rec.shiftId);
@@ -162,7 +188,7 @@ function ReportsPage() {
           oee,
         };
       });
-  }, [appState.productionRecords, appState.shifts, appState.areas, appState.stops, period, periodStartMs]);
+  }, [appState.productionRecords, appState.shifts, appState.areas, appState.stops, rangeStartMs, rangeEndMs]);
 
   const filteredOee = useMemo(() => {
     if (!searchQuery.trim()) return oeeData;
@@ -236,6 +262,7 @@ function ReportsPage() {
   // --- Excel Exporters ---
   const handleExportCurrentReport = () => {
     const dateStamp = fmtDateKey(nowMs);
+    const rangeTag = `${startDate}_to_${endDate}`;
 
     if (activeReport === "stop-summary") {
       const rows = filteredStopSummary.map((r) => ({
@@ -250,7 +277,7 @@ function ReportsPage() {
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Stop_Summary");
-      XLSX.writeFile(wb, `Laporan_Ringkasan_Stop_${period}_${dateStamp}.xlsx`);
+      XLSX.writeFile(wb, `Laporan_Ringkasan_Stop_${rangeTag}_${dateStamp}.xlsx`);
     } else if (activeReport === "mttr-mtbf") {
       const rows = filteredMttr.map((r) => ({
         Station: neutralizeExcelCell(r.stationName),
@@ -263,7 +290,7 @@ function ReportsPage() {
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "MTTR_MTBF_Report");
-      XLSX.writeFile(wb, `Laporan_MTTR_MTBF_${period}_${dateStamp}.xlsx`);
+      XLSX.writeFile(wb, `Laporan_MTTR_MTBF_${rangeTag}_${dateStamp}.xlsx`);
     } else if (activeReport === "oee") {
       const rows = filteredOee.map((r) => ({
         Date: r.date,
@@ -281,7 +308,7 @@ function ReportsPage() {
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "OEE_Report");
-      XLSX.writeFile(wb, `Laporan_OEE_${dateStamp}.xlsx`);
+      XLSX.writeFile(wb, `Laporan_OEE_${rangeTag}_${dateStamp}.xlsx`);
     } else {
       const rows = filteredLogDetail.map((r) => ({
         Stop_ID: r.id,
@@ -301,11 +328,11 @@ function ReportsPage() {
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Log_Detail");
-      XLSX.writeFile(wb, `Laporan_Log_Detail_${period}_${dateStamp}.xlsx`);
+      XLSX.writeFile(wb, `Laporan_Log_Detail_${rangeTag}_${dateStamp}.xlsx`);
     }
 
     toast.success(t("rep.exported"), {
-      description: "File Excel berhasil dibuat dan siap diunduh.",
+      description: "Excel file created and ready to download.",
     });
   };
 
@@ -325,8 +352,8 @@ function ReportsPage() {
 
   return (
     <div className="space-y-6 w-full">
-      {/* Page Title & Period Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Page Title & Tablist */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
             {t("rep.title")}
@@ -336,225 +363,63 @@ function ReportsPage() {
           </p>
         </div>
 
-        {/* Period Selector */}
-        <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card p-1 font-mono text-xs shadow-2xs">
-          <Calendar className="h-3.5 w-3.5 text-muted-foreground ml-2" />
-          <span className="text-muted-foreground pr-1">{t("rep.period")}:</span>
-          {(
-            [
-              { id: "today", label: "Hari ini" },
-              { id: "7d", label: "7 Hari" },
-              { id: "30d", label: "30 Hari" },
-              { id: "all", label: "Semua" },
-            ] as const
-          ).map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setPeriod(p.id)}
-              className={`px-3 py-1 rounded transition-colors ${
-                period === p.id
-                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+        {/* Tablist on the Right */}
+        <div className="flex items-center">
+          <Tabs
+            variant="primary"
+            value={activeReport}
+            onValueChange={(val) => {
+              setActiveReport(val as ReportType);
+              setSearchQuery("");
+              setReportPage(1);
+            }}
+            items={[
+              { value: "stop-summary", label: "Stop Summary", badge: filteredStopSummary.length },
+              { value: "mttr-mtbf", label: "MTTR & MTBF", badge: filteredMttr.length },
+              { value: "oee", label: "Production OEE", badge: filteredOee.length },
+              { value: "log-detail", label: "Log Detail", badge: filteredLogDetail.length },
+            ]}
+          />
         </div>
-      </div>
-
-      {/* 4 Report Selector Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Stop Summary */}
-        <button
-          onClick={() => {
-            setActiveReport("stop-summary");
-            setSearchQuery("");
-          }}
-          className={`text-left rounded-xl border p-4 flex flex-col justify-between transition-all ${
-            activeReport === "stop-summary"
-              ? "border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/20 shadow-md ring-1 ring-emerald-500"
-              : "border-border bg-card hover:border-primary/40 hover:bg-muted/40 shadow-xs"
-          }`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-              <Layers className="h-5 w-5" />
-            </div>
-            {activeReport === "stop-summary" ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                <Check className="h-3 w-3" />
-                Aktif
-              </span>
-            ) : (
-              <span className="font-mono text-[10px] text-muted-foreground">
-                {appState.stations.length} Stasiun
-              </span>
-            )}
-          </div>
-          <div className="mt-3">
-            <h3 className="font-display text-sm font-semibold text-foreground">
-              {t("rep.stopSummary")}
-            </h3>
-            <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-              Total & rata-rata durasi per stasiun dan status breakdown.
-            </p>
-          </div>
-        </button>
-
-        {/* Card 2: MTTR / MTBF */}
-        <button
-          onClick={() => {
-            setActiveReport("mttr-mtbf");
-            setSearchQuery("");
-          }}
-          className={`text-left rounded-xl border p-4 flex flex-col justify-between transition-all ${
-            activeReport === "mttr-mtbf"
-              ? "border-rose-500 bg-rose-500/10 dark:bg-rose-950/20 shadow-md ring-1 ring-rose-500"
-              : "border-border bg-card hover:border-primary/40 hover:bg-muted/40 shadow-xs"
-          }`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="p-2 rounded-lg bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30">
-              <TrendingDown className="h-5 w-5" />
-            </div>
-            {activeReport === "mttr-mtbf" ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-rose-600 dark:text-rose-400 border border-rose-500/30">
-                <Check className="h-3 w-3" />
-                Aktif
-              </span>
-            ) : (
-              <span className="font-mono text-[10px] text-muted-foreground">
-                PRD 2.4
-              </span>
-            )}
-          </div>
-          <div className="mt-3">
-            <h3 className="font-display text-sm font-semibold text-foreground">
-              {t("rep.mttrReport")}
-            </h3>
-            <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-              Metrik keandalan mesin MTTR (menit) & MTBF (jam).
-            </p>
-          </div>
-        </button>
-
-        {/* Card 3: OEE Report */}
-        <button
-          onClick={() => {
-            setActiveReport("oee");
-            setSearchQuery("");
-          }}
-          className={`text-left rounded-xl border p-4 flex flex-col justify-between transition-all ${
-            activeReport === "oee"
-              ? "border-cyan-500 bg-cyan-500/10 dark:bg-cyan-950/20 shadow-md ring-1 ring-cyan-500"
-              : "border-border bg-card hover:border-primary/40 hover:bg-muted/40 shadow-xs"
-          }`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="p-2 rounded-lg bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30">
-              <Activity className="h-5 w-5" />
-            </div>
-            {activeReport === "oee" ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-600 dark:text-cyan-400 border border-cyan-500/30">
-                <Check className="h-3 w-3" />
-                Aktif
-              </span>
-            ) : (
-              <span className="font-mono text-[10px] text-muted-foreground">
-                {appState.productionRecords.length} Catatan
-              </span>
-            )}
-          </div>
-          <div className="mt-3">
-            <h3 className="font-display text-sm font-semibold text-foreground">
-              {t("rep.oeeReport")}
-            </h3>
-            <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-              Availability, Performance, Quality, dan OEE per shift.
-            </p>
-          </div>
-        </button>
-
-        {/* Card 4: Stop Log Detail */}
-        <button
-          onClick={() => {
-            setActiveReport("log-detail");
-            setSearchQuery("");
-          }}
-          className={`text-left rounded-xl border p-4 flex flex-col justify-between transition-all ${
-            activeReport === "log-detail"
-              ? "border-purple-500 bg-purple-500/10 dark:bg-purple-950/20 shadow-md ring-1 ring-purple-500"
-              : "border-border bg-card hover:border-primary/40 hover:bg-muted/40 shadow-xs"
-          }`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="p-2 rounded-lg bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30">
-              <FileSpreadsheet className="h-5 w-5" />
-            </div>
-            {activeReport === "log-detail" ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-purple-600 dark:text-purple-400 border border-purple-500/30">
-                <Check className="h-3 w-3" />
-                Aktif
-              </span>
-            ) : (
-              <span className="font-mono text-[10px] text-muted-foreground">
-                {filteredStops.length} Kejadian
-              </span>
-            )}
-          </div>
-          <div className="mt-3">
-            <h3 className="font-display text-sm font-semibold text-foreground">
-              {t("rep.logDetail")}
-            </h3>
-            <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-              Log kronologis per kejadian dengan sumber PLC / E-form.
-            </p>
-          </div>
-        </button>
       </div>
 
       {/* Main Table Preview Section with Search & Download Button */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
-        {/* Table Toolbar */}
-        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-display text-base font-bold text-foreground">
-                  {activeReport === "stop-summary" && t("rep.stopSummary")}
-                  {activeReport === "mttr-mtbf" && t("rep.mttrReport")}
-                  {activeReport === "oee" && t("rep.oeeReport")}
-                  {activeReport === "log-detail" && t("rep.logDetail")}
-                </h2>
-                <span className="inline-flex items-center rounded-md border border-border bg-muted/60 px-2 py-0.5 font-mono text-xs text-muted-foreground">
-                  {activeRowCount} baris
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
-                Pratinjau data di bawah ini siap diekspor ke file Excel (.xlsx).
-              </p>
-            </div>
-          </div>
+        {/* Table Toolbar: Search (Fill Container) on Left, Date Range Picker & Download Button on Right */}
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
+          {/* Search Input (Fill Container) */}
+          <Search
+            containerClassName="flex-1 w-full"
+            placeholder={t("rep.search")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
 
-          <div className="flex items-center gap-2.5">
-            {/* Search Input */}
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder={t("rep.search")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 dark:border-zinc-700/80 bg-background pl-8 pr-3 py-1.5 font-sans text-xs text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
-              />
-            </div>
+          {/* Right: Date Range Picker on Left of Download Report Button */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+                setReportPage(1);
+              }}
+              onReset={() => {
+                const now = new Date();
+                const todayStr = now.toISOString().slice(0, 10);
+                const past = new Date(Date.now() - 6 * 86_400_000);
+                setStartDate(past.toISOString().slice(0, 10));
+                setEndDate(todayStr);
+                setReportPage(1);
+              }}
+            />
 
             {/* Download Report Button (Orange Style Matching Reference) */}
             <button
               onClick={handleExportCurrentReport}
               disabled={activeRowCount === 0}
-              className="flex items-center gap-2 rounded-lg bg-[#ff5a1f] hover:bg-[#e04810] text-white px-4 py-2 font-sans text-xs font-semibold shadow-xs transition-colors shrink-0 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+              className="flex items-center gap-2 rounded-lg bg-[#ff5a1f] hover:bg-[#e04810] text-white px-4 py-2 font-sans text-xs font-semibold shadow-xs transition-colors shrink-0 disabled:opacity-50 disabled:pointer-events-none cursor-pointer h-10"
             >
               <Download className="h-4 w-4" />
               <span>Download Report</span>
@@ -569,15 +434,16 @@ function ReportsPage() {
             <table className="w-full text-left text-xs font-sans border-collapse">
               <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
+                  <th className="py-3.5 px-4 w-16 text-center whitespace-nowrap">ACTION</th>
                   <th className="py-3.5 px-4 w-12 text-center">NO</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      STASIUN <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      STATION <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      KONVEYOR <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      CONVEYOR <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">
@@ -597,7 +463,7 @@ function ReportsPage() {
                   </th>
                   <th className="py-3.5 px-4 text-right whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      RATA-RATA DURASI <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      AVERAGE DURATION <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">
@@ -610,19 +476,28 @@ function ReportsPage() {
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                 {paginatedStopSummary.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-muted-foreground font-mono text-xs">
+                    <td colSpan={9} className="py-12 text-center text-muted-foreground font-mono text-xs">
                       {t("rep.noData")}
                     </td>
                   </tr>
                 ) : (
                   paginatedStopSummary.map((row, idx) => (
                     <tr key={row.stationId} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setViewingStationStopSummary(row)}
+                          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 shadow-2xs transition-colors cursor-pointer"
+                          title="View Stop & Breakdown Detail"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
                       <td className="py-3.5 px-4 text-center font-mono text-muted-foreground">
                         {(reportPage - 1) * reportPageSize + idx + 1}
                       </td>
                       <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">
                         <div className="font-semibold">{row.stationName}</div>
-                        <div className="text-[10px] font-mono text-muted-foreground">{row.stationId}</div>
                       </td>
                       <td className="py-3.5 px-4 font-mono text-muted-foreground whitespace-nowrap">{row.conveyorId}</td>
                       <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap">
@@ -670,17 +545,17 @@ function ReportsPage() {
                   <th className="py-3.5 px-4 w-12 text-center">NO</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      STASIUN <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      STATION <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      PERIODE <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      PERIOD <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      JUMLAH BREAKDOWN <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      BREAKDOWN COUNT <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 text-right whitespace-nowrap">
@@ -690,12 +565,12 @@ function ReportsPage() {
                   </th>
                   <th className="py-3.5 px-4 text-right whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      MTTR (MENIT) <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      MTTR (MINUTES) <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 text-right whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      MTBF (JAM) <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      MTBF (HOURS) <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 text-right whitespace-nowrap">
@@ -720,10 +595,9 @@ function ReportsPage() {
                       </td>
                       <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">
                         <div className="font-semibold">{row.stationName}</div>
-                        <div className="text-[10px] font-mono text-muted-foreground">{row.stationId}</div>
                       </td>
                       <td className="py-3.5 px-4 text-center font-mono text-muted-foreground whitespace-nowrap">
-                        {row.periodDays} Hari
+                        {row.periodDays} Days
                       </td>
                       <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap">
                         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${
@@ -756,7 +630,7 @@ function ReportsPage() {
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-right font-mono text-muted-foreground whitespace-nowrap">
-                        {row.operatingHours.toFixed(1)} Jam
+                        {row.operatingHours.toFixed(1)} Hours
                       </td>
                     </tr>
                   ))
@@ -773,12 +647,12 @@ function ReportsPage() {
                   <th className="py-3.5 px-4 w-12 text-center">NO</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      TANGGAL & SHIFT <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      DATE & SHIFT <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      AREA PRODUKSI <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      PRODUCTION AREA <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 text-right whitespace-nowrap">
@@ -813,7 +687,7 @@ function ReportsPage() {
                   </th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      NILAI OEE <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      OEE SCORE <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                 </tr>
@@ -889,27 +763,27 @@ function ReportsPage() {
                   </th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      WAKTU MULAI (WIB) <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      START TIME (WIB) <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      STASIUN <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      STATION <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      KATEGORI <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      CATEGORY <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      TIPE <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      TYPE <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 text-right whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      DURASI <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      DURATION <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">
@@ -919,17 +793,17 @@ function ReportsPage() {
                   </th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      SUMBER <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      SOURCE <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      PELAPOR <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      REPORTER <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      CATATAN <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      NOTES <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
                 </tr>
@@ -950,7 +824,7 @@ function ReportsPage() {
                       <td className="py-3.5 px-4 font-mono font-bold text-foreground whitespace-nowrap">{row.id}</td>
                       <td className="py-3.5 px-4 font-mono text-muted-foreground text-[11px] whitespace-nowrap">
                         <div>{fmtDateTime(row.startMs)}</div>
-                        {row.endMs && <div className="text-[10px] text-muted-foreground/70">s/d {fmtDateTime(row.endMs)}</div>}
+                        {row.endMs && <div className="text-[10px] text-muted-foreground/70">to {fmtDateTime(row.endMs)}</div>}
                       </td>
                       <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">{row.stationName}</td>
                       <td className="py-3.5 px-4 text-foreground whitespace-nowrap">{row.categoryName}</td>
@@ -1013,6 +887,130 @@ function ReportsPage() {
           onPageSizeChange={setReportPageSize}
         />
       </div>
+
+      {/* Detail Modal: Station Total Stop & Breakdown Details */}
+      {viewingStationStopSummary && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
+          <div className="w-full max-w-4xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-start justify-between border-b border-border pb-3 shrink-0">
+              <div>
+                <h3 className="font-display text-base font-bold text-foreground flex items-center gap-2">
+                  <span>Station Stop & Breakdown Details</span>
+                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                    {viewingStationStopSummary.stationName}
+                  </span>
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Conveyor: {viewingStationStopSummary.conveyorId} • Period: {startDate} to {endDate}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingStationStopSummary(null)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Quick KPI stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
+              <div className="rounded-xl border border-border bg-muted/30 p-3">
+                <span className="text-[11px] text-muted-foreground font-medium block">Total Line Stops</span>
+                <span className="text-lg font-bold font-mono text-foreground">{viewingStationStopSummary.totalStops}</span>
+              </div>
+              <div className="rounded-xl border border-border bg-rose-500/10 p-3 border-rose-500/20">
+                <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium block">Breakdown Stops</span>
+                <span className="text-lg font-bold font-mono text-rose-600 dark:text-rose-400">{viewingStationStopSummary.breakdownStops}</span>
+              </div>
+              <div className="rounded-xl border border-border bg-muted/30 p-3">
+                <span className="text-[11px] text-muted-foreground font-medium block">Total Downtime</span>
+                <span className="text-lg font-bold font-mono text-foreground">{fmtDuration(viewingStationStopSummary.totalDowntimeMs)}</span>
+              </div>
+              <div className="rounded-xl border border-border bg-muted/30 p-3">
+                <span className="text-[11px] text-muted-foreground font-medium block">Average Duration</span>
+                <span className="text-lg font-bold font-mono text-foreground">
+                  {viewingStationStopSummary.avgDurationMs > 0 ? (viewingStationStopSummary.avgDurationMs / 60_000).toFixed(1) + " min" : "0 min"}
+                </span>
+              </div>
+            </div>
+
+            {/* Occurrences list */}
+            <div className="overflow-y-auto flex-1 rounded-xl border border-slate-200/80 dark:border-zinc-800">
+              <table className="w-full text-left text-xs font-sans border-collapse">
+                <thead className="sticky top-0 border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+                  <tr>
+                    <th className="py-2.5 px-3 w-10 text-center">NO</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">START TIME (WIB)</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">DURATION</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">PROBLEM CATEGORY</th>
+                    <th className="py-2.5 px-3 text-center whitespace-nowrap">TYPE</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">OPERATOR</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">NOTES</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+                  {stationDetailStops.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-muted-foreground font-mono">
+                        No stop occurrences recorded for this station in the selected period.
+                      </td>
+                    </tr>
+                  ) : (
+                    stationDetailStops.map((s, idx) => {
+                      const cat = appState.categories.find((c) => c.id === s.categoryId);
+                      const isBreakdown = !!cat?.countsAsBreakdown;
+                      const dur = stopDurationMs(s, nowMs);
+                      return (
+                        <tr key={s.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/30 transition-colors">
+                          <td className="py-2.5 px-3 text-center font-mono text-muted-foreground">{idx + 1}</td>
+                          <td className="py-2.5 px-3 font-mono text-muted-foreground whitespace-nowrap">
+                            <div>{fmtDateTime(s.startMs)}</div>
+                            {s.endMs && <div className="text-[10px] text-muted-foreground/70">to {fmtTime(s.endMs)}</div>}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-semibold text-foreground whitespace-nowrap">
+                            {fmtDuration(dur)}
+                          </td>
+                          <td className="py-2.5 px-3 font-medium text-foreground whitespace-nowrap">
+                            {cat?.name ?? s.categoryId}
+                          </td>
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            {isBreakdown ? (
+                              <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25">
+                                BREAKDOWN
+                              </span>
+                            ) : (
+                              <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border">
+                                LINE STOP
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-muted-foreground whitespace-nowrap">
+                            {s.reportedBy}
+                          </td>
+                          <td className="py-2.5 px-3 text-muted-foreground text-[11px] max-w-xs truncate">
+                            {s.note || "—"}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-border shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewingStationStopSummary(null)}
+                className="px-4 py-2 rounded-lg bg-muted text-foreground text-xs font-semibold hover:bg-muted/80 transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

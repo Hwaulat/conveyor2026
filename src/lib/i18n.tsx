@@ -25,11 +25,16 @@ function translate(lang: Lang, key: string, vars?: Record<string, string | numbe
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("id");
+  const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => {
     const stored = window.localStorage.getItem(LANG_KEY);
-    if (stored === "en" || stored === "id") setLangState(stored);
+    if (stored === "en") {
+      setLangState(stored);
+    } else {
+      setLangState("en");
+      window.localStorage.setItem(LANG_KEY, "en");
+    }
   }, []);
 
   const setLang = (l: Lang) => {

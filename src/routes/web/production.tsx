@@ -20,6 +20,7 @@ import type { ProductionRecord } from "../../lib/types";
 import { computeOee, stopDurationMs, neutralizeExcelCell } from "../../lib/calc";
 import { toast } from "sonner";
 import { SelectInput } from "../../components/ui/select-input";
+import { Search } from "../../components/ui/search";
 import { TablePagination } from "../../components/TablePagination";
 import { ArrowUpDown } from "lucide-react";
 
@@ -56,6 +57,7 @@ function ProductionPage() {
   const [previewRows, setPreviewRows] = useState<ParsedRow[] | null>(null);
   const [fileName, setFileName] = useState<string>("");
   const [manualModalOpen, setManualModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [prodPage, setProdPage] = useState(1);
   const [prodPageSize, setProdPageSize] = useState(10);
 
@@ -95,7 +97,7 @@ function ProductionPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Production_Template");
     XLSX.writeFile(wb, "Template_Produksi_KRM.xlsx");
-    toast.success("Template Excel berhasil diunduh");
+    toast.success("Excel template successfully downloaded");
   };
 
   // Upload & Parse Excel File
@@ -111,7 +113,7 @@ function ProductionPage() {
         const wb = XLSX.read(bstr, { type: "binary" });
         const wsName = wb.SheetNames[0];
         if (!wsName) {
-          toast.error("File Excel tidak memiliki sheet yang valid");
+          toast.error("Excel file does not have a valid sheet");
           return;
         }
         const ws = wb.Sheets[wsName];
@@ -119,7 +121,7 @@ function ProductionPage() {
         const rawJson: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
         if (rawJson.length === 0) {
-          toast.error("File Excel kosong");
+          toast.error("Excel file is empty");
           return;
         }
 
@@ -196,7 +198,7 @@ function ProductionPage() {
         setPreviewRows(parsed);
       } catch (err) {
         console.error(err);
-        toast.error("Gagal membaca file Excel. Pastikan format file sesuai.");
+        toast.error("Failed to read Excel file. Please ensure the file format is correct.");
       }
     };
     reader.readAsBinaryString(file);
@@ -220,13 +222,13 @@ function ProductionPage() {
       }));
 
     if (toCommit.length === 0) {
-      toast.error("Tidak ada baris valid untuk disimpan");
+      toast.error("No valid rows to save");
       return;
     }
 
     store.commitProductionRecords(toCommit);
     toast.success(t("prod.committed"), {
-      description: `${toCommit.length} baris data produksi berhasil diperbarui.`,
+      description: `${toCommit.length} production data rows successfully updated.`,
     });
     setPreviewRows(null);
     setFileName("");
@@ -257,10 +259,27 @@ function ProductionPage() {
     return [...appState.productionRecords].sort((a, b) => b.date.localeCompare(a.date));
   }, [appState.productionRecords]);
 
+  const filteredRecords = useMemo(() => {
+    let result = sortedRecords;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((rec) => {
+        const shift = appState.shifts.find((s) => s.id === rec.shiftId);
+        const area = appState.areas.find((a) => a.id === rec.areaId);
+        return (
+          rec.date.toLowerCase().includes(q) ||
+          (shift && shift.name.toLowerCase().includes(q)) ||
+          (area && area.name.toLowerCase().includes(q))
+        );
+      });
+    }
+    return result;
+  }, [sortedRecords, searchQuery, appState.shifts, appState.areas]);
+
   const paginatedRecords = useMemo(() => {
     const s = (prodPage - 1) * prodPageSize;
-    return sortedRecords.slice(s, s + prodPageSize);
-  }, [sortedRecords, prodPage, prodPageSize]);
+    return filteredRecords.slice(s, s + prodPageSize);
+  }, [filteredRecords, prodPage, prodPageSize]);
 
   return (
     <div className="space-y-6 w-full">
@@ -289,7 +308,7 @@ function ProductionPage() {
             className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow transition-colors"
           >
             <Plus className="h-4 w-4" />
-            Input Manual
+            Manual Input
           </button>
         </div>
       </div>
@@ -318,7 +337,7 @@ function ProductionPage() {
             className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 font-mono text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
           >
             <Upload className="h-4 w-4" />
-            {fileName ? `File terpilih: ${fileName}` : "Pilih Berkas Excel"}
+            {fileName ? `Selected file: ${fileName}` : "Select Excel File"}
           </label>
         </div>
 
@@ -333,7 +352,7 @@ function ProductionPage() {
                 <div className="flex items-center gap-3 font-mono text-xs mt-1">
                   <span className="text-emerald-600 dark:text-emerald-400 font-bold">{validCount} Valid</span>
                   <span className="text-muted-foreground/40">•</span>
-                  <span className="text-red-600 dark:text-red-400 font-bold">{rejectedCount} Ditolak</span>
+                  <span className="text-red-600 dark:text-red-400 font-bold">{rejectedCount} Rejected</span>
                 </div>
               </div>
 
@@ -342,7 +361,7 @@ function ProductionPage() {
                   onClick={() => setPreviewRows(null)}
                   className="px-3 py-1.5 rounded border border-border text-xs font-mono text-muted-foreground hover:bg-muted"
                 >
-                  Batal
+                  Cancel
                 </button>
                 <button
                   onClick={handleCommitPreview}
@@ -366,7 +385,7 @@ function ProductionPage() {
                     <th className="py-2 px-3">{t("prod.planned")}</th>
                     <th className="py-2 px-3">{t("prod.totalCount")}</th>
                     <th className="py-2 px-3">{t("prod.goodCount")}</th>
-                    <th className="py-2 px-3">Catatan / Error</th>
+                    <th className="py-2 px-3">Notes / Error</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -406,13 +425,17 @@ function ProductionPage() {
 
       {/* Production Records & OEE Calculation Table */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
-        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 bg-white dark:bg-[#0b1320]">
-          <h3 className="font-display text-sm font-semibold text-foreground">
-            {t("prod.oeeResults")} & Data Produksi
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Downtime stop otomatis diambil dari log stop pada tanggal & shift terkait untuk menghitung Availability, Performance, Quality, dan OEE.
-          </p>
+        {/* Table Toolbar with Search (Fill Container) */}
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 bg-white dark:bg-[#0b1320] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <Search
+            containerClassName="flex-1 w-full"
+            placeholder="Search by date, shift name, or area..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setProdPage(1);
+            }}
+          />
         </div>
 
         <div className="overflow-x-auto">
@@ -431,12 +454,12 @@ function ProductionPage() {
                 </th>
                 <th className="py-3 px-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
-                    WAKTU TERENCANA <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                    PLANNED TIME <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                   </span>
                 </th>
                 <th className="py-3 px-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
-                    DOWNTIME STOP <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                    STOP DOWNTIME <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                   </span>
                 </th>
                 <th className="py-3 px-4 text-center whitespace-nowrap">
@@ -533,7 +556,7 @@ function ProductionPage() {
         <TablePagination
           page={prodPage}
           pageSize={prodPageSize}
-          totalItems={sortedRecords.length}
+          totalItems={filteredRecords.length}
           onPageChange={setProdPage}
           onPageSizeChange={setProdPageSize}
         />
@@ -544,12 +567,12 @@ function ProductionPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
           <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
             <h3 className="font-display text-base font-semibold text-foreground mb-4">
-              Input Data Produksi Manual
+              Manual Production Data Input
             </h3>
 
             <div className="space-y-3.5 text-xs font-mono">
               <div>
-                <label className="block text-muted-foreground mb-1">Tanggal (YYYY-MM-DD):</label>
+                <label className="block text-muted-foreground mb-1">Date (YYYY-MM-DD):</label>
                 <input
                   type="date"
                   value={formDate}
@@ -569,7 +592,7 @@ function ProductionPage() {
                       label: s.name,
                     }))}
                     hideClear
-                    placeholder="Pilih Shift"
+                    placeholder="Select Shift"
                   />
                 </div>
                 <div>
@@ -582,14 +605,14 @@ function ProductionPage() {
                       label: a.name,
                     }))}
                     hideClear
-                    placeholder="Pilih Area"
+                    placeholder="Select Area"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-muted-foreground mb-1">Waktu Terencana (menit):</label>
+                  <label className="block text-muted-foreground mb-1">Planned Time (minutes):</label>
                   <input
                     type="number"
                     value={formPlannedMin}
@@ -598,7 +621,7 @@ function ProductionPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-muted-foreground mb-1">Ideal Cycle (detik):</label>
+                  <label className="block text-muted-foreground mb-1">Ideal Cycle (seconds):</label>
                   <input
                     type="number"
                     value={formIdealSec}
@@ -635,13 +658,13 @@ function ProductionPage() {
                 onClick={() => setManualModalOpen(false)}
                 className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
               >
-                Batal
+                Cancel
               </button>
               <button
                 onClick={handleManualSubmit}
                 className="px-4 py-2 rounded bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs"
               >
-                Simpan Record
+                Save Record
               </button>
             </div>
           </div>

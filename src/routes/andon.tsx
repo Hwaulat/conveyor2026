@@ -120,7 +120,7 @@ function AndonPage() {
             <span className="font-mono text-5xl md:text-6xl font-black text-emerald-600 dark:text-emerald-400">
               {runningCount}
             </span>
-            <span className="font-mono text-sm text-emerald-600/80 dark:text-emerald-400/80">/ {appState.stations.length} Stasiun</span>
+            <span className="font-mono text-sm text-emerald-600/80 dark:text-emerald-400/80">/ {appState.stations.length} Stations</span>
           </div>
         </div>
 
@@ -223,7 +223,7 @@ function AndonPage() {
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div>
                     <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest font-bold block">
-                      STASIUN #{station.sequence}
+                      STATION #{station.sequence}
                     </span>
                     <h2 className="font-display text-2xl font-black text-foreground tracking-tight">
                       {station.name}

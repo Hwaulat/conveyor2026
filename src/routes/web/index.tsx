@@ -413,7 +413,7 @@ function DashboardPage() {
                 <button
                   onClick={() => handleAreaChange("all")}
                   className="rounded-full hover:bg-cyan-500/20 p-0.5 transition-colors"
-                  title="Hapus filter area"
+                  title="Clear area filter"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -423,11 +423,11 @@ function DashboardPage() {
             {selectedStation && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-mono text-xs font-semibold text-primary">
                 <Layers className="h-3 w-3" />
-                <span>Stasiun: {selectedStation.name}</span>
+                <span>Station: {selectedStation.name}</span>
                 <button
                   onClick={() => setSelectedStationId("all")}
                   className="rounded-full hover:bg-primary/20 p-0.5 transition-colors"
-                  title="Hapus filter stasiun"
+                  title="Clear station filter"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -436,26 +436,26 @@ function DashboardPage() {
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             {selectedStation
-              ? `Menampilkan analisis kinerja & metrik untuk ${selectedStation.name} (${selectedStation.code || selectedStation.id})`
+              ? `Showing performance analysis & metrics for ${selectedStation.name} (${selectedStation.code || selectedStation.id})`
               : selectedArea
-                ? `Menampilkan analisis kinerja untuk ${selectedArea.name}`
+                ? `Showing performance analysis for ${selectedArea.name}`
                 : t("dash.subtitle")}
           </p>
         </div>
 
         {/* Filter Controls Row: Area Filter (Left) + Station Filter + Date Range Filter */}
         <div className="flex flex-wrap items-center gap-2.5 self-start xl:self-auto">
-          {/* 1. Area Filter (di samping kiri filter station) */}
+          {/* 1. Area Filter */}
           <div className="w-44 sm:w-52">
             <SelectInput
               hideClear
               datalist={[
-                { value: "all", label: `Semua Area (${appState.areas.length})` },
+                { value: "all", label: `All Areas (${appState.areas.length})` },
                 ...appState.areas.map((a) => ({ value: a.id, label: a.name })),
               ]}
               value={selectedAreaId}
               onChange={(val) => handleAreaChange(val ?? "all")}
-              placeholder="Pilih Area"
+              placeholder="Select Area"
             />
           </div>
 
@@ -507,10 +507,10 @@ function DashboardPage() {
             <span className="font-mono text-3xl font-bold text-foreground tracking-tight">
               {filteredStops.length}
             </span>
-            <span className="text-xs text-muted-foreground ml-1">kali</span>
+            <span className="text-xs text-muted-foreground ml-1">times</span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-1">
-            {stopsToday.length} stop hari ini
+            {stopsToday.length} stops today
           </div>
         </div>
 
@@ -526,7 +526,7 @@ function DashboardPage() {
             </span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-1">
-            {fmtMinutes(totalDowntimeMs)} akumulasi
+            {fmtMinutes(totalDowntimeMs)} accumulated
           </div>
         </div>
 
@@ -542,7 +542,7 @@ function DashboardPage() {
             </span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-1">
-            Per kejadian di rentang ini
+            Per occurrence in this range
           </div>
         </div>
 
@@ -574,7 +574,7 @@ function DashboardPage() {
             </span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-1">
-            Target: &gt; 45h antar kerusakan
+            Target: &gt; 45h between breakdowns
           </div>
         </div>
 
@@ -608,7 +608,7 @@ function DashboardPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-display text-sm font-semibold text-foreground">
-                  Tren Kecepatan per Menit (Trend Speed by Minute)
+                  Speed Trend per Minute
                 </h3>
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${speedByMinuteData.currentSpeed > speedByMinuteData.threshold
@@ -625,18 +625,18 @@ function DashboardPage() {
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {selectedStation
-                  ? `Kecepatan telemetri stasiun ${selectedStation.name} (${selectedStation.code || selectedStation.id}) per menit`
+                  ? `Station ${selectedStation.name} (${selectedStation.code || selectedStation.id}) telemetry speed per minute`
                   : selectedArea
-                    ? `Rata-rata kecepatan konveyor ${selectedArea.name} per menit`
-                    : "Monitoring telemetri kecepatan konveyor secara real-time per menit"}
+                    ? `Average conveyor speed ${selectedArea.name} per minute`
+                    : "Real-time conveyor speed telemetry monitoring per minute"}
               </p>
             </div>
           </div>
 
-          {/* KPI Badge: Rata-rata per Hari */}
+          {/* KPI Badge: Daily Average */}
           <div className="flex items-center gap-2 font-mono text-xs">
             <div className="px-3.5 py-1.5 rounded-lg border border-border bg-muted/40">
-              <span className="text-muted-foreground text-[10px] block font-medium">Rata-rata per Hari:</span>
+              <span className="text-muted-foreground text-[10px] block font-medium">Daily Average:</span>
               <span className="font-bold text-foreground text-sm">
                 {speedByMinuteData.dailyAvgSpeed.toFixed(2)} {speedByMinuteData.unit}
               </span>
@@ -666,7 +666,7 @@ function DashboardPage() {
               <Tooltip
                 contentStyle={chartTooltipStyle}
                 formatter={(val, name) => [`${val} ${speedByMinuteData.unit}`, name]}
-                labelFormatter={(label) => `Waktu: ${label} WIB`}
+                labelFormatter={(label) => `Time: ${label} WIB`}
               />
               <Legend wrapperStyle={{ fontSize: "11px", fontFamily: "monospace" }} />
               <ReferenceLine
@@ -694,7 +694,7 @@ function DashboardPage() {
               <Line
                 type="monotone"
                 dataKey="speed"
-                name={`Kecepatan (${speedByMinuteData.unit})`}
+                name={`Speed (${speedByMinuteData.unit})`}
                 stroke="#06b6d4"
                 strokeWidth={2.5}
                 dot={false}
@@ -712,10 +712,10 @@ function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-display text-sm font-semibold text-foreground">
-                Tren MTTR & MTBF ({trendData.length} Titik Waktu)
+                MTTR & MTBF Trend ({trendData.length} Time Points)
               </h3>
               <p className="text-xs text-muted-foreground">
-                {selectedStation ? `Khusus stasiun ${selectedStation.name}` : selectedArea ? `Khusus area ${selectedArea.name}` : "Perbandingan durasi perbaikan vs waktu antar kejadian"}
+                {selectedStation ? `Station ${selectedStation.name} only` : selectedArea ? `Area ${selectedArea.name} only` : "Repair duration vs. time between failures comparison"}
               </p>
             </div>
           </div>
@@ -733,7 +733,7 @@ function DashboardPage() {
                   yAxisId="left"
                   type="monotone"
                   dataKey="mttrMin"
-                  name="MTTR (Menit)"
+                  name="MTTR (Minutes)"
                   stroke="#f43f5e"
                   strokeWidth={2}
                   dot={{ r: 3 }}
@@ -743,7 +743,7 @@ function DashboardPage() {
                   yAxisId="right"
                   type="monotone"
                   dataKey="mtbfHour"
-                  name="MTBF (Jam)"
+                  name="MTBF (Hours)"
                   stroke="#10b981"
                   strokeWidth={2}
                   dot={{ r: 3 }}
@@ -759,10 +759,10 @@ function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-display text-sm font-semibold text-foreground">
-                {t("dash.pareto")} — Penyebab Line Stop
+                {t("dash.pareto")} — Line Stop Causes
               </h3>
               <p className="text-xs text-muted-foreground">
-                Downtime kumulatif berdasarkan kategori penyebab stop
+                Cumulative downtime by stop cause category
               </p>
             </div>
           </div>
@@ -770,7 +770,7 @@ function DashboardPage() {
           <div className="h-64 w-full">
             {paretoData.length === 0 ? (
               <div className="h-full flex items-center justify-center text-xs text-muted-foreground font-mono">
-                Tidak ada data stop pada filter ini
+                No stop data for this filter
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -789,11 +789,11 @@ function DashboardPage() {
                   <Tooltip
                     contentStyle={chartTooltipStyle}
                     formatter={(val, name, item) => {
-                      if (name === "durationMin") return [`${val} Menit (${item.payload.count}×)`, "Durasi Stop"];
+                      if (name === "durationMin") return [`${val} Minutes (${item.payload.count}×)`, "Stop Duration"];
                       return [val, name];
                     }}
                   />
-                  <Bar dataKey="durationMin" name="Durasi (Menit)" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="durationMin" name="Duration (Minutes)" radius={[4, 4, 0, 0]}>
                     {paretoData.map((_, index) => (
                       <Cell
                         key={`cell-${index}`}
@@ -815,14 +815,14 @@ function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-display text-sm font-semibold text-foreground">
-                {t("dash.frequency")} per Stasiun
+                {t("dash.frequency")} per Station
               </h3>
               <p className="text-xs text-muted-foreground">
-                {selectedArea ? `Stasiun di area ${selectedArea.name}` : "Frekuensi kejadian stop pada masing-masing stasiun"}
+                {selectedArea ? `Stations in area ${selectedArea.name}` : "Stop occurrence frequency per station"}
               </p>
             </div>
             <span className="font-mono text-xs text-muted-foreground">
-              Total {stationFrequencyData.reduce((acc, curr) => acc + curr.count, 0)} kejadian
+              Total {stationFrequencyData.reduce((acc, curr) => acc + curr.count, 0)} occurrences
             </span>
           </div>
 
@@ -834,9 +834,9 @@ function DashboardPage() {
                 <YAxis stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
                 <Tooltip
                   contentStyle={chartTooltipStyle}
-                  formatter={(val, _, item) => [`${val} Kejadian (${item.payload.durationMin} m)`, item.payload.fullName]}
+                  formatter={(val, _, item) => [`${val} Occurrences (${item.payload.durationMin} m)`, item.payload.fullName]}
                 />
-                <Bar dataKey="count" name="Jumlah Kejadian" fill="#3b82f6" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="count" name="Occurrence Count" fill="#3b82f6" radius={[4, 4, 0, 0]}>
                   {stationFrequencyData.map((entry) => (
                     <Cell
                       key={`st-${entry.name}`}
@@ -854,11 +854,11 @@ function DashboardPage() {
           <div>
             <div className="flex items-center justify-between">
               <h3 className="font-display text-sm font-semibold text-foreground">
-                {selectedStation ? `OEE Area — ${selectedStation.name}` : selectedArea ? `OEE — ${selectedArea.name}` : `${t("dash.oee")} — Overall Equipment Effectiveness`}
+                {selectedStation ? `Area OEE — ${selectedStation.name}` : selectedArea ? `OEE — ${selectedArea.name}` : `${t("dash.oee")} — Overall Equipment Effectiveness`}
               </h3>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {selectedStation ? `Estimasi efektivitas area ${selectedStation.areaId}` : selectedArea ? `Estimasi efektivitas ${selectedArea.name}` : t("dash.oeeNote")}
+              {selectedStation ? `Estimated effectiveness for area ${selectedStation.areaId}` : selectedArea ? `Estimated effectiveness for ${selectedArea.name}` : t("dash.oeeNote")}
             </p>
 
             {/* Big OEE Number */}
@@ -935,12 +935,12 @@ function DashboardPage() {
           </div>
 
           <div className="pt-4 mt-4 border-t border-border flex justify-between items-center text-xs">
-            <span className="text-muted-foreground font-mono">Rumus: A × P × Q</span>
+            <span className="text-muted-foreground font-mono">Formula: A × P × Q</span>
             <a
               href="/web/production"
               className="text-foreground hover:underline font-medium inline-flex items-center gap-1 font-mono text-[11px]"
             >
-              Kelola Produksi <ArrowUpRight className="h-3 w-3" />
+              Manage Production <ArrowUpRight className="h-3 w-3" />
             </a>
           </div>
         </div>

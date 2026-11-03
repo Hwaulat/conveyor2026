@@ -118,7 +118,7 @@ export function DateRangePicker({
             "group inline-flex items-center gap-2.5 h-9 px-3 rounded-lg border border-border bg-card hover:bg-muted/40 transition-all shadow-2xs font-mono text-xs text-foreground select-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary",
             className
           )}
-          title="Klik untuk memilih rentang tanggal"
+          title="Click to select date range"
         >
           {/* Calendar Icon on Left */}
           <CalendarIcon className="h-4 w-4 text-slate-500 dark:text-slate-400 shrink-0 group-hover:text-primary transition-colors" />
@@ -133,8 +133,8 @@ export function DateRangePicker({
             type="button"
             onClick={handleClear}
             className="p-1 rounded-full hover:bg-muted text-muted-foreground/80 hover:text-foreground transition-colors shrink-0 cursor-pointer -mr-0.5"
-            title="Reset rentang tanggal"
-            aria-label="Reset rentang tanggal"
+            title="Reset date range"
+            aria-label="Reset date range"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -147,14 +147,14 @@ export function DateRangePicker({
         className="w-80 p-4 font-mono text-xs space-y-4 bg-popover text-popover-foreground border border-border shadow-xl rounded-xl z-50"
       >
         <div className="flex items-center justify-between pb-2 border-b border-border">
-          <span className="font-bold text-foreground">Pilih Rentang Tanggal</span>
+          <span className="font-bold text-foreground">Select Date Range</span>
           <span className="text-[10px] text-muted-foreground">Format: DD/MM/YYYY</span>
         </div>
 
         {/* Quick Presets */}
         <div className="space-y-1.5">
           <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-            Preset Cepat:
+            Quick Presets:
           </span>
           <div className="grid grid-cols-2 gap-1.5 text-[11px]">
             <button
@@ -162,28 +162,28 @@ export function DateRangePicker({
               onClick={() => handlePreset("today")}
               className="px-2.5 py-1.5 rounded-md border border-border bg-muted/30 hover:bg-muted text-left font-semibold text-foreground transition-colors"
             >
-              Hari Ini
+              Today
             </button>
             <button
               type="button"
               onClick={() => handlePreset("7d")}
               className="px-2.5 py-1.5 rounded-md border border-border bg-muted/30 hover:bg-muted text-left font-semibold text-foreground transition-colors"
             >
-              7 Hari Terakhir
+              Last 7 Days
             </button>
             <button
               type="button"
               onClick={() => handlePreset("30d")}
               className="px-2.5 py-1.5 rounded-md border border-border bg-muted/30 hover:bg-muted text-left font-semibold text-foreground transition-colors"
             >
-              30 Hari Terakhir
+              Last 30 Days
             </button>
             <button
               type="button"
               onClick={() => handlePreset("thisMonth")}
               className="px-2.5 py-1.5 rounded-md border border-border bg-muted/30 hover:bg-muted text-left font-semibold text-foreground transition-colors"
             >
-              Bulan Ini
+              This Month
             </button>
           </div>
         </div>
@@ -192,7 +192,7 @@ export function DateRangePicker({
         <div className="space-y-3 pt-1 border-t border-border">
           <div>
             <label className="block text-[11px] text-muted-foreground font-semibold mb-1">
-              Dari Tanggal (Mulai):
+              From Date (Start):
             </label>
             <input
               type="date"
@@ -204,7 +204,7 @@ export function DateRangePicker({
 
           <div>
             <label className="block text-[11px] text-muted-foreground font-semibold mb-1">
-              Sampai Tanggal (Selesai):
+              To Date (End):
             </label>
             <input
               type="date"
@@ -222,14 +222,14 @@ export function DateRangePicker({
             onClick={() => setOpen(false)}
             className="px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:bg-muted transition-colors text-[11px]"
           >
-            Batal
+            Cancel
           </button>
           <button
             type="button"
             onClick={handleApply}
             className="px-3.5 py-1.5 rounded-md bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors shadow-2xs text-[11px]"
           >
-            Terapkan
+            Apply
           </button>
         </div>
       </PopoverContent>

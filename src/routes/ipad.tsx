@@ -467,9 +467,15 @@ function IpadEFormPage() {
       toast.error("Please enter a category name.");
       return;
     }
+    const code = newCatCode.trim()
+      ? newCatCode.trim().toUpperCase()
+      : formType === "mtc"
+      ? `LM-${Date.now().toString().slice(-4)}`
+      : `LS-${Date.now().toString().slice(-4)}`;
+
     const created = store.addCategory({
       name: newCatName.trim(),
-      code: newCatCode.trim() || (formType === "mtc" ? `LM-${Date.now().toString().slice(-4)}` : `LS-${Date.now().toString().slice(-4)}`),
+      code,
       countsAsBreakdown: false,
       countsAsDowntime: true,
       active: true,
@@ -479,7 +485,7 @@ function IpadEFormPage() {
       forLinestopMaintenance: formType === "mtc",
     });
     setSelectedCategoryId(created.id);
-    toast.success(`New category saved: ${created.name}`);
+    toast.success(`New category saved: [${created.code || code}] ${created.name}`);
     setNewCatName("");
     setNewCatCode("");
     setNewCatModalOpen(false);
@@ -508,46 +514,20 @@ function IpadEFormPage() {
                 {formType === "mtc" ? "Linestop Maintenance E-Form" : "Linestop E-Form"}
               </h1>
             </div>
-            <p className="text-xs text-muted-foreground font-mono">
-              Floor Operator Tablet Mode • {currentShift.name}
-            </p>
           </div>
         </div>
 
-        {/* Network & Theme & Live Clock */}
-        <div className="flex items-center gap-2.5">
-          {/* Theme Switcher Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-2.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-2xs cursor-pointer"
-            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          >
-            {theme === "dark" ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-500" />}
-          </button>
-
-          {/* Network Simulator Button */}
-          <button
-            onClick={handleToggleOfflineMode}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border font-mono text-xs font-bold transition-all shadow-2xs cursor-pointer ${
-              effectiveOnline
-                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-300 animate-pulse"
-            }`}
-            title="Click to toggle simulated online/offline"
-          >
-            {effectiveOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-            <span className="hidden sm:inline">{effectiveOnline ? "ONLINE" : "OFFLINE QUEUE"}</span>
-          </button>
-
-          <div className="hidden sm:flex flex-col text-right font-mono border-l border-border pl-3">
+        {/* Live Clock */}
+        <div className="flex items-center">
+          <div className="flex flex-col text-right font-mono">
             <span className="text-sm font-bold text-foreground">{fmtTime(nowMs)} WIB</span>
             <span className="text-[10px] text-muted-foreground">{fmtDateTime(nowMs)}</span>
           </div>
         </div>
       </header>
 
-      {/* Main Container - Centered without Recent Entries Section */}
-      <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col justify-start">
+      {/* Main Container - Fill Screen Width */}
+      <div className="w-full flex-1 flex flex-col justify-start">
         {/* Offline Queue Strip if items waiting */}
         {effectiveOnline === false && (appState?.offlineQueue || []).length > 0 && (
           <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/30 p-3.5 flex items-center justify-between text-xs font-mono text-amber-600 dark:text-amber-300 shadow-sm">
@@ -670,7 +650,7 @@ function IpadEFormPage() {
 
               {areaStations.length === 0 ? (
                 <div className="p-4 rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground font-mono">
-                  Belum ada stasiun terdaftar di area ini (No station for now).
+                  No stations registered in this area for now.
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -760,7 +740,13 @@ function IpadEFormPage() {
                 </label>
                 <button
                   type="button"
-                  onClick={() => setNewCatModalOpen(true)}
+                  onClick={() => {
+                    const nextNum = appState.categories.length + 1;
+                    const defaultPrefix = formType === "mtc" ? "LM" : "LS";
+                    setNewCatCode(`${defaultPrefix}-${String(nextNum).padStart(2, "0")}`);
+                    setNewCatName("");
+                    setNewCatModalOpen(true);
+                  }}
                   className="font-mono text-xs text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 font-bold cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -887,28 +873,30 @@ function IpadEFormPage() {
             </p>
 
             <div className="space-y-3 mb-4">
+              {/* 1. Category Code First */}
+              <div>
+                <label className="block font-mono text-xs text-muted-foreground mb-1">
+                  Category Code:
+                </label>
+                <input
+                  type="text"
+                  placeholder={formType === "mtc" ? "e.g. LM-02" : "e.g. LS-05"}
+                  value={newCatCode}
+                  onChange={(e) => setNewCatCode(e.target.value.toUpperCase())}
+                  className="w-full h-12 rounded-lg border border-input bg-background px-3 font-mono text-sm font-bold uppercase text-foreground focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              {/* 2. Category Name Second */}
               <div>
                 <label className="block font-mono text-xs text-muted-foreground mb-1">
                   Category Name:
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Sensor Jamming"
+                  placeholder={formType === "mtc" ? "e.g. Dock pin stuck" : "e.g. Sensor Jamming"}
                   value={newCatName}
                   onChange={(e) => setNewCatName(e.target.value)}
-                  className="w-full h-12 rounded-lg border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block font-mono text-xs text-muted-foreground mb-1">
-                  Category Code (Optional):
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. LS-05 or LM-02"
-                  value={newCatCode}
-                  onChange={(e) => setNewCatCode(e.target.value)}
                   className="w-full h-12 rounded-lg border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary"
                 />
               </div>

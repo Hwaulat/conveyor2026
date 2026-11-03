@@ -3,7 +3,6 @@ import { useState, useMemo } from "react";
 import {
   History,
   Filter,
-  Search,
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -32,7 +31,10 @@ import {
 import { stopDurationMs } from "../../lib/calc";
 import { toast } from "sonner";
 import { SelectInput } from "../../components/ui/select-input";
+import { Search } from "../../components/ui/search";
 import { TablePagination } from "../../components/TablePagination";
+import { Tabs } from "../../components/ui/tablist";
+import { DateRangePicker } from "../../components/DateRangePicker";
 import { Eye, ArrowUpDown } from "lucide-react";
 
 export const Route = createFileRoute("/web/logs")({
@@ -53,6 +55,24 @@ function LogHistoryPage() {
   const nowMs = Date.now();
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+
+  // Date Range state matching Dashboard
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date(Date.now() - 6 * 86_400_000);
+    return d.toISOString().slice(0, 10);
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    return new Date().toISOString().slice(0, 10);
+  });
+
+  const { rangeStartMs, rangeEndMs } = useMemo(() => {
+    const sDate = startDate || new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10);
+    const eDate = endDate || new Date().toISOString().slice(0, 10);
+    const start = Date.parse(`${sDate}T00:00:00+07:00`) || (nowMs - 7 * 86_400_000);
+    const end = Date.parse(`${eDate}T23:59:59.999+07:00`) || nowMs;
+    return { rangeStartMs: start, rangeEndMs: end };
+  }, [startDate, endDate, nowMs]);
+
   const [selectedStation, setSelectedStation] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -80,6 +100,8 @@ function LogHistoryPage() {
   // Filtered Stops
   const filteredStops = useMemo(() => {
     let result = sortStops(appState.stops);
+
+    result = result.filter((s) => s.startMs >= rangeStartMs && s.startMs <= rangeEndMs);
 
     if (selectedStation !== "all") {
       result = result.filter((s) => s.stationId === selectedStation);
@@ -110,7 +132,7 @@ function LogHistoryPage() {
     }
 
     return result;
-  }, [appState.stops, selectedStation, selectedCategory, selectedStatus, searchQuery, appState.categories, appState.stations]);
+  }, [appState.stops, rangeStartMs, rangeEndMs, selectedStation, selectedCategory, selectedStatus, searchQuery, appState.categories, appState.stations]);
 
   // Paginated Stops for Table View
   const paginatedStops = useMemo(() => {
@@ -119,12 +141,12 @@ function LogHistoryPage() {
   }, [filteredStops, currentPage, pageSize]);
 
   const unrecordedStops = useMemo(() => {
-    return appState.stops.filter((s) => s.source === "plc");
-  }, [appState.stops]);
+    return appState.stops.filter((s) => s.source === "plc" && s.startMs >= rangeStartMs && s.startMs <= rangeEndMs);
+  }, [appState.stops, rangeStartMs, rangeEndMs]);
 
   const stationSummary = useMemo(() => {
     return appState.stations.map((station) => {
-      const stStops = appState.stops.filter((s) => s.stationId === station.id);
+      const stStops = appState.stops.filter((s) => s.stationId === station.id && s.startMs >= rangeStartMs && s.startMs <= rangeEndMs);
       const totalDuration = stStops.reduce((sum, s) => sum + stopDurationMs(s, nowMs), 0);
       const avgDuration = stStops.length > 0 ? totalDuration / stStops.length : 0;
       return {
@@ -135,7 +157,7 @@ function LogHistoryPage() {
         stops: sortStops(stStops),
       };
     });
-  }, [appState.stations, appState.stops, nowMs]);
+  }, [appState.stations, appState.stops, rangeStartMs, rangeEndMs, nowMs]);
 
   const handleOpenCorrectModal = (stop: LineStop) => {
     setCorrectingStop(stop);
@@ -158,7 +180,7 @@ function LogHistoryPage() {
     const endMs = corrEndVal ? fromLocalInputValue(corrEndVal) : null;
 
     if (isNaN(startMs)) {
-      toast.error("Waktu mulai tidak valid");
+      toast.error("Invalid start time");
       return;
     }
     if (endMs && endMs < startMs) {
@@ -186,7 +208,7 @@ function LogHistoryPage() {
 
   const handleCloseStop = (stop: LineStop) => {
     store.closeStop(stop.id, Date.now());
-    toast.success("Stop berhasil ditutup");
+    toast.success("Stop successfully closed");
   };
 
   const handleConfirmVoid = () => {
@@ -196,7 +218,7 @@ function LogHistoryPage() {
       return;
     }
     store.voidStop(voidingStop.id, voidReason, "Super Admin");
-    toast.success("Stop berhasil dibatalkan (void)");
+    toast.success("Stop successfully voided");
     setVoidingStop(null);
   };
 
@@ -213,22 +235,20 @@ function LogHistoryPage() {
           </p>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 font-mono text-xs shadow-2xs">
-          <button
-            onClick={() => setViewMode("list")}
-            className={`px-3 py-1.5 rounded transition-colors ${viewMode === "list" ? "bg-primary text-primary-foreground font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            {t("logs.listView")}
-          </button>
-          <button
-            onClick={() => setViewMode("summary")}
-            className={`px-3 py-1.5 rounded transition-colors ${viewMode === "summary" ? "bg-primary text-primary-foreground font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            {t("logs.summaryView")}
-          </button>
+        {/* Tablist on the Right */}
+        <div className="flex items-center">
+          <Tabs
+            variant="primary"
+            value={viewMode}
+            onValueChange={(val) => {
+              setViewMode(val as ViewMode);
+              setCurrentPage(1);
+            }}
+            items={[
+              { value: "list", label: "List View", badge: filteredStops.length },
+              { value: "summary", label: "Summary View", badge: stationSummary.length },
+            ]}
+          />
         </div>
       </div>
 
@@ -240,10 +260,10 @@ function LogHistoryPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                  {t("logs.unrecorded")} ({unrecordedStops.length} Kejadian)
+                  {t("logs.unrecorded")} ({unrecordedStops.length} Occurrences)
                 </h4>
                 <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
-                  Perlu Verifikasi
+                  Needs Verification
                 </span>
               </div>
               <p className="text-xs text-amber-700/80 dark:text-amber-200/80 mt-1">
@@ -266,7 +286,7 @@ function LogHistoryPage() {
                         onClick={() => handleOpenCorrectModal(s)}
                         className="rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 font-mono text-[11px] text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-colors font-bold"
                       >
-                        {t("logs.correct")} / Catat Form
+                        {t("logs.correct")} / Record Form
                       </button>
                     </div>
                   );
@@ -283,17 +303,13 @@ function LogHistoryPage() {
         <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
           {/* Top Filter Toolbar */}
           <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
-            {/* Search on Left */}
-            <div className="relative flex-1 lg:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search by operator, note, station..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-9 rounded-lg border border-slate-200 dark:border-zinc-700/80 bg-background pl-9 pr-3 text-xs text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs font-sans"
-              />
-            </div>
+            {/* Search on Left (Fill Container) */}
+            <Search
+              containerClassName="flex-1 w-full"
+              placeholder="Search by operator, note, station..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
 
             {/* Filters on Right */}
             <div className="flex flex-wrap items-center gap-2">
@@ -344,12 +360,37 @@ function LogHistoryPage() {
                 />
               </div>
 
+              {/* Date Range Picker beside All Status Filter */}
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onChange={(start, end) => {
+                  setStartDate(start);
+                  setEndDate(end);
+                  setCurrentPage(1);
+                }}
+                onReset={() => {
+                  const now = new Date();
+                  const todayStr = now.toISOString().slice(0, 10);
+                  const past = new Date(Date.now() - 6 * 86_400_000);
+                  setStartDate(past.toISOString().slice(0, 10));
+                  setEndDate(todayStr);
+                  setCurrentPage(1);
+                }}
+              />
+
               <button
                 onClick={() => {
                   setSelectedStation("all");
                   setSelectedCategory("all");
                   setSelectedStatus("all");
                   setSearchQuery("");
+                  const now = new Date();
+                  const todayStr = now.toISOString().slice(0, 10);
+                  const past = new Date(Date.now() - 6 * 86_400_000);
+                  setStartDate(past.toISOString().slice(0, 10));
+                  setEndDate(todayStr);
+                  setCurrentPage(1);
                 }}
                 className="text-xs font-sans text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 px-3 h-9 rounded-lg border border-slate-200 dark:border-zinc-700/80 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs shrink-0 cursor-pointer"
               >
@@ -437,7 +478,7 @@ function LogHistoryPage() {
                               type="button"
                               onClick={() => setViewingStop(stop)}
                               className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 shadow-2xs transition-colors"
-                              title="Lihat Detail Log"
+                              title="View Log Detail"
                             >
                               <Eye className="h-3.5 w-3.5" />
                             </button>
@@ -447,7 +488,7 @@ function LogHistoryPage() {
                               type="button"
                               onClick={() => handleOpenCorrectModal(stop)}
                               className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-blue-600 hover:border-blue-300 dark:hover:text-blue-400 shadow-2xs transition-colors"
-                              title="Koreksi / Edit Log"
+                              title="Correct / Edit Log"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
                             </button>
@@ -460,7 +501,7 @@ function LogHistoryPage() {
                                 setVoidReason("");
                               }}
                               className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 shadow-2xs transition-colors"
-                              title="Batalkan / Hapus (Void)"
+                              title="Cancel / Void"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -470,9 +511,9 @@ function LogHistoryPage() {
                                 type="button"
                                 onClick={() => handleCloseStop(stop)}
                                 className="px-2 h-7 inline-flex items-center rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-2xs transition-colors"
-                                title="Tutup Status Stop"
+                                title="Close Stop Status"
                               >
-                                Tutup
+                                Close
                               </button>
                             )}
                           </div>
@@ -485,7 +526,7 @@ function LogHistoryPage() {
 
                         {/* Waktu Selesai */}
                         <td className="py-3.5 px-4 font-mono text-[13px] text-muted-foreground whitespace-nowrap">
-                          {stop.endMs ? fmtTime(stop.endMs) : <span className="text-amber-500 font-semibold">— masih jalan —</span>}
+                          {stop.endMs ? fmtTime(stop.endMs) : <span className="text-amber-500 font-semibold">— still running —</span>}
                         </td>
 
                         {/* Stasiun */}
@@ -604,15 +645,15 @@ function LogHistoryPage() {
 
                   <div className="flex items-center gap-6 font-mono text-xs">
                     <div className="text-right">
-                      <span className="text-muted-foreground block text-[10px] uppercase">Frekuensi</span>
-                      <span className="text-foreground font-bold">{item.count}× kejadian</span>
+                      <span className="text-muted-foreground block text-[10px] uppercase">Frequency</span>
+                      <span className="text-foreground font-bold">{item.count}× occurrences</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-muted-foreground block text-[10px] uppercase">Total Durasi</span>
+                      <span className="text-muted-foreground block text-[10px] uppercase">Total Duration</span>
                       <span className="text-amber-600 dark:text-amber-400 font-bold">{fmtDuration(item.totalDuration)}</span>
                     </div>
                     <div className="text-right hidden sm:block">
-                      <span className="text-muted-foreground block text-[10px] uppercase">Rata-rata</span>
+                      <span className="text-muted-foreground block text-[10px] uppercase">Average</span>
                       <span className="text-foreground">{fmtDuration(item.avgDuration)}</span>
                     </div>
                   </div>
@@ -622,10 +663,10 @@ function LogHistoryPage() {
                 {isExpanded && (
                   <div className="border-t border-border bg-muted/20 p-4">
                     <h5 className="font-mono text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                      Rincian Kejadian ({item.stops.length})
+                      Occurrence Details ({item.stops.length})
                     </h5>
                     {item.stops.length === 0 ? (
-                      <p className="text-xs text-muted-foreground font-mono">Belum ada catatan stop untuk stasiun ini.</p>
+                      <p className="text-xs text-muted-foreground font-mono">No stop records for this station yet.</p>
                     ) : (
                       <div className="divide-y divide-border/60">
                         {item.stops.map((s) => {
@@ -643,7 +684,7 @@ function LogHistoryPage() {
                                   )}
                                 </div>
                                 <div className="font-mono text-[11px] text-muted-foreground">
-                                  {fmtDateTime(s.startMs)} • Dilaporkan oleh: {s.reportedBy}
+                                  {fmtDateTime(s.startMs)} • Reported by: {s.reportedBy}
                                 </div>
                               </div>
                               <div className="flex items-center gap-3 font-mono">
@@ -652,7 +693,7 @@ function LogHistoryPage() {
                                   onClick={() => handleOpenCorrectModal(s)}
                                   className="text-xs text-muted-foreground hover:text-foreground underline"
                                 >
-                                  Koreksi
+                                  Correct
                                 </button>
                               </div>
                             </div>
@@ -675,10 +716,10 @@ function LogHistoryPage() {
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
               <div>
                 <h3 className="font-display text-base font-semibold text-foreground">
-                  Koreksi Line Stop #{correctingStop.id}
+                  Correct Line Stop #{correctingStop.id}
                 </h3>
                 <p className="text-xs text-muted-foreground font-mono">
-                  Nilai sebelum koreksi akan tersimpan permanen di riwayat audit.
+                  Values before correction will be permanently saved in the audit history.
                 </p>
               </div>
               <button
@@ -693,7 +734,7 @@ function LogHistoryPage() {
               {/* Category */}
               <div>
                 <SelectInput
-                  label="Kategori Stop:"
+                  label="Stop Category:"
                   value={corrCategoryId}
                   onChange={(val) => setCorrCategoryId(val ?? "")}
                   datalist={appState.categories.map((c) => ({
@@ -701,7 +742,7 @@ function LogHistoryPage() {
                     label: `${c.name}${c.countsAsBreakdown ? " (Breakdown)" : ""}`,
                   }))}
                   hideClear
-                  placeholder="Pilih Kategori Stop"
+                  placeholder="Select Stop Category"
                 />
               </div>
 
@@ -709,7 +750,7 @@ function LogHistoryPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-mono text-[11px] text-muted-foreground mb-1">
-                    Waktu Mulai:
+                    Start Time:
                   </label>
                   <input
                     type="datetime-local"
@@ -720,7 +761,7 @@ function LogHistoryPage() {
                 </div>
                 <div>
                   <label className="block font-mono text-[11px] text-muted-foreground mb-1">
-                    Waktu Selesai (Opsional):
+                    End Time (Optional):
                   </label>
                   <input
                     type="datetime-local"
@@ -734,7 +775,7 @@ function LogHistoryPage() {
               {/* Reported By */}
               <div>
                 <label className="block font-mono text-[11px] text-muted-foreground mb-1">
-                  Operator / Dilaporkan Oleh:
+                  Operator / Reported By:
                 </label>
                 <input
                   type="text"
@@ -747,7 +788,7 @@ function LogHistoryPage() {
               {/* Note */}
               <div>
                 <label className="block font-mono text-[11px] text-muted-foreground mb-1">
-                  Catatan Kejadian:
+                  Event Notes:
                 </label>
                 <textarea
                   value={corrNote}
@@ -760,11 +801,11 @@ function LogHistoryPage() {
               {/* Mandatory Reason */}
               <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
                 <label className="block font-mono text-[11px] font-bold text-amber-700 dark:text-amber-300 mb-1">
-                  * Alasan Koreksi (Wajib untuk Audit Trail):
+                  * Correction Reason (Required for Audit Trail):
                 </label>
                 <input
                   type="text"
-                  placeholder="Contoh: Salah pilih kategori saat emergency stop"
+                  placeholder="Example: Wrong category selected during emergency stop"
                   value={corrReason}
                   onChange={(e) => setCorrReason(e.target.value)}
                   className="w-full rounded border border-amber-500/40 bg-background p-2 text-foreground font-mono focus:outline-none focus:border-amber-500"
@@ -777,13 +818,13 @@ function LogHistoryPage() {
                 onClick={() => setCorrectingStop(null)}
                 className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
               >
-                Batal
+                Cancel
               </button>
               <button
                 onClick={handleSaveCorrection}
                 className="px-4 py-2 rounded bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-xs"
               >
-                Simpan Perubahan
+                Save Changes
               </button>
             </div>
           </div>
@@ -795,19 +836,19 @@ function LogHistoryPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
           <div className="w-full max-w-md rounded-xl border border-red-500/40 bg-card p-6 shadow-2xl">
             <h3 className="font-display text-base font-semibold text-red-600 dark:text-red-400 mb-1">
-              Batalkan (Void) Stop #{voidingStop.id}?
+              Void Stop #{voidingStop.id}?
             </h3>
             <p className="text-xs text-muted-foreground mb-4">
-              Stop ini akan dihapus dari kalkulasi aktif dan dicatat dalam audit log.
+              This stop will be removed from active calculations and recorded in the audit log.
             </p>
 
             <div className="mb-4">
               <label className="block font-mono text-[11px] font-bold text-foreground mb-1">
-                * Alasan Pembatalan:
+                * Cancellation Reason:
               </label>
               <input
                 type="text"
-                placeholder="Contoh: Entry ganda tidak sengaja"
+                placeholder="Example: Accidental duplicate entry"
                 value={voidReason}
                 onChange={(e) => setVoidReason(e.target.value)}
                 className="w-full rounded border border-input bg-background p-2 text-xs text-foreground font-mono focus:outline-none focus:border-red-500"
@@ -819,13 +860,13 @@ function LogHistoryPage() {
                 onClick={() => setVoidingStop(null)}
                 className="px-3 py-1.5 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
               >
-                Batal
+                Cancel
               </button>
               <button
                 onClick={handleConfirmVoid}
                 className="px-3 py-1.5 rounded bg-red-600 text-white font-semibold font-mono text-xs hover:bg-red-500 shadow-xs"
               >
-                Konfirmasi Void
+                Confirm Void
               </button>
             </div>
           </div>
@@ -856,40 +897,40 @@ function LogHistoryPage() {
 
             <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Stasiun</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Station</span>
                 <span className="text-foreground font-bold text-xs">
                   {appState.stations.find((x) => x.id === viewingStop.stationId)?.name ?? viewingStop.stationId}
                 </span>
               </div>
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Kategori</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Category</span>
                 <span className="text-foreground font-bold text-xs">
                   {appState.categories.find((c) => c.id === viewingStop.categoryId)?.name ?? viewingStop.categoryId}
                 </span>
               </div>
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Waktu Mulai</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Start Time</span>
                 <span className="text-foreground font-semibold">{fmtDateTime(viewingStop.startMs)}</span>
               </div>
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Waktu Selesai</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">End Time</span>
                 <span className="text-foreground font-semibold">
-                  {viewingStop.endMs ? fmtDateTime(viewingStop.endMs) : "Masih aktif (OPEN)"}
+                  {viewingStop.endMs ? fmtDateTime(viewingStop.endMs) : "Still active (OPEN)"}
                 </span>
               </div>
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Total Durasi</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Total Duration</span>
                 <span className="text-foreground font-bold text-xs">{fmtDuration(stopDurationMs(viewingStop, nowMs))}</span>
               </div>
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Operator / Pelapor</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Operator / Reporter</span>
                 <span className="text-foreground font-semibold">{viewingStop.reportedBy}</span>
               </div>
             </div>
 
             {viewingStop.note && (
               <div className="p-3 rounded-lg bg-muted/30 border border-border text-[11px]">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold mb-1">Catatan Kejadian</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold mb-1">Event Notes</span>
                 <p className="text-foreground font-sans">{viewingStop.note}</p>
               </div>
             )}
@@ -900,7 +941,7 @@ function LogHistoryPage() {
                 onClick={() => setViewingStop(null)}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors shadow-2xs"
               >
-                Tutup
+                Close
               </button>
             </div>
           </div>

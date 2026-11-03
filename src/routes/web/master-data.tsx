@@ -1,11 +1,10 @@
-import { createFileRoute, useLocation } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import {
   Layers,
   Plus,
   Pencil,
   Trash2,
-  Search,
   X,
   Check,
   Building2,
@@ -21,14 +20,20 @@ import { useAppStore, store } from "../../lib/store";
 import type { Station, Category } from "../../lib/types";
 import { toast } from "sonner";
 import { SelectInput } from "../../components/ui/select-input";
+import { Search } from "../../components/ui/search";
 import { TablePagination } from "../../components/TablePagination";
 import { Eye, ArrowUpDown } from "lucide-react";
 
 export const Route = createFileRoute("/web/master-data")({
+  validateSearch: (search: Record<string, unknown>): { view?: "stations" | "categories" } => {
+    return {
+      view: search["view"] === "categories" ? "categories" : "stations",
+    };
+  },
   head: () => ({
     meta: [
       { title: "PT. Krama Yudha Ratu Motor Indonesia — Master Data Configuration" },
-      { name: "description", content: "Konfigurasi Master Data Stasiun dan Kategori Stop (MTTR & MTBF)." },
+      { name: "description", content: "Master Data configuration for Stations, Conveyors, and Stop Categories (MTTR & MTBF)." },
     ],
   }),
   component: MasterDataPage,
@@ -53,16 +58,8 @@ function MasterDataPage() {
   const { t } = useI18n();
   const appState = useAppStore();
 
-  const location = useLocation();
-
-  // Active View: "stations" | "categories" (driven by URL search param ?view=)
-  const activeView = useMemo(() => {
-    if (typeof window !== "undefined") {
-      const sp = new URLSearchParams(window.location.search);
-      if (sp.get("view") === "categories") return "categories";
-    }
-    return "stations";
-  }, [location.search]);
+  const search = Route.useSearch();
+  const activeView: "stations" | "categories" = search.view === "categories" ? "categories" : "stations";
 
   // ==========================================
   // STATION STATE & HANDLERS
@@ -157,22 +154,20 @@ function MasterDataPage() {
   // Filtered conveyor rows for display
   const filteredConveyorRows = useMemo(() => {
     return conveyorRows.filter((row) => {
-      const matchArea = selectedAreaFilter === "all" || row.areaId === selectedAreaFilter;
-      if (!stationSearchQuery.trim()) return matchArea;
+      if (!stationSearchQuery.trim()) return true;
 
       const q = stationSearchQuery.toLowerCase();
-      const matchSearch =
+      return (
         row.conveyorName.toLowerCase().includes(q) ||
         row.areaName.toLowerCase().includes(q) ||
         row.stations.some(
           (st) =>
             (st.code && st.code.toLowerCase().includes(q)) ||
             st.name.toLowerCase().includes(q)
-        );
-
-      return matchArea && matchSearch;
+        )
+      );
     });
-  }, [conveyorRows, selectedAreaFilter, stationSearchQuery]);
+  }, [conveyorRows, stationSearchQuery]);
 
   const paginatedConveyorRows = useMemo(() => {
     const start = (stationPage - 1) * stationPageSize;
@@ -208,7 +203,7 @@ function MasterDataPage() {
 
   const handleRemoveStationRow = (rowId: string) => {
     if (stationRows.length <= 1) {
-      toast.warning("Minimal harus ada satu stasiun");
+      toast.warning("At least one station is required");
       return;
     }
     setStationRows((prev) => prev.filter((r) => r.id !== rowId));
@@ -222,17 +217,17 @@ function MasterDataPage() {
 
   const handleSaveBatchStations = () => {
     if (!areaInput.trim()) {
-      toast.error("Nama Area wajib diisi");
+      toast.error("Area Name is required");
       return;
     }
     if (!conveyorInput.trim()) {
-      toast.error("Nama Konveyor wajib diisi");
+      toast.error("Conveyor Name is required");
       return;
     }
 
     const validRows = stationRows.filter((r) => r.name.trim().length > 0);
     if (validRows.length === 0) {
-      toast.error("Minimal satu baris nama stasiun harus diisi");
+      toast.error("At least one station name row must be filled");
       return;
     }
 
@@ -251,11 +246,11 @@ function MasterDataPage() {
     }));
 
     store.addStationsBatch(stationsToAdd);
-    toast.success(`Berhasil menambahkan ${stationsToAdd.length} stasiun baru pada ${conveyor.name}`);
+    toast.success(`Successfully added ${stationsToAdd.length} new stations to ${conveyor.name}`);
     setBatchModalOpen(false);
   };
 
-  // Edit Conveyor & Stations Handlers (Requirement 1: Sama dengan pop up Tambah Data)
+  // Edit Conveyor & Stations Handlers
   const handleOpenEditConveyor = (row: ConveyorMasterRow) => {
     setEditConveyorTarget(row);
     setEditAreaInput(row.areaName);
@@ -263,10 +258,10 @@ function MasterDataPage() {
     const mappedRows: StationDraftRow[] =
       row.stations.length > 0
         ? row.stations.map((st) => ({
-            id: st.id,
-            code: st.code || `ST-${String(st.sequence).padStart(2, "0")}`,
-            name: st.name,
-          }))
+          id: st.id,
+          code: st.code || `ST-${String(st.sequence).padStart(2, "0")}`,
+          name: st.name,
+        }))
         : [{ id: `row-${Date.now()}-1`, code: "ST-01", name: "" }];
     setEditStationRows(mappedRows);
     setEditConveyorModalOpen(true);
@@ -283,7 +278,7 @@ function MasterDataPage() {
 
   const handleRemoveEditStationRow = (rowId: string) => {
     if (editStationRows.length <= 1) {
-      toast.warning("Minimal harus ada satu stasiun");
+      toast.warning("At least one station is required");
       return;
     }
     setEditStationRows((prev) => prev.filter((r) => r.id !== rowId));
@@ -298,17 +293,17 @@ function MasterDataPage() {
   const handleSaveEditConveyor = () => {
     if (!editConveyorTarget) return;
     if (!editAreaInput.trim()) {
-      toast.error("Nama Area wajib diisi");
+      toast.error("Area Name is required");
       return;
     }
     if (!editConveyorInput.trim()) {
-      toast.error("Nama Konveyor wajib diisi");
+      toast.error("Conveyor Name is required");
       return;
     }
 
     const validRows = editStationRows.filter((r) => r.name.trim().length > 0);
     if (validRows.length === 0) {
-      toast.error("Minimal satu baris nama stasiun harus diisi");
+      toast.error("At least one station name row must be filled");
       return;
     }
 
@@ -320,7 +315,7 @@ function MasterDataPage() {
 
     store.syncConveyorStations(editConveyorTarget.conveyorId, area.id, validRows);
 
-    toast.success(`Berhasil memperbarui data stasiun dan jalur konveyor pada ${editConveyorInput.trim()}`);
+    toast.success(`Successfully updated station and conveyor line data for ${editConveyorInput.trim()}`);
     setEditConveyorModalOpen(false);
     setEditConveyorTarget(null);
   };
@@ -328,7 +323,7 @@ function MasterDataPage() {
   const handleConfirmDeleteConveyor = () => {
     if (!deleteConveyorTarget) return;
     store.deleteConveyor(deleteConveyorTarget.conveyorId);
-    toast.success(`Jalur konveyor "${deleteConveyorTarget.conveyorName}" beserta stasiunnya berhasil dihapus`);
+    toast.success(`Conveyor line "${deleteConveyorTarget.conveyorName}" and its stations successfully deleted`);
     setDeleteConveyorTarget(null);
   };
 
@@ -370,13 +365,6 @@ function MasterDataPage() {
   // Filtered categories
   const filteredCategories = useMemo(() => {
     return appState.categories.filter((cat) => {
-      if (categoryTypeFilter === "linestop" && cat.forLinestop === false) return false;
-      if (categoryTypeFilter === "mtc" && !cat.forLinestopMaintenance) return false;
-      if (categoryTypeFilter === "both" && (cat.forLinestop === false || !cat.forLinestopMaintenance)) return false;
-
-      if (categoryFilter === "breakdown" && !cat.countsAsBreakdown) return false;
-      if (categoryFilter === "non-breakdown" && cat.countsAsBreakdown) return false;
-
       if (!categorySearchQuery.trim()) return true;
 
       const q = categorySearchQuery.toLowerCase();
@@ -386,7 +374,7 @@ function MasterDataPage() {
 
       return codeMatch || nameMatch || idMatch;
     });
-  }, [appState.categories, categoryTypeFilter, categoryFilter, categorySearchQuery]);
+  }, [appState.categories, categorySearchQuery]);
 
   const paginatedCategories = useMemo(() => {
     const start = (categoryPage - 1) * categoryPageSize;
@@ -422,11 +410,11 @@ function MasterDataPage() {
 
   const handleSaveNewCategory = () => {
     if (!catNameInput.trim()) {
-      toast.error("Nama category problem wajib diisi");
+      toast.error("Category problem name is required");
       return;
     }
     if (!catForLinestop && !catForLinestopMtc) {
-      toast.error("Pilih minimal satu tipe E-Form (Linestop atau Linestop Maintenance)");
+      toast.error("Select at least one E-Form type (Linestop or Linestop Maintenance)");
       return;
     }
     const code = catCodeInput.trim().toUpperCase() || `CAT-${catNameInput.slice(0, 4).toUpperCase()}`;
@@ -442,7 +430,7 @@ function MasterDataPage() {
       forLinestopMaintenance: catForLinestopMtc,
     });
 
-    toast.success(`Category Problem "${catNameInput.trim()}" (${code}) berhasil ditambahkan`);
+    toast.success(`Category Problem "${catNameInput.trim()}" (${code}) successfully added`);
     setAddCatModalOpen(false);
   };
 
@@ -462,11 +450,11 @@ function MasterDataPage() {
   const handleSaveEditCategory = () => {
     if (!editingCategory) return;
     if (!editCatName.trim()) {
-      toast.error("Nama category problem wajib diisi");
+      toast.error("Category problem name is required");
       return;
     }
     if (!editCatForLinestop && !editCatForLinestopMtc) {
-      toast.error("Pilih minimal satu tipe E-Form (Linestop atau Linestop Maintenance)");
+      toast.error("Select at least one E-Form type (Linestop or Linestop Maintenance)");
       return;
     }
 
@@ -480,7 +468,7 @@ function MasterDataPage() {
       forLinestopMaintenance: editCatForLinestopMtc,
     });
 
-    toast.success(`Category Problem "${editCatName.trim()}" berhasil diperbarui`);
+    toast.success(`Category Problem "${editCatName.trim()}" successfully updated`);
     setEditCatModalOpen(false);
     setEditingCategory(null);
   };
@@ -488,7 +476,7 @@ function MasterDataPage() {
   const handleConfirmDeleteCategory = () => {
     if (!deleteCatTarget) return;
     store.deleteCategory(deleteCatTarget.id);
-    toast.success(`Kategori "${deleteCatTarget.name}" berhasil dihapus`);
+    toast.success(`Category "${deleteCatTarget.name}" successfully deleted`);
     setDeleteCatTarget(null);
   };
 
@@ -502,33 +490,14 @@ function MasterDataPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
-            {activeView === "categories" ? "Master Data — Category Problem" : "Master Data — Stasiun & Area"}
+            {activeView === "categories" ? "Master Data — Category Problem" : "Master Data — Stations & Area"}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {activeView === "categories"
-              ? "Konfigurasi Kode Kategori Masalah dan Relasi Tipe E-Form (Linestop & Linestop Maintenance)."
-              : "Konfigurasi Area, Jalur Konveyor, dan Stasiun Produksi Pabrik."}
+              ? "Configuration of Problem Category Codes and E-Form Type Relations (Linestop & Linestop Maintenance)."
+              : "Configuration of Factory Production Areas, Conveyor Lines, and Stations."}
           </p>
         </div>
-
-        {/* Action Button depending on Active View */}
-        {activeView === "stations" ? (
-          <button
-            onClick={handleOpenBatchModal}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow transition-colors cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Tambah Data Stasiun</span>
-          </button>
-        ) : (
-          <button
-            onClick={handleOpenAddCategory}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow transition-colors cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Tambah Category Problem</span>
-          </button>
-        )}
       </div>
 
       {/* ======================================================== */}
@@ -538,52 +507,25 @@ function MasterDataPage() {
         <div className="space-y-6">
           {/* Main Station Master Table Card */}
           <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs space-y-0">
-            {/* Toolbar: Search & Area Filter */}
+            {/* Toolbar: Search (Fill Container) & Add Station Button */}
             <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
-              <div className="flex items-center gap-2">
-                <span className="font-sans text-xs text-slate-500 dark:text-zinc-400 font-medium">
-                  Menampilkan {filteredConveyorRows.length} dari {conveyorRows.length} jalur konveyor ({appState.stations.length} total stasiun)
-                </span>
-              </div>
+              {/* Search Bar (Fill Container) */}
+              <Search
+                containerClassName="flex-1 w-full"
+                placeholder="Search code, station name, conveyor..."
+                value={stationSearchQuery}
+                onChange={(e) => setStationSearchQuery(e.target.value)}
+              />
 
-              <div className="flex flex-wrap items-center gap-2.5">
-                {/* Area Filter */}
-                <div className="w-48 sm:w-56">
-                  <SelectInput
-                    hideClear
-                    value={selectedAreaFilter}
-                    onChange={(val) => setSelectedAreaFilter(val ?? "all")}
-                    datalist={[
-                      { value: "all", label: `Semua Area (${appState.areas.length})` },
-                      ...appState.areas.map((a) => ({
-                        value: a.id,
-                        label: a.name,
-                      })),
-                    ]}
-                    placeholder="Pilih Area"
-                  />
-                </div>
-
-                {/* Search Bar */}
-                <div className="relative flex-1 sm:w-64">
-                  <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={stationSearchQuery}
-                    onChange={(e) => setStationSearchQuery(e.target.value)}
-                    placeholder="Cari kode, nama stasiun, konveyor..."
-                    className="w-full h-9 pl-9 pr-8 rounded-lg border border-slate-200 dark:border-zinc-700/80 bg-background text-foreground placeholder:text-slate-400 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
-                  />
-                  {stationSearchQuery && (
-                    <button
-                      onClick={() => setStationSearchQuery("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
+              {/* Add Station Button on Right of Search */}
+              <button
+                type="button"
+                onClick={handleOpenBatchModal}
+                className="flex items-center gap-1.5 rounded-lg bg-[#ff5a1f] hover:bg-[#e04810] text-white px-3.5 py-2 font-sans text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0 h-10"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Station Data</span>
+              </button>
             </div>
 
             {/* Table: ACTION, NAMA AREA, NAMA KONVEYOR, NAMA STASIUN, STATUS */}
@@ -594,19 +536,19 @@ function MasterDataPage() {
                     <th className="py-3 px-4 w-28 whitespace-nowrap">ACTION</th>
                     <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
-                        NAMA AREA
+                        AREA NAME
                         <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
                     <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
-                        NAMA KONVEYOR
+                        CONVEYOR NAME
                         <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
                     <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
-                        NAMA STASIUN
+                        STATION NAME
                         <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
@@ -623,8 +565,8 @@ function MasterDataPage() {
                     <tr>
                       <td colSpan={5} className="py-12 text-center text-muted-foreground font-mono">
                         <Layers className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        <p className="font-medium text-sm">Tidak ada data stasiun atau konveyor ditemukan</p>
-                        <p className="text-xs mt-1">Coba sesuaikan kata kunci pencarian atau filter area Anda.</p>
+                        <p className="font-medium text-sm">No station or conveyor data found</p>
+                        <p className="text-xs mt-1">Try adjusting your search keywords or area filter.</p>
                       </td>
                     </tr>
                   ) : (
@@ -633,11 +575,11 @@ function MasterDataPage() {
                         row.stations.length === 0
                           ? "-"
                           : row.stations
-                              .map(
-                                (st) =>
-                                  `(${st.code || `ST-${String(st.sequence).padStart(2, "0")}`} - ${st.name})`,
-                              )
-                              .join(", ");
+                            .map(
+                              (st) =>
+                                `(${st.code || `ST-${String(st.sequence).padStart(2, "0")}`} - ${st.name})`,
+                            )
+                            .join(", ");
 
                       return (
                         <tr
@@ -652,7 +594,7 @@ function MasterDataPage() {
                                 type="button"
                                 onClick={() => setViewingConveyorRow(row)}
                                 className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 shadow-2xs transition-colors"
-                                title="Lihat Detail Jalur Konveyor & Stasiun"
+                                title="View Conveyor Line & Station Details"
                               >
                                 <Eye className="h-3.5 w-3.5" />
                               </button>
@@ -662,7 +604,7 @@ function MasterDataPage() {
                                 type="button"
                                 onClick={() => handleOpenEditConveyor(row)}
                                 className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-blue-600 hover:border-blue-300 dark:hover:text-blue-400 shadow-2xs transition-colors"
-                                title="Ubah Stasiun & Jalur Konveyor"
+                                title="Edit Station & Conveyor Line"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
@@ -672,7 +614,7 @@ function MasterDataPage() {
                                 type="button"
                                 onClick={() => setDeleteConveyorTarget(row)}
                                 className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 shadow-2xs transition-colors"
-                                title="Hapus Jalur Konveyor & Stasiun"
+                                title="Delete Conveyor Line & Station"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -684,12 +626,9 @@ function MasterDataPage() {
                             {row.areaName}
                           </td>
 
-                          {/* Nama Konveyor */}
-                          <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
-                              <Workflow className="h-3.5 w-3.5 text-cyan-500 shrink-0" />
-                              {row.conveyorName}
-                            </span>
+                          {/* Nama Konveyor (Icon removed per user request) */}
+                          <td className="py-3.5 px-4 text-foreground font-medium whitespace-nowrap">
+                            {row.conveyorName}
                           </td>
 
                           {/* Nama Stasiun (Format: (ST-001 - Station Name), koma jika > 1) */}
@@ -709,26 +648,23 @@ function MasterDataPage() {
                                 onClick={() => {
                                   store.toggleConveyorActive(row.conveyorId);
                                   toast.success(
-                                    `Status konveyor "${row.conveyorName}" diubah menjadi ${!row.isActive ? "Aktif" : "Nonaktif"}`,
+                                    `Conveyor "${row.conveyorName}" status changed to ${!row.isActive ? "Active" : "Inactive"}`,
                                   );
                                 }}
-                                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-                                  row.isActive ? "bg-emerald-600 dark:bg-emerald-500" : "bg-slate-300 dark:bg-zinc-700"
-                                }`}
-                                title={row.isActive ? "Klik untuk menonaktifkan" : "Klik untuk mengaktifkan"}
+                                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${row.isActive ? "bg-emerald-600 dark:bg-emerald-500" : "bg-slate-300 dark:bg-zinc-700"
+                                  }`}
+                                title={row.isActive ? "Click to deactivate" : "Click to activate"}
                               >
-                                <span className="sr-only">Toggle status konveyor</span>
+                                <span className="sr-only">Toggle conveyor status</span>
                                 <span
                                   aria-hidden="true"
-                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
-                                    row.isActive ? "translate-x-5" : "translate-x-0"
-                                  }`}
+                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${row.isActive ? "translate-x-5" : "translate-x-0"
+                                    }`}
                                 />
                               </button>
                               <span
-                                className={`text-[11px] font-bold font-mono ${
-                                  row.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
-                                }`}
+                                className={`text-[11px] font-bold font-mono ${row.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+                                  }`}
                               >
                                 {row.isActive ? "Active" : "Inactive"}
                               </span>
@@ -761,66 +697,25 @@ function MasterDataPage() {
         <div className="space-y-6">
           {/* Main Category Table Card */}
           <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs space-y-0">
-            {/* Toolbar */}
+            {/* Toolbar: Search (Fill Container) & Add Category Problem Button */}
             <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
-              <div className="flex items-center gap-2">
-                <span className="font-sans text-xs text-slate-500 dark:text-zinc-400 font-medium">
-                  Menampilkan {filteredCategories.length} dari {appState.categories.length} category problem
-                </span>
-              </div>
+              {/* Search Bar (Fill Container) */}
+              <Search
+                containerClassName="flex-1 w-full"
+                placeholder="Search code or category problem name..."
+                value={categorySearchQuery}
+                onChange={(e) => setCategorySearchQuery(e.target.value)}
+              />
 
-              <div className="flex flex-wrap items-center gap-2.5">
-                {/* Tipe E-form Filter */}
-                <div className="w-52 sm:w-60">
-                  <SelectInput
-                    hideClear
-                    value={categoryTypeFilter}
-                    onChange={(val) => setCategoryTypeFilter((val as any) ?? "all")}
-                    datalist={[
-                      { value: "all", label: "Semua Tipe E-Form" },
-                      { value: "linestop", label: "Hanya Linestop" },
-                      { value: "mtc", label: "Hanya Linestop Maintenance" },
-                      { value: "both", label: "Kedua Tipe E-Form" },
-                    ]}
-                    placeholder="Filter Tipe E-Form"
-                  />
-                </div>
-
-                {/* Breakdown Filter */}
-                <div className="w-48 sm:w-56">
-                  <SelectInput
-                    hideClear
-                    value={categoryFilter}
-                    onChange={(val) => setCategoryFilter((val as any) ?? "all")}
-                    datalist={[
-                      { value: "all", label: "Semua Kategori" },
-                      { value: "breakdown", label: "Breakdown (MTTR/MTBF)" },
-                      { value: "non-breakdown", label: "Non-Breakdown" },
-                    ]}
-                    placeholder="Filter Breakdown"
-                  />
-                </div>
-
-                {/* Search Bar */}
-                <div className="relative flex-1 sm:w-64">
-                  <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={categorySearchQuery}
-                    onChange={(e) => setCategorySearchQuery(e.target.value)}
-                    placeholder="Cari kode atau nama category problem..."
-                    className="w-full h-9 pl-9 pr-8 rounded-lg border border-slate-200 dark:border-zinc-700/80 bg-background text-foreground placeholder:text-slate-400 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
-                  />
-                  {categorySearchQuery && (
-                    <button
-                      onClick={() => setCategorySearchQuery("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
+              {/* Add Category Problem Button */}
+              <button
+                type="button"
+                onClick={handleOpenAddCategory}
+                className="flex items-center gap-1.5 rounded-lg bg-[#ff5a1f] hover:bg-[#e04810] text-white px-3.5 py-2 font-sans text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0 h-10"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Category Problem</span>
+              </button>
             </div>
 
             {/* Table */}
@@ -831,25 +726,25 @@ function MasterDataPage() {
                     <th className="py-3 px-4 w-24 whitespace-nowrap">ACTION</th>
                     <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
-                        KODE KATEGORI
+                        CATEGORY CODE
                         <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
                     <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
-                        NAMA CATEGORY PROBLEM
+                        CATEGORY PROBLEM NAME
                         <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
                     <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
-                        TIPE E-FORM
+                        E-FORM TYPE
                         <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
                     <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
-                        PERHITUNGAN MTTR & MTBF
+                        MTTR & MTBF CALCULATION
                         <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
@@ -866,8 +761,8 @@ function MasterDataPage() {
                     <tr>
                       <td colSpan={6} className="py-12 text-center text-muted-foreground font-mono">
                         <Tag className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        <p className="font-medium text-sm">Tidak ada category problem ditemukan</p>
-                        <p className="text-xs mt-1">Gunakan tombol &quot;Tambah Category Problem&quot; untuk menambahkan data baru.</p>
+                        <p className="font-medium text-sm">No category problems found</p>
+                        <p className="text-xs mt-1">Use the &quot;Add Category Problem&quot; button to add new data.</p>
                       </td>
                     </tr>
                   ) : (
@@ -883,7 +778,7 @@ function MasterDataPage() {
                                 type="button"
                                 onClick={() => handleOpenEditCategory(cat)}
                                 className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-blue-600 hover:border-blue-300 dark:hover:text-blue-400 shadow-2xs transition-colors cursor-pointer"
-                                title="Ubah Category Problem"
+                                title="Edit Category Problem"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
@@ -893,7 +788,7 @@ function MasterDataPage() {
                                 type="button"
                                 onClick={() => setDeleteCatTarget(cat)}
                                 className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 shadow-2xs transition-colors cursor-pointer"
-                                title="Hapus Category Problem"
+                                title="Delete Category Problem"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -912,9 +807,6 @@ function MasterDataPage() {
                             <div className="font-semibold text-foreground text-[13px]">
                               {cat.name}
                             </div>
-                            <span className="text-[10px] text-muted-foreground block font-mono">
-                              ID: {cat.id}
-                            </span>
                           </td>
 
                           {/* Tipe E-Form */}
@@ -963,26 +855,23 @@ function MasterDataPage() {
                                 onClick={() => {
                                   store.updateCategory(cat.id, { active: !cat.active });
                                   toast.success(
-                                    `Status "${cat.name}" diubah menjadi ${!cat.active ? "Aktif" : "Nonaktif"}`,
+                                    `Status "${cat.name}" changed to ${!cat.active ? "Active" : "Inactive"}`,
                                   );
                                 }}
-                                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary ${
-                                  cat.active ? "bg-emerald-600 dark:bg-emerald-500" : "bg-slate-300 dark:bg-zinc-700"
-                                }`}
-                                title={cat.active ? "Klik untuk menonaktifkan" : "Klik untuk mengaktifkan"}
+                                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary ${cat.active ? "bg-emerald-600 dark:bg-emerald-500" : "bg-slate-300 dark:bg-zinc-700"
+                                  }`}
+                                title={cat.active ? "Click to deactivate" : "Click to activate"}
                               >
-                                <span className="sr-only">Toggle status kategori</span>
+                                <span className="sr-only">Toggle category status</span>
                                 <span
                                   aria-hidden="true"
-                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
-                                    cat.active ? "translate-x-5" : "translate-x-0"
-                                  }`}
+                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${cat.active ? "translate-x-5" : "translate-x-0"
+                                    }`}
                                 />
                               </button>
                               <span
-                                className={`text-[11px] font-bold font-mono ${
-                                  cat.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
-                                }`}
+                                className={`text-[11px] font-bold font-mono ${cat.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+                                  }`}
                               >
                                 {cat.active ? "Active" : "Inactive"}
                               </span>
@@ -1018,7 +907,7 @@ function MasterDataPage() {
               <div className="flex items-center gap-2">
                 <Workflow className="h-5 w-5 text-primary" />
                 <h3 className="font-display text-base font-bold text-foreground">
-                  Tambah Data Stasiun & Jalur Konveyor
+                  Add Station Data & Conveyor Line
                 </h3>
               </div>
               <button
@@ -1030,15 +919,15 @@ function MasterDataPage() {
             </div>
 
             <div className="space-y-4 text-xs font-mono">
-              {/* Field 1: Nama Area */}
+              {/* Field 1: Area Name */}
               <div>
                 <label className="block text-foreground font-semibold mb-1">
-                  1. Nama Area:
+                  1. Area Name:
                 </label>
                 <input
                   type="text"
                   list="area-suggestions"
-                  placeholder="Contoh: Main Assembly Line"
+                  placeholder="Example: Main Assembly Line"
                   value={areaInput}
                   onChange={(e) => setAreaInput(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
@@ -1049,19 +938,19 @@ function MasterDataPage() {
                   ))}
                 </datalist>
                 <span className="text-[10px] text-muted-foreground mt-1 block">
-                  Ketik nama area baru atau pilih dari area yang sudah ada.
+                  Type a new area name or select from existing areas.
                 </span>
               </div>
 
-              {/* Field 2: Nama Conveyor */}
+              {/* Field 2: Conveyor Name */}
               <div>
                 <label className="block text-foreground font-semibold mb-1">
-                  2. Nama Konveyor:
+                  2. Conveyor Name:
                 </label>
                 <input
                   type="text"
                   list="conveyor-suggestions"
-                  placeholder="Contoh: Conveyor CV-01 (Infeed & Framing)"
+                  placeholder="Example: Conveyor CV-01 (Infeed & Framing)"
                   value={conveyorInput}
                   onChange={(e) => setConveyorInput(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
@@ -1072,7 +961,7 @@ function MasterDataPage() {
                   ))}
                 </datalist>
                 <span className="text-[10px] text-muted-foreground mt-1 block">
-                  Ketik nama jalur konveyor yang berada di dalam area tersebut.
+                  Type the name of the conveyor line within that area.
                 </span>
               </div>
 
@@ -1081,10 +970,10 @@ function MasterDataPage() {
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <label className="block text-foreground font-semibold">
-                      3. Daftar Stasiun ({stationRows.length} baris):
+                      3. Station List ({stationRows.length} rows):
                     </label>
                     <span className="text-[10px] text-muted-foreground">
-                      Bisa tambah lebih dari 1 stasiun dalam jalur konveyor ini.
+                      You can add more than 1 station in this conveyor line.
                     </span>
                   </div>
                   <button
@@ -1093,7 +982,7 @@ function MasterDataPage() {
                     className="flex items-center gap-1 rounded bg-muted hover:bg-muted/80 text-foreground px-2.5 py-1 text-[11px] font-semibold border border-border transition-colors shadow-2xs"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    <span>Tambah Baris</span>
+                    <span>Add Row</span>
                   </button>
                 </div>
 
@@ -1110,7 +999,7 @@ function MasterDataPage() {
                       <div className="w-1/3">
                         <input
                           type="text"
-                          placeholder="Kode (ST-01)"
+                          placeholder="Code (ST-01)"
                           value={row.code}
                           onChange={(e) => handleUpdateRow(row.id, "code", e.target.value)}
                           className="w-full rounded border border-border bg-background px-2.5 py-1.5 text-foreground font-bold uppercase focus:outline-none focus:border-ring"
@@ -1120,7 +1009,7 @@ function MasterDataPage() {
                       <div className="flex-1">
                         <input
                           type="text"
-                          placeholder="Nama Stasiun (contoh: Robot Welding)"
+                          placeholder="Station Name (e.g.: Robot Welding)"
                           value={row.name}
                           onChange={(e) => handleUpdateRow(row.id, "name", e.target.value)}
                           className="w-full rounded border border-border bg-background px-2.5 py-1.5 text-foreground focus:outline-none focus:border-ring"
@@ -1132,7 +1021,7 @@ function MasterDataPage() {
                         onClick={() => handleRemoveStationRow(row.id)}
                         disabled={stationRows.length <= 1}
                         className="p-1.5 rounded text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                        title="Hapus Baris"
+                        title="Delete Row"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -1148,14 +1037,14 @@ function MasterDataPage() {
                 onClick={() => setBatchModalOpen(false)}
                 className="px-4 py-2 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveBatchStations}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs transition-colors"
               >
-                Simpan Semua Stasiun
+                Save All Stations
               </button>
             </div>
           </div>
@@ -1163,7 +1052,7 @@ function MasterDataPage() {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: EDIT CONVEYOR & STATIONS (SAMA DENGAN TAMBAH DATA) */}
+      {/* MODAL: EDIT CONVEYOR & STATIONS                          */}
       {/* ======================================================== */}
       {editConveyorModalOpen && editConveyorTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-xs p-4">
@@ -1172,7 +1061,7 @@ function MasterDataPage() {
               <div className="flex items-center gap-2">
                 <Workflow className="h-5 w-5 text-primary" />
                 <h3 className="font-display text-base font-bold text-foreground">
-                  Ubah Data Stasiun & Jalur Konveyor
+                  Edit Station & Conveyor Line Data
                 </h3>
               </div>
               <button
@@ -1188,15 +1077,15 @@ function MasterDataPage() {
             </div>
 
             <div className="space-y-4 text-xs font-mono">
-              {/* Field 1: Nama Area */}
+              {/* Field 1: Area Name */}
               <div>
                 <label className="block text-foreground font-semibold mb-1">
-                  1. Nama Area:
+                  1. Area Name:
                 </label>
                 <input
                   type="text"
                   list="edit-area-suggestions"
-                  placeholder="Contoh: Main Assembly Line"
+                  placeholder="Example: Main Assembly Line"
                   value={editAreaInput}
                   onChange={(e) => setEditAreaInput(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
@@ -1207,19 +1096,19 @@ function MasterDataPage() {
                   ))}
                 </datalist>
                 <span className="text-[10px] text-muted-foreground mt-1 block">
-                  Ketik nama area baru atau pilih dari area yang sudah ada.
+                  Type a new area name or select from existing areas.
                 </span>
               </div>
 
-              {/* Field 2: Nama Conveyor */}
+              {/* Field 2: Conveyor Name */}
               <div>
                 <label className="block text-foreground font-semibold mb-1">
-                  2. Nama Konveyor:
+                  2. Conveyor Name:
                 </label>
                 <input
                   type="text"
                   list="edit-conveyor-suggestions"
-                  placeholder="Contoh: Conveyor CV-01"
+                  placeholder="Example: Conveyor CV-01"
                   value={editConveyorInput}
                   onChange={(e) => setEditConveyorInput(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
@@ -1230,7 +1119,7 @@ function MasterDataPage() {
                   ))}
                 </datalist>
                 <span className="text-[10px] text-muted-foreground mt-1 block">
-                  Ketik nama jalur konveyor yang berada di dalam area tersebut.
+                  Type the conveyor line name located within this area.
                 </span>
               </div>
 
@@ -1239,10 +1128,10 @@ function MasterDataPage() {
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <label className="block text-foreground font-semibold">
-                      3. Daftar Stasiun ({editStationRows.length} baris):
+                      3. Station List ({editStationRows.length} rows):
                     </label>
                     <span className="text-[10px] text-muted-foreground">
-                      Tambah, edit, atau hapus stasiun dalam jalur konveyor ini.
+                      Add, edit, or remove stations within this conveyor line.
                     </span>
                   </div>
                   <button
@@ -1251,7 +1140,7 @@ function MasterDataPage() {
                     className="flex items-center gap-1 rounded bg-muted hover:bg-muted/80 text-foreground px-2.5 py-1 text-[11px] font-semibold border border-border transition-colors shadow-2xs"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    <span>Tambah Baris</span>
+                    <span>Add Row</span>
                   </button>
                 </div>
 
@@ -1268,7 +1157,7 @@ function MasterDataPage() {
                       <div className="w-1/3">
                         <input
                           type="text"
-                          placeholder="Kode (ST-01)"
+                          placeholder="Code (ST-01)"
                           value={row.code}
                           onChange={(e) => handleUpdateEditRow(row.id, "code", e.target.value)}
                           className="w-full rounded border border-border bg-background px-2.5 py-1.5 text-foreground font-bold uppercase focus:outline-none focus:border-ring"
@@ -1278,7 +1167,7 @@ function MasterDataPage() {
                       <div className="flex-1">
                         <input
                           type="text"
-                          placeholder="Nama Stasiun"
+                          placeholder="Station Name"
                           value={row.name}
                           onChange={(e) => handleUpdateEditRow(row.id, "name", e.target.value)}
                           className="w-full rounded border border-border bg-background px-2.5 py-1.5 text-foreground focus:outline-none focus:border-ring"
@@ -1290,7 +1179,7 @@ function MasterDataPage() {
                         onClick={() => handleRemoveEditStationRow(row.id)}
                         disabled={editStationRows.length <= 1}
                         className="p-1.5 rounded text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                        title="Hapus Baris"
+                        title="Delete Row"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -1307,16 +1196,16 @@ function MasterDataPage() {
                   setEditConveyorModalOpen(false);
                   setEditConveyorTarget(null);
                 }}
-                className="px-4 py-2 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
+                className="px-4 py-2 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted cursor-pointer"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveEditConveyor}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs transition-colors"
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs transition-colors cursor-pointer"
               >
-                Simpan Perubahan
+                Save Changes
               </button>
             </div>
           </div>
@@ -1332,26 +1221,26 @@ function MasterDataPage() {
             <div className="flex items-center gap-3 mb-3 text-rose-600 dark:text-rose-400">
               <AlertTriangle className="h-6 w-6 shrink-0" />
               <h3 className="font-display text-base font-bold text-foreground">
-                Hapus Jalur Konveyor?
+                Delete Conveyor Line?
               </h3>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-              Apakah Anda yakin ingin menghapus jalur konveyor <strong className="text-foreground">{deleteConveyorTarget.conveyorName}</strong> di area <strong className="text-foreground">{deleteConveyorTarget.areaName}</strong> beserta <strong className="text-foreground">{deleteConveyorTarget.stations.length} stasiun</strong> di dalamnya?
+              Are you sure you want to delete conveyor line <strong className="text-foreground">{deleteConveyorTarget.conveyorName}</strong> in area <strong className="text-foreground">{deleteConveyorTarget.areaName}</strong> along with <strong className="text-foreground">{deleteConveyorTarget.stations.length} station(s)</strong>?
             </p>
             <div className="flex justify-end gap-2 pt-4 border-t border-border">
               <button
                 type="button"
                 onClick={() => setDeleteConveyorTarget(null)}
-                className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted"
+                className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted cursor-pointer"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDeleteConveyor}
-                className="px-4 py-2 rounded bg-rose-600 text-white font-semibold font-mono text-xs hover:bg-rose-500 shadow-2xs"
+                className="px-4 py-2 rounded bg-rose-600 text-white font-semibold font-mono text-xs hover:bg-rose-500 shadow-2xs cursor-pointer"
               >
-                Ya, Hapus Konveyor & Stasiun
+                Yes, Delete Conveyor & Stations
               </button>
             </div>
           </div>
@@ -1368,7 +1257,7 @@ function MasterDataPage() {
               <div className="flex items-center gap-2">
                 <Tag className="h-5 w-5 text-primary" />
                 <h3 className="font-display text-base font-bold text-foreground">
-                  Tambah Category Problem
+                  Add Category Problem
                 </h3>
               </div>
               <button
@@ -1383,11 +1272,11 @@ function MasterDataPage() {
               {/* Category Code */}
               <div>
                 <label className="block text-foreground font-semibold mb-1">
-                  Kode Kategori (Category Code):
+                  Category Code:
                 </label>
                 <input
                   type="text"
-                  placeholder="Contoh: LS-05, LM-02, CAT-BRK"
+                  placeholder="e.g.: LS-05, LM-02, CAT-BRK"
                   value={catCodeInput}
                   onChange={(e) => handleCatCodeChange(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground font-bold uppercase placeholder:text-muted-foreground focus:outline-none focus:border-ring"
@@ -1397,11 +1286,11 @@ function MasterDataPage() {
               {/* Category Name */}
               <div>
                 <label className="block text-foreground font-semibold mb-1">
-                  Nama Category Problem:
+                  Category Problem Name:
                 </label>
                 <input
                   type="text"
-                  placeholder="Contoh: Full cabin in line, Dock pin stuck, Sensor jam"
+                  placeholder="e.g.: Full cabin in line, Dock pin stuck, Sensor jam"
                   value={catNameInput}
                   onChange={(e) => handleCatNameChange(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
@@ -1411,25 +1300,23 @@ function MasterDataPage() {
               {/* Type E-Form Checkbox Buttons (Linestop, Linestop Maintenance, or Both) */}
               <div>
                 <label className="block text-foreground font-semibold mb-2">
-                  Tipe Formulir E-Form:
+                  E-Form Form Type:
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-sans">
                   {/* Button 1: Linestop */}
                   <button
                     type="button"
                     onClick={() => setCatForLinestop(!catForLinestop)}
-                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      catForLinestop
+                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${catForLinestop
                         ? "border-amber-500 bg-amber-500/10 shadow-2xs"
                         : "border-border bg-card hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${
-                        catForLinestop
+                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${catForLinestop
                           ? "bg-amber-500 border-amber-500 text-white"
                           : "border-muted-foreground"
-                      }`}
+                        }`}
                     >
                       {catForLinestop && <Check className="h-3 w-3 stroke-[3]" />}
                     </div>
@@ -1438,7 +1325,7 @@ function MasterDataPage() {
                         Linestop
                       </span>
                       <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-                        Tersedia pada form Line Stop produksi
+                        Available on production Line Stop form
                       </span>
                     </div>
                   </button>
@@ -1447,18 +1334,16 @@ function MasterDataPage() {
                   <button
                     type="button"
                     onClick={() => setCatForLinestopMtc(!catForLinestopMtc)}
-                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      catForLinestopMtc
+                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${catForLinestopMtc
                         ? "border-cyan-500 bg-cyan-500/10 shadow-2xs"
                         : "border-border bg-card hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${
-                        catForLinestopMtc
+                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${catForLinestopMtc
                           ? "bg-cyan-500 border-cyan-500 text-white"
                           : "border-muted-foreground"
-                      }`}
+                        }`}
                     >
                       {catForLinestopMtc && <Check className="h-3 w-3 stroke-[3]" />}
                     </div>
@@ -1467,13 +1352,13 @@ function MasterDataPage() {
                         Linestop Maintenance
                       </span>
                       <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-                        Tersedia pada form teknisi Maintenance
+                        Available on Maintenance technician form
                       </span>
                     </div>
                   </button>
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-1.5 font-sans">
-                  * Bisa pilih salah satu tipe E-Form, atau centang kedua-duanya sekaligus.
+                  * Select one E-Form type, or check both at the same time.
                 </p>
               </div>
 
@@ -1488,7 +1373,7 @@ function MasterDataPage() {
                   />
                   <div>
                     <span className="block font-bold text-rose-600 dark:text-rose-400">
-                      Dihitung dalam MTTR & MTBF (Breakdown Category)
+                      Counted in MTTR & MTBF (Breakdown Category)
                     </span>
                     <span className="text-[11px] text-muted-foreground leading-relaxed block mt-0.5 font-sans">
                       {t("md.breakdownHint")}
@@ -1496,19 +1381,6 @@ function MasterDataPage() {
                   </div>
                 </label>
               </div>
-
-              {/* Active Flag */}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={catActiveInput}
-                  onChange={(e) => setCatActiveInput(e.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                />
-                <span className="text-foreground">
-                  Kategori Aktif (Dapat dipilih pada formulir iPad)
-                </span>
-              </label>
             </div>
 
             <div className="flex justify-end gap-2 pt-4 mt-6 border-t border-border">
@@ -1517,14 +1389,14 @@ function MasterDataPage() {
                 onClick={() => setAddCatModalOpen(false)}
                 className="px-4 py-2 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted cursor-pointer"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveNewCategory}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs transition-colors cursor-pointer"
               >
-                Simpan Category Problem
+                Save Category Problem
               </button>
             </div>
           </div>
@@ -1539,7 +1411,7 @@ function MasterDataPage() {
           <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
               <h3 className="font-display text-base font-semibold text-foreground">
-                Ubah Category Problem ({editingCategory.name})
+                Edit Category Problem ({editingCategory.name})
               </h3>
               <button
                 onClick={() => setEditCatModalOpen(false)}
@@ -1551,23 +1423,23 @@ function MasterDataPage() {
 
             <div className="space-y-4 text-xs font-mono">
               <div>
-                <label className="block text-muted-foreground mb-1">Kode Kategori:</label>
+                <label className="block text-muted-foreground mb-1">Category Code:</label>
                 <input
                   type="text"
                   value={editCatCode}
                   onChange={(e) => setEditCatCode(e.target.value.toUpperCase())}
-                  placeholder="Contoh: LS-01, LM-01"
+                  placeholder="e.g.: LS-01, LM-01"
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground font-bold uppercase focus:outline-none focus:border-ring"
                 />
               </div>
 
               <div>
-                <label className="block text-muted-foreground mb-1">Nama Category Problem:</label>
+                <label className="block text-muted-foreground mb-1">Category Problem Name:</label>
                 <input
                   type="text"
                   value={editCatName}
                   onChange={(e) => setEditCatName(e.target.value)}
-                  placeholder="Contoh: Full cabin in line"
+                  placeholder="e.g.: Full cabin in line"
                   className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground focus:outline-none focus:border-ring"
                 />
               </div>
@@ -1575,25 +1447,23 @@ function MasterDataPage() {
               {/* Type E-Form Checkbox Buttons (Linestop, Linestop Maintenance, or Both) */}
               <div>
                 <label className="block text-foreground font-semibold mb-2">
-                  Tipe Formulir E-Form:
+                  E-Form Form Type:
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-sans">
                   {/* Button 1: Linestop */}
                   <button
                     type="button"
                     onClick={() => setEditCatForLinestop(!editCatForLinestop)}
-                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      editCatForLinestop
+                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${editCatForLinestop
                         ? "border-amber-500 bg-amber-500/10 shadow-2xs"
                         : "border-border bg-card hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${
-                        editCatForLinestop
+                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${editCatForLinestop
                           ? "bg-amber-500 border-amber-500 text-white"
                           : "border-muted-foreground"
-                      }`}
+                        }`}
                     >
                       {editCatForLinestop && <Check className="h-3 w-3 stroke-[3]" />}
                     </div>
@@ -1602,7 +1472,7 @@ function MasterDataPage() {
                         Linestop
                       </span>
                       <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-                        Tersedia pada form Line Stop produksi
+                        Available on production Line Stop form
                       </span>
                     </div>
                   </button>
@@ -1611,18 +1481,16 @@ function MasterDataPage() {
                   <button
                     type="button"
                     onClick={() => setEditCatForLinestopMtc(!editCatForLinestopMtc)}
-                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      editCatForLinestopMtc
+                    className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${editCatForLinestopMtc
                         ? "border-cyan-500 bg-cyan-500/10 shadow-2xs"
                         : "border-border bg-card hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${
-                        editCatForLinestopMtc
+                      className={`mt-0.5 h-4 w-4 shrink-0 rounded flex items-center justify-center border transition-colors ${editCatForLinestopMtc
                           ? "bg-cyan-500 border-cyan-500 text-white"
                           : "border-muted-foreground"
-                      }`}
+                        }`}
                     >
                       {editCatForLinestopMtc && <Check className="h-3 w-3 stroke-[3]" />}
                     </div>
@@ -1631,13 +1499,13 @@ function MasterDataPage() {
                         Linestop Maintenance
                       </span>
                       <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-                        Tersedia pada form teknisi Maintenance
+                        Available on Maintenance technician form
                       </span>
                     </div>
                   </button>
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-1.5 font-sans">
-                  * Bisa pilih salah satu tipe E-Form, atau centang kedua-duanya sekaligus.
+                  * Select one E-Form type, or check both at the same time.
                 </p>
               </div>
 
@@ -1652,7 +1520,7 @@ function MasterDataPage() {
                   />
                   <div>
                     <span className="block font-bold text-rose-600 dark:text-rose-400">
-                      Dihitung dalam MTTR & MTBF (Breakdown Category)
+                      Counted in MTTR & MTBF (Breakdown Category)
                     </span>
                     <span className="text-[11px] text-muted-foreground leading-relaxed block mt-0.5 font-sans">
                       {t("md.breakdownHint")}
@@ -1670,7 +1538,7 @@ function MasterDataPage() {
                   className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                 />
                 <span className="text-foreground">
-                  Kategori Aktif
+                  Active Category
                 </span>
               </label>
             </div>
@@ -1681,14 +1549,14 @@ function MasterDataPage() {
                 onClick={() => setEditCatModalOpen(false)}
                 className="px-4 py-2 rounded-lg border border-border font-mono text-xs text-muted-foreground hover:bg-muted cursor-pointer"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveEditCategory}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs cursor-pointer"
               >
-                Simpan Perubahan
+                Save Changes
               </button>
             </div>
           </div>
@@ -1704,16 +1572,16 @@ function MasterDataPage() {
             <div className="flex items-center gap-3 mb-3 text-rose-600 dark:text-rose-400">
               <AlertTriangle className="h-6 w-6 shrink-0" />
               <h3 className="font-display text-base font-bold text-foreground">
-                Hapus Category Problem?
+                Delete Category Problem?
               </h3>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-              Apakah Anda yakin ingin menghapus category problem <strong className="text-foreground">{deleteCatTarget.name} ({deleteCatTarget.code || deleteCatTarget.id})</strong>?
+              Are you sure you want to delete category problem <strong className="text-foreground">{deleteCatTarget.name} ({deleteCatTarget.code || deleteCatTarget.id})</strong>?
             </p>
 
             {linkedStopsCount > 0 && (
               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs mb-3">
-                <strong>Perhatian:</strong> Kategori ini sedang digunakan oleh <strong>{linkedStopsCount}</strong> catatan line stop. Riwayat kejadian stop sebelumnya akan tetap tersimpan, namun kategori ini tidak dapat dipilih lagi di masa mendatang.
+                <strong>Warning:</strong> This category is currently referenced by <strong>{linkedStopsCount}</strong> line stop records. Past history will remain intact, but this category will no longer be selectable in future forms.
               </div>
             )}
 
@@ -1722,13 +1590,13 @@ function MasterDataPage() {
                 onClick={() => setDeleteCatTarget(null)}
                 className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted cursor-pointer"
               >
-                Batal
+                Cancel
               </button>
               <button
                 onClick={handleConfirmDeleteCategory}
                 className="px-4 py-2 rounded bg-rose-600 text-white font-semibold font-mono text-xs hover:bg-rose-500 shadow-2xs cursor-pointer"
               >
-                Ya, Hapus Category Problem
+                Yes, Delete Category Problem
               </button>
             </div>
           </div>
@@ -1745,7 +1613,7 @@ function MasterDataPage() {
                   <Eye className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm text-foreground">Detail Jalur Konveyor & Stasiun</h3>
+                  <h3 className="font-semibold text-sm text-foreground">Conveyor Line & Station Details</h3>
                   <p className="text-[11px] text-muted-foreground font-mono">ID: {viewingConveyorRow.conveyorId}</p>
                 </div>
               </div>
@@ -1760,32 +1628,32 @@ function MasterDataPage() {
 
             <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Nama Area</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Area Name</span>
                 <span className="text-foreground font-bold text-xs">{viewingConveyorRow.areaName}</span>
               </div>
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Nama Konveyor</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Conveyor Name</span>
                 <span className="text-foreground font-bold text-xs">{viewingConveyorRow.conveyorName}</span>
               </div>
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Status Konveyor</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Conveyor Status</span>
                 <span className={`font-bold text-xs ${viewingConveyorRow.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
-                  {viewingConveyorRow.isActive ? "Aktif (Active)" : "Nonaktif (Inactive)"}
+                  {viewingConveyorRow.isActive ? "Active" : "Inactive"}
                 </span>
               </div>
               <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Total Stasiun</span>
-                <span className="text-foreground font-bold text-xs">{viewingConveyorRow.stations.length} Stasiun</span>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Total Stations</span>
+                <span className="text-foreground font-bold text-xs">{viewingConveyorRow.stations.length} Stations</span>
               </div>
             </div>
 
             <div className="pt-2">
               <label className="block text-foreground font-semibold mb-2 font-mono text-xs">
-                Daftar Stasiun ({viewingConveyorRow.stations.length}):
+                Station List ({viewingConveyorRow.stations.length}):
               </label>
               <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                 {viewingConveyorRow.stations.length === 0 ? (
-                  <p className="text-muted-foreground italic font-mono text-[11px]">Belum ada stasiun terdaftar pada konveyor ini.</p>
+                  <p className="text-muted-foreground italic font-mono text-[11px]">No stations registered on this conveyor yet.</p>
                 ) : (
                   viewingConveyorRow.stations.map((st, idx) => (
                     <div key={st.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/60 font-mono text-[11px]">
@@ -1811,7 +1679,7 @@ function MasterDataPage() {
                 onClick={() => setViewingConveyorRow(null)}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors shadow-2xs font-mono text-xs"
               >
-                Tutup
+                Close
               </button>
             </div>
           </div>

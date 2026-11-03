@@ -46,7 +46,7 @@ function UserManagementPage() {
 
   const handleSaveUser = () => {
     if (!userName.trim() || !userEmail.trim()) {
-      toast.error("Nama dan email wajib diisi");
+      toast.error("Name and email are required");
       return;
     }
     store.addUser({
@@ -55,7 +55,7 @@ function UserManagementPage() {
       badge: userBadge.trim() || `EMP-${Math.floor(100 + Math.random() * 900)}`,
       role: userRole,
     });
-    toast.success("User baru berhasil ditambahkan");
+    toast.success("New user successfully added");
     setUserName("");
     setUserEmail("");
     setUserBadge("");
@@ -80,14 +80,14 @@ function UserManagementPage() {
           className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 font-mono text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors"
         >
           <Plus className="h-4 w-4" />
-          Tambah Pengguna
+          Add User
         </button>
       </div>
 
       {/* Users Table */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
         <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400 bg-white dark:bg-[#0b1320]">
-          <span className="font-medium">{appState.users.length} Akun terdaftar</span>
+          <span className="font-medium">{appState.users.length} Registered accounts</span>
           <span className="text-amber-600 dark:text-amber-400 font-medium">{t("users.auditNote")}</span>
         </div>
 
@@ -116,7 +116,7 @@ function UserManagementPage() {
                     {t("users.role")} <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                   </span>
                 </th>
-                <th className="py-3 px-4 text-right whitespace-nowrap">Ubah Peran</th>
+                <th className="py-3 px-4 text-right whitespace-nowrap">Change Role</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
@@ -128,7 +128,7 @@ function UserManagementPage() {
                       type="button"
                       onClick={() => setViewingUser(u)}
                       className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 shadow-2xs transition-colors"
-                      title="Lihat Detail Pengguna"
+                      title="View User Details"
                     >
                       <Eye className="h-3.5 w-3.5" />
                     </button>
@@ -167,7 +167,7 @@ function UserManagementPage() {
                     </span>
                   </td>
 
-                  {/* Ubah Peran SelectInput */}
+                  {/* Change Role SelectInput */}
                   <td className="py-3.5 px-4 text-right whitespace-nowrap">
                     <div className="inline-block w-40 text-left">
                       <SelectInput
@@ -180,7 +180,7 @@ function UserManagementPage() {
                           value: r,
                           label: t(`role.${r}` as any),
                         }))}
-                        placeholder="Pilih Role"
+                        placeholder="Select Role"
                       />
                     </div>
                   </td>
@@ -205,13 +205,13 @@ function UserManagementPage() {
         <div className="flex items-center gap-2">
           <History className="h-4 w-4 text-muted-foreground" />
           <h3 className="font-display text-sm font-semibold text-foreground">
-            Riwayat Audit & Perubahan Sistem
+            Audit History & System Changes
           </h3>
         </div>
 
         <div className="rounded-lg border border-border bg-muted/20 overflow-hidden divide-y divide-border text-xs font-mono">
           {appState.auditLogs.length === 0 ? (
-            <div className="p-4 text-muted-foreground">Belum ada riwayat audit.</div>
+            <div className="p-4 text-muted-foreground">No audit history yet.</div>
           ) : (
             appState.auditLogs.slice(0, 8).map((log) => (
               <div key={log.id} className="p-3 flex items-start justify-between gap-4">
@@ -219,7 +219,7 @@ function UserManagementPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-foreground font-bold">{log.action}</span>
                     <span className="text-muted-foreground/30">•</span>
-                    <span className="text-muted-foreground">Oleh: {log.user}</span>
+                    <span className="text-muted-foreground">By: {log.user}</span>
                   </div>
                   <p className="text-muted-foreground/80 font-sans text-[11px] leading-relaxed">
                     {log.details}
@@ -239,7 +239,7 @@ function UserManagementPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
             <h3 className="font-display text-base font-semibold text-foreground mb-4">
-              Tambah Pengguna Baru
+              Add New User
             </h3>
 
             <div className="space-y-3.5 text-xs font-mono">
@@ -247,7 +247,7 @@ function UserManagementPage() {
                 <label className="block text-muted-foreground mb-1">{t("users.name")}:</label>
                 <input
                   type="text"
-                  placeholder="Nama Lengkap"
+                  placeholder="Full Name"
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
                   className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
@@ -258,7 +258,7 @@ function UserManagementPage() {
                 <label className="block text-muted-foreground mb-1">{t("users.email")}:</label>
                 <input
                   type="email"
-                  placeholder="nama@krm.co.id"
+                  placeholder="name@krm.co.id"
                   value={userEmail}
                   onChange={(e) => setUserEmail(e.target.value)}
                   className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
@@ -269,7 +269,7 @@ function UserManagementPage() {
                 <label className="block text-muted-foreground mb-1">{t("users.badge")}:</label>
                 <input
                   type="text"
-                  placeholder="Contoh: EMP-501"
+                  placeholder="Example: EMP-501"
                   value={userBadge}
                   onChange={(e) => setUserBadge(e.target.value)}
                   className="w-full rounded border border-border bg-background p-2 text-foreground focus:outline-none focus:border-ring"
@@ -288,7 +288,7 @@ function UserManagementPage() {
                     label: t(`role.${r}` as any),
                   }))}
                   hideClear
-                  placeholder="Pilih Role"
+                  placeholder="Select Role"
                 />
               </div>
             </div>
@@ -298,13 +298,13 @@ function UserManagementPage() {
                 onClick={() => setAddUserModalOpen(false)}
                 className="px-4 py-2 rounded border border-border font-mono text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
-                Batal
+                Cancel
               </button>
               <button
                 onClick={handleSaveUser}
                 className="px-4 py-2 rounded bg-primary text-primary-foreground font-semibold font-mono text-xs hover:bg-primary/90 shadow-2xs transition-colors"
               >
-                Simpan Pengguna
+                Save User
               </button>
             </div>
           </div>
@@ -321,7 +321,7 @@ function UserManagementPage() {
                   <Eye className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm text-foreground">Detail Data Pengguna</h3>
+                  <h3 className="font-semibold text-sm text-foreground">User Data Details</h3>
                   <p className="text-[11px] text-muted-foreground font-mono">ID: {viewingUser.id}</p>
                 </div>
               </div>
@@ -346,11 +346,11 @@ function UserManagementPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Nomor Badge</span>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Badge Number</span>
                   <span className="text-foreground font-bold text-xs">{viewingUser.badge}</span>
                 </div>
                 <div className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Role Sistem</span>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">System Role</span>
                   <span className="text-foreground font-bold text-xs uppercase">{viewingUser.role}</span>
                 </div>
               </div>
@@ -362,7 +362,7 @@ function UserManagementPage() {
                 onClick={() => setViewingUser(null)}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors shadow-2xs"
               >
-                Tutup
+                Close
               </button>
             </div>
           </div>

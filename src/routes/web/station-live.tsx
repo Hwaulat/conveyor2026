@@ -91,7 +91,7 @@ function StationLivePage() {
   }, [filteredStations, appState.stationLive, nowMs]);
 
   const areaOptions = useMemo(() => [
-    { value: "all", label: `Semua Area (${appState.areas.length})` },
+    { value: "all", label: `All Areas (${appState.areas.length})` },
     ...appState.areas.map((a) => ({
       value: a.id,
       label: `${a.name} (${a.code})`,
@@ -113,7 +113,7 @@ function StationLivePage() {
             </h1>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Pantauan langsung kondisi setiap stasiun conveyor, status running/stopped, kecepatan aktual, dan durasi stop secara real-time.
+            Live monitoring of each conveyor station condition, running/stopped status, actual speed, and stop duration in real-time.
           </p>
         </div>
 
@@ -125,7 +125,7 @@ function StationLivePage() {
               datalist={areaOptions}
               value={selectedAreaId}
               onChange={(val) => setSelectedAreaId(val ?? "all")}
-              placeholder="Filter Area Stasiun"
+              placeholder="Filter Station Area"
             />
           </div>
 
@@ -134,10 +134,10 @@ function StationLivePage() {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-mono font-medium rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-xs"
-            title="Buka tampilan siaran Andon TV di tab baru"
+            title="Open Andon TV broadcast view in a new tab"
           >
             <Tv className="h-3.5 w-3.5 text-primary" />
-            <span>Buka Andon TV</span>
+            <span>Open Andon TV</span>
             <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
           </a>
         </div>
@@ -149,7 +149,7 @@ function StationLivePage() {
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/20 p-4 sm:p-5 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400">
             <span className="font-mono text-xs uppercase tracking-wider font-semibold">
-              Stasiun Running
+              Stations Running
             </span>
             <CheckCircle2 className="h-5 w-5" />
           </div>
@@ -158,7 +158,7 @@ function StationLivePage() {
               {runningCount}
             </span>
             <span className="font-mono text-xs sm:text-sm text-emerald-600/80 dark:text-emerald-400/80">
-              / {filteredStations.length} Stasiun
+              / {filteredStations.length} Stations
             </span>
           </div>
         </div>
@@ -173,7 +173,7 @@ function StationLivePage() {
         >
           <div className="flex items-center justify-between text-red-600 dark:text-red-400">
             <span className="font-mono text-xs uppercase tracking-wider font-semibold">
-              Stasiun Stopped
+              Stations Stopped
             </span>
             <AlertTriangle className={`h-5 w-5 ${stoppedCount > 0 ? "animate-bounce" : ""}`} />
           </div>
@@ -186,7 +186,7 @@ function StationLivePage() {
               {stoppedCount}
             </span>
             <span className="font-mono text-xs sm:text-sm text-muted-foreground">
-              {stoppedCount > 0 ? "STOP DARURAT" : "Normal"}
+              {stoppedCount > 0 ? "EMERGENCY STOP" : "Normal"}
             </span>
           </div>
         </div>
@@ -195,7 +195,7 @@ function StationLivePage() {
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="font-mono text-xs uppercase tracking-wider font-semibold">
-              Line Stop Hari Ini
+              Line Stops Today
             </span>
             <AlertOctagon className="h-5 w-5" />
           </div>
@@ -203,7 +203,7 @@ function StationLivePage() {
             <span className="font-mono text-4xl sm:text-5xl font-black text-foreground">
               {stopsToday.length}
             </span>
-            <span className="font-mono text-xs sm:text-sm text-muted-foreground">Kejadian</span>
+            <span className="font-mono text-xs sm:text-sm text-muted-foreground">Occurrences</span>
           </div>
         </div>
 
@@ -217,7 +217,7 @@ function StationLivePage() {
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-              Stop Terlama Aktif
+              Longest Active Stop
             </span>
             <Clock
               className={`h-5 w-5 ${
@@ -241,15 +241,15 @@ function StationLivePage() {
       {filteredStations.length === 0 ? (
         <div className="p-12 text-center rounded-xl border border-dashed border-border bg-card">
           <Building2 className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-40" />
-          <h4 className="font-semibold text-foreground">Tidak Ada Stasiun Ditemukan</h4>
+          <h4 className="font-semibold text-foreground">No Stations Found</h4>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-            Tidak ada stasiun yang terdaftar dalam area yang dipilih. Silakan pilih area lain atau kembali ke "Semua Area".
+            No stations registered in the selected area. Please choose another area or reset the filter.
           </p>
           <button
             onClick={() => setSelectedAreaId("all")}
             className="mt-4 px-3 py-1.5 text-xs font-mono font-medium rounded-lg border border-border bg-muted hover:bg-muted/80 text-foreground transition-colors"
           >
-            Reset ke Semua Area
+            Reset to All Areas
           </button>
         </div>
       ) : (
@@ -284,7 +284,7 @@ function StationLivePage() {
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>
                       <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest font-bold block">
-                        STASIUN #{station.sequence}
+                        STATION #{station.sequence}
                       </span>
                       <h3 className="font-display text-xl font-black text-foreground tracking-tight">
                         {station.name}
@@ -318,14 +318,14 @@ function StationLivePage() {
                     {isStopped && (
                       <div className="mt-2 pt-2 border-t border-white/30 space-y-1">
                         <span className="text-xs uppercase tracking-wider block font-sans opacity-90">
-                          Durasi Berhenti:
+                          Stop Duration:
                         </span>
                         <span className="text-2xl md:text-3xl font-black tracking-wider text-white block">
                           {fmtDuration(stoppedDuration)}
                         </span>
                         {activeCat && (
                           <div className="mt-1 font-sans text-xs bg-black/40 text-white py-1 px-2.5 rounded inline-block">
-                            Alasan: <span className="font-bold">{activeCat.name}</span>
+                            Reason: <span className="font-bold">{activeCat.name}</span>
                           </div>
                         )}
                         {activeStop?.reportedBy && (
@@ -346,7 +346,7 @@ function StationLivePage() {
                 {/* Card Bottom: Telemetry */}
                 <div className="pt-3 border-t border-border space-y-2 font-mono text-xs">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Kecepatan:</span>
+                    <span className="text-muted-foreground">Speed:</span>
                     <div className="text-right">
                       <span className="text-base font-bold text-foreground">
                         {isStopped ? "0.00" : live ? live.speed.toFixed(2) : "0.00"} {station.speedUnit}
