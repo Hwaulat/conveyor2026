@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   LayoutDashboard,
   History,
@@ -17,8 +17,9 @@ import {
   X,
   Clock,
   ExternalLink,
-  PanelLeftClose,
-  PanelLeftOpen,
+  PanelLeft,
+  Bell,
+  ChevronDown,
   Radio,
 } from "lucide-react";
 import { useI18n } from "../lib/i18n";
@@ -26,6 +27,14 @@ import { useTheme } from "../lib/theme";
 import { useAppStore, store } from "../lib/store";
 import { fmtTime, fmtDateHuman, shiftOf } from "../lib/format";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "../components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/web")({
   head: () => ({
@@ -70,6 +79,16 @@ function WebLayout() {
 
   const currentShift = shiftOf(nowMs, appState.shifts);
   const stoppedStationsCount = Object.values(appState.stationLive).filter((s) => s.state === "stopped").length;
+
+  const formattedDateFull = useMemo(() => {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Jakarta",
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(nowMs));
+  }, [nowMs]);
 
   const navGroups: NavGroup[] = [
     {
@@ -308,9 +327,9 @@ function WebLayout() {
       {/* Main Container */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Top Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/90 px-4 md:px-6 backdrop-blur">
-          {/* Left: Sidebar Collapse Icon Button (Replaces online status & shift) */}
-          <div className="flex items-center gap-2">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 md:px-6 backdrop-blur">
+          {/* Left: Sidebar Collapse Icon Button & Vertical Divider */}
+          <div className="flex items-center gap-3">
             <button
               onClick={() => {
                 if (typeof window !== "undefined" && window.innerWidth < 1024) {
@@ -319,70 +338,165 @@ function WebLayout() {
                   setSidebarCollapsed(!sidebarCollapsed);
                 }
               }}
-              className="p-2 rounded-lg border border-border bg-card text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer"
+              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer"
               title={sidebarCollapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
               aria-label="Toggle Sidebar"
             >
-              {sidebarCollapsed ? (
-                <PanelLeftOpen className="h-4 w-4" />
-              ) : (
-                <PanelLeftClose className="h-4 w-4" />
-              )}
+              <PanelLeft className="h-5 w-5" />
             </button>
+            <div className="h-5 w-px bg-border" />
           </div>
 
-          {/* Right: Clock WIB, Theme Switch, Language Switch, User Profile */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Live Clock WIB */}
-            <div className="hidden sm:flex flex-col items-end border-r border-border pr-3">
-              <div className="flex items-center gap-1.5 font-mono text-sm font-semibold tracking-wider text-foreground">
-                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>{fmtTime(nowMs)}</span>
-                <span className="text-[10px] text-muted-foreground font-normal">WIB</span>
-              </div>
-              <span className="text-[10px] text-muted-foreground font-sans">
-                {fmtDateHuman(nowMs)}
-              </span>
-            </div>
-
-            {/* Theme Switcher Toggle (Icon Only) */}
+          {/* Right: Moon (Theme), Date & Time, Divider, Bell with Badge, User Profile */}
+          <div className="flex items-center gap-3 sm:gap-3.5">
+            {/* Theme Switcher Toggle (Moon/Sun) */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg border border-border bg-card text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer"
-              title={theme === "dark" ? "Ganti ke Mode Terang (Light Mode)" : "Ganti ke Mode Gelap (Dark Mode)"}
+              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer"
+              title={theme === "dark" ? "Ganti ke Mode Terang" : "Ganti ke Mode Gelap"}
               aria-label="Toggle Theme"
             >
               {theme === "dark" ? (
-                <Sun className="h-4 w-4 text-amber-400" />
+                <Sun className="h-4 w-4 text-amber-500" />
               ) : (
-                <Moon className="h-4 w-4 text-indigo-500" />
+                <Moon className="h-4 w-4" />
               )}
             </button>
 
-            {/* Language Switcher */}
-            <button
-              onClick={() => setLang(lang === "id" ? "en" : "id")}
-              className="flex items-center gap-1.5 rounded border border-border bg-card px-2.5 py-1.5 font-mono text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
-              title="Ganti Bahasa / Switch Language"
-            >
-              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="font-semibold uppercase">{lang}</span>
-            </button>
+            {/* Live Clock & Full Date */}
+            <div className="hidden sm:flex flex-col items-end text-right select-none leading-none gap-1">
+              <span className="font-mono text-sm font-bold text-foreground tracking-wide">
+                {fmtTime(nowMs)}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                {formattedDateFull}
+              </span>
+            </div>
+
+            {/* Thin vertical separator line */}
+            <div className="hidden sm:block h-6 w-px bg-border" />
+
+            {/* Notification Bell with Red Badge */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="relative p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer focus:outline-none"
+                  title="Notifikasi Sistem"
+                  aria-label="Notifications"
+                >
+                  <Bell className="h-4 w-4" />
+                  <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-xs">
+                    {stoppedStationsCount > 0 ? stoppedStationsCount : 3}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 p-2">
+                <div className="flex items-center justify-between pb-2 border-b border-border px-2">
+                  <span className="text-xs font-semibold text-foreground">
+                    Notifikasi Sistem
+                  </span>
+                  <span className="text-[10px] bg-red-500/10 text-red-500 font-medium px-1.5 py-0.5 rounded">
+                    {stoppedStationsCount > 0 ? `${stoppedStationsCount} Line Stop` : "3 Baru"}
+                  </span>
+                </div>
+                <div className="py-2 space-y-1.5 text-xs">
+                  {stoppedStationsCount > 0 ? (
+                    Object.entries(appState.stationLive)
+                      .filter(([, s]) => s.state === "stopped")
+                      .slice(0, 3)
+                      .map(([id, s]) => (
+                        <div key={id} className="p-2 rounded bg-destructive/10 border border-destructive/20 text-destructive text-[11px]">
+                          <span className="font-semibold">{id}</span> sedang mengalami kendala (STOP)
+                        </div>
+                      ))
+                  ) : (
+                    <>
+                      <div className="p-2 rounded bg-muted/60 text-[11px] text-foreground">
+                        <span className="font-semibold block text-primary">Sistem Normal</span>
+                        Seluruh stasiun aktif dan sinkronisasi conveyor berjalan lancar.
+                      </div>
+                      <div className="p-2 rounded bg-muted/60 text-[11px] text-foreground">
+                        <span className="font-semibold block text-emerald-600 dark:text-emerald-400">Shift 1 Berjalan</span>
+                        Monitoring OEE dan line-stop aktif tercatat di database.
+                      </div>
+                      <div className="p-2 rounded bg-muted/60 text-[11px] text-foreground">
+                        <span className="font-semibold block text-amber-600 dark:text-amber-400">Pemeriksaan Rutin</span>
+                        Jadwal inspeksi pencegahan terjadwal pukul 16:30 WIB.
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="pt-1.5 border-t border-border">
+                  <Link
+                    to="/web/logs"
+                    className="block text-center text-[11px] text-primary hover:underline py-1"
+                  >
+                    Lihat Semua Riwayat Line Stop &rarr;
+                  </Link>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* User Profile */}
-            <div className="flex items-center gap-2 pl-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted font-mono text-xs font-semibold text-foreground">
-                SA
-              </div>
-              <div className="hidden md:flex flex-col text-left">
-                <span className="text-xs font-medium text-foreground leading-tight">
-                  {t("header.superAdmin")}
-                </span>
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  {t("header.admin")}
-                </span>
-              </div>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer text-left focus:outline-none"
+                  title="Profil & Pengaturan"
+                >
+                  <img
+                    src="/admin-avatar.png"
+                    alt="admin"
+                    className="h-7 w-7 rounded-full object-cover border border-border shadow-2xs"
+                  />
+                  <div className="flex flex-col text-left leading-none">
+                    <span className="text-xs font-bold text-foreground">
+                      admin
+                    </span>
+                    <span className="text-[10px] text-muted-foreground mt-0.5">
+                      Super Admin
+                    </span>
+                  </div>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 p-1.5">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-xs font-semibold leading-none text-foreground">admin</p>
+                    <p className="text-[11px] leading-none text-muted-foreground">superadmin@kyrm.co.id</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    const nextLang = lang === "id" ? "en" : "id";
+                    setLang(nextLang);
+                    toast.success(nextLang === "id" ? "Bahasa diubah ke Indonesia" : "Language changed to English");
+                  }}
+                  className="cursor-pointer text-xs"
+                >
+                  <Globe className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span>Bahasa: <strong>{lang.toUpperCase()}</strong> ({lang === "id" ? "Indonesia" : "English"})</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer text-xs">
+                  {theme === "dark" ? (
+                    <Sun className="mr-2 h-4 w-4 text-amber-500" />
+                  ) : (
+                    <Moon className="mr-2 h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span>Mode: <strong>{theme === "dark" ? "Dark Mode" : "Light Mode"}</strong></span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => toast.success("Sesi admin aktif (Super Admin)")}
+                  className="cursor-pointer text-xs text-emerald-600 dark:text-emerald-400"
+                >
+                  <Radio className="mr-2 h-3.5 w-3.5" />
+                  <span>Status: <strong>Online</strong></span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
