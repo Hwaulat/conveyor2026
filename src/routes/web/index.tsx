@@ -5,11 +5,7 @@ import {
   Clock,
   TrendingDown,
   Activity,
-  Layers,
   ArrowUpRight,
-  X,
-  Building2,
-  Calendar,
   Gauge,
 } from "lucide-react";
 import {
@@ -45,7 +41,7 @@ import { SelectInput } from "../../components/ui/select-input";
 export const Route = createFileRoute("/web/")({
   head: () => ({
     meta: [
-      { title: "PT. Krama Yudha Ratu Motor Indonesia — Real-time Dashboard & KPI" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — Monitoring Conveyor & KPI" },
       { name: "description", content: "Real-time Conveyor line performance, MTTR, MTBF and OEE metrics." },
     ],
   }),
@@ -65,16 +61,16 @@ function DashboardPage() {
 
   const isDark = theme === "dark";
 
-  // Default Area: PTED
+  // Default Area: Sanding Area (following iPad default)
   const defaultAreaId = useMemo(() => {
     return (
       appState.areas.find(
-        (a) => a.name.toLowerCase() === "pted" || a.code?.toLowerCase() === "pted",
-      )?.id ?? appState.areas[0]?.id ?? "area-pted"
+        (a) => a.id === "area-sanding" || a.code?.toUpperCase() === "SANDING",
+      )?.id ?? appState.areas[0]?.id ?? "area-sanding"
     );
   }, [appState.areas]);
 
-  // Filter 1: Area Filter (default: PTED)
+  // Filter 1: Area Filter (default: Sanding Area matching iPad)
   const [selectedAreaId, setSelectedAreaId] = useState<string>(() => defaultAreaId);
 
   useEffect(() => {
@@ -400,40 +396,9 @@ function DashboardPage() {
       {/* Top Banner: Title & Filter Row */}
       <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
-              {t("dash.title")}
-            </h1>
-
-            {/* Active Filter Badges */}
-            {selectedArea && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-0.5 font-mono text-xs font-semibold text-cyan-600 dark:text-cyan-400">
-                <Building2 className="h-3 w-3" />
-                <span>Area: {selectedArea.name}</span>
-                <button
-                  onClick={() => handleAreaChange("all")}
-                  className="rounded-full hover:bg-cyan-500/20 p-0.5 transition-colors"
-                  title="Clear area filter"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-
-            {selectedStation && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-mono text-xs font-semibold text-primary">
-                <Layers className="h-3 w-3" />
-                <span>Station: {selectedStation.name}</span>
-                <button
-                  onClick={() => setSelectedStationId("all")}
-                  className="rounded-full hover:bg-primary/20 p-0.5 transition-colors"
-                  title="Clear station filter"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
+            {t("dash.title")}
+          </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {selectedStation
               ? `Showing performance analysis & metrics for ${selectedStation.name} (${selectedStation.code || selectedStation.id})`

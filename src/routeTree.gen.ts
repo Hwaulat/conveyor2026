@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AndonRouteImport } from './routes/andon'
+import { Route as EFormRouteImport } from './routes/e-form'
 import { Route as IpadRouteImport } from './routes/ipad'
 import { Route as WebRouteImport } from './routes/web'
 import { Route as WebIndexRouteImport } from './routes/web/index'
@@ -18,8 +19,10 @@ import { Route as WebLogsRouteImport } from './routes/web/logs'
 import { Route as WebMasterDataRouteImport } from './routes/web/master-data'
 import { Route as WebProductionRouteImport } from './routes/web/production'
 import { Route as WebReportsRouteImport } from './routes/web/reports'
+import { Route as WebStationHistoryRouteImport } from './routes/web/station-history'
 import { Route as WebStationLiveRouteImport } from './routes/web/station-live'
 import { Route as WebUsersRouteImport } from './routes/web/users'
+import { Route as WebStationLiveEFormRouteImport } from './routes/web/station-live.e-form'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -29,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
 const AndonRoute = AndonRouteImport.update({
   id: '/andon',
   path: '/andon',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EFormRoute = EFormRouteImport.update({
+  id: '/e-form',
+  path: '/e-form',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IpadRoute = IpadRouteImport.update({
@@ -66,6 +74,11 @@ const WebReportsRoute = WebReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => WebRoute,
 } as any)
+const WebStationHistoryRoute = WebStationHistoryRouteImport.update({
+  id: '/station-history',
+  path: '/station-history',
+  getParentRoute: () => WebRoute,
+} as any)
 const WebStationLiveRoute = WebStationLiveRouteImport.update({
   id: '/station-live',
   path: '/station-live',
@@ -76,90 +89,114 @@ const WebUsersRoute = WebUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => WebRoute,
 } as any)
+const WebStationLiveEFormRoute = WebStationLiveEFormRouteImport.update({
+  id: '/e-form',
+  path: '/e-form',
+  getParentRoute: () => WebStationLiveRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/andon': typeof AndonRoute
+  '/e-form': typeof EFormRoute
   '/ipad': typeof IpadRoute
   '/web': typeof WebRouteWithChildren
   '/web/logs': typeof WebLogsRoute
   '/web/master-data': typeof WebMasterDataRoute
   '/web/production': typeof WebProductionRoute
   '/web/reports': typeof WebReportsRoute
-  '/web/station-live': typeof WebStationLiveRoute
+  '/web/station-history': typeof WebStationHistoryRoute
+  '/web/station-live': typeof WebStationLiveRouteWithChildren
   '/web/users': typeof WebUsersRoute
   '/web/': typeof WebIndexRoute
+  '/web/station-live/e-form': typeof WebStationLiveEFormRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/andon': typeof AndonRoute
+  '/e-form': typeof EFormRoute
   '/ipad': typeof IpadRoute
   '/web/logs': typeof WebLogsRoute
   '/web/master-data': typeof WebMasterDataRoute
   '/web/production': typeof WebProductionRoute
   '/web/reports': typeof WebReportsRoute
-  '/web/station-live': typeof WebStationLiveRoute
+  '/web/station-history': typeof WebStationHistoryRoute
+  '/web/station-live': typeof WebStationLiveRouteWithChildren
   '/web/users': typeof WebUsersRoute
   '/web': typeof WebIndexRoute
+  '/web/station-live/e-form': typeof WebStationLiveEFormRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/andon': typeof AndonRoute
+  '/e-form': typeof EFormRoute
   '/ipad': typeof IpadRoute
   '/web': typeof WebRouteWithChildren
   '/web/logs': typeof WebLogsRoute
   '/web/master-data': typeof WebMasterDataRoute
   '/web/production': typeof WebProductionRoute
   '/web/reports': typeof WebReportsRoute
-  '/web/station-live': typeof WebStationLiveRoute
+  '/web/station-history': typeof WebStationHistoryRoute
+  '/web/station-live': typeof WebStationLiveRouteWithChildren
   '/web/users': typeof WebUsersRoute
   '/web/': typeof WebIndexRoute
+  '/web/station-live/e-form': typeof WebStationLiveEFormRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/andon'
+    | '/e-form'
     | '/ipad'
     | '/web'
     | '/web/logs'
     | '/web/master-data'
     | '/web/production'
     | '/web/reports'
+    | '/web/station-history'
     | '/web/station-live'
     | '/web/users'
     | '/web/'
+    | '/web/station-live/e-form'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/andon'
+    | '/e-form'
     | '/ipad'
     | '/web/logs'
     | '/web/master-data'
     | '/web/production'
     | '/web/reports'
+    | '/web/station-history'
     | '/web/station-live'
     | '/web/users'
     | '/web'
+    | '/web/station-live/e-form'
   id:
     | '__root__'
     | '/'
     | '/andon'
+    | '/e-form'
     | '/ipad'
     | '/web'
     | '/web/logs'
     | '/web/master-data'
     | '/web/production'
     | '/web/reports'
+    | '/web/station-history'
     | '/web/station-live'
     | '/web/users'
     | '/web/'
+    | '/web/station-live/e-form'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AndonRoute: typeof AndonRoute
+  EFormRoute: typeof EFormRoute
   IpadRoute: typeof IpadRoute
   WebRoute: typeof WebRouteWithChildren
 }
@@ -178,6 +215,13 @@ declare module '@tanstack/react-router' {
       path: '/andon'
       fullPath: '/andon'
       preLoaderRoute: typeof AndonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/e-form': {
+      id: '/e-form'
+      path: '/e-form'
+      fullPath: '/e-form'
+      preLoaderRoute: typeof EFormRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ipad': {
@@ -229,6 +273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebReportsRouteImport
       parentRoute: typeof WebRoute
     }
+    '/web/station-history': {
+      id: '/web/station-history'
+      path: '/station-history'
+      fullPath: '/web/station-history'
+      preLoaderRoute: typeof WebStationHistoryRouteImport
+      parentRoute: typeof WebRoute
+    }
     '/web/station-live': {
       id: '/web/station-live'
       path: '/station-live'
@@ -243,15 +294,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebUsersRouteImport
       parentRoute: typeof WebRoute
     }
+    '/web/station-live/e-form': {
+      id: '/web/station-live/e-form'
+      path: '/e-form'
+      fullPath: '/web/station-live/e-form'
+      preLoaderRoute: typeof WebStationLiveEFormRouteImport
+      parentRoute: typeof WebStationLiveRoute
+    }
   }
 }
+
+interface WebStationLiveRouteChildren {
+  WebStationLiveEFormRoute: typeof WebStationLiveEFormRoute
+}
+
+const WebStationLiveRouteChildren: WebStationLiveRouteChildren = {
+  WebStationLiveEFormRoute: WebStationLiveEFormRoute,
+}
+
+const WebStationLiveRouteWithChildren = WebStationLiveRoute._addFileChildren(
+  WebStationLiveRouteChildren,
+)
 
 interface WebRouteChildren {
   WebLogsRoute: typeof WebLogsRoute
   WebMasterDataRoute: typeof WebMasterDataRoute
   WebProductionRoute: typeof WebProductionRoute
   WebReportsRoute: typeof WebReportsRoute
-  WebStationLiveRoute: typeof WebStationLiveRoute
+  WebStationHistoryRoute: typeof WebStationHistoryRoute
+  WebStationLiveRoute: typeof WebStationLiveRouteWithChildren
   WebUsersRoute: typeof WebUsersRoute
   WebIndexRoute: typeof WebIndexRoute
 }
@@ -261,7 +332,8 @@ const WebRouteChildren: WebRouteChildren = {
   WebMasterDataRoute: WebMasterDataRoute,
   WebProductionRoute: WebProductionRoute,
   WebReportsRoute: WebReportsRoute,
-  WebStationLiveRoute: WebStationLiveRoute,
+  WebStationHistoryRoute: WebStationHistoryRoute,
+  WebStationLiveRoute: WebStationLiveRouteWithChildren,
   WebUsersRoute: WebUsersRoute,
   WebIndexRoute: WebIndexRoute,
 }
@@ -271,6 +343,7 @@ const WebRouteWithChildren = WebRoute._addFileChildren(WebRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AndonRoute: AndonRoute,
+  EFormRoute: EFormRoute,
   IpadRoute: IpadRoute,
   WebRoute: WebRouteWithChildren,
 }

@@ -65,8 +65,8 @@ function ProductionPage() {
   const defaultAreaId = useMemo(() => {
     return (
       appState.areas.find(
-        (a) => a.name.toLowerCase() === "pted" || a.code?.toLowerCase() === "pted",
-      )?.id ?? appState.areas[0]?.id ?? "area-pted"
+        (a) => a.id === "area-sanding" || a.code?.toUpperCase() === "SANDING",
+      )?.id ?? appState.areas[0]?.id ?? "area-sanding"
     );
   }, [appState.areas]);
 

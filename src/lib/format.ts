@@ -33,6 +33,13 @@ const dateHumanFmt = new Intl.DateTimeFormat("en-GB", {
   year: "numeric",
 });
 
+const dateFullHumanFmt = new Intl.DateTimeFormat("en-GB", {
+  timeZone: PLANT_TZ,
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+});
+
 const dateShortFmt = new Intl.DateTimeFormat("en-GB", {
   timeZone: PLANT_TZ,
   day: "2-digit",
@@ -55,12 +62,20 @@ export function fmtDateHuman(ms: number): string {
   return dateHumanFmt.format(new Date(ms));
 }
 
+export function fmtDateFullHuman(ms: number): string {
+  return dateFullHumanFmt.format(new Date(ms));
+}
+
 export function fmtDateShort(ms: number): string {
   return dateShortFmt.format(new Date(ms));
 }
 
 export function fmtDateTime(ms: number): string {
   return `${fmtDateShort(ms)} ${fmtTimeShort(ms)}`;
+}
+
+export function fmtDateTimeFull(ms: number): string {
+  return `${fmtDateFullHuman(ms)}, ${fmtTimeShort(ms)}`;
 }
 
 /** "1h 05m" / "45m 12s" style compact duration, locale-neutral. */

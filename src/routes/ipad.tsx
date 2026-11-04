@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import {
   Tablet,
@@ -6,6 +6,8 @@ import {
   Wifi,
   WifiOff,
   ArrowLeft,
+  ChevronLeft,
+  Eye,
   Send,
   Sun,
   Moon,
@@ -27,6 +29,12 @@ import { stopDurationMs } from "../lib/calc";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/ipad")({
+  validateSearch: (search: Record<string, unknown>): { stationId?: string; areaId?: string } => {
+    return {
+      stationId: typeof search["stationId"] === "string" ? search["stationId"] : undefined,
+      areaId: typeof search["areaId"] === "string" ? search["areaId"] : undefined,
+    };
+  },
   head: () => ({
     meta: [
       { title: "PT. Krama Yudha Ratu Motor Indonesia — Line-Stop E-Form (Tablet)" },
@@ -113,7 +121,7 @@ const TECHNICIANS_PRESETS = [
   { name: "Dewi Lestari", badge: "EMP-304", role: "Quality Gate Operator" },
 ];
 
-function IpadEFormPage() {
+export function IpadEFormPage() {
   const { theme, toggleTheme } = useTheme();
   const appState = useAppStore();
   const [nowMs, setNowMs] = useState(Date.now());
@@ -122,112 +130,141 @@ function IpadEFormPage() {
   const [isOnline, setIsOnline] = useState(true);
   const [simulatedOffline, setSimulatedOffline] = useState(false);
 
-  // Form Type: "linestop" (Linestop) | "mtc" (Linestop Maintenance)
-  const [formType, setFormType] = useState<"linestop" | "mtc">("linestop");
-
-  // Tablist Area Configuration for iPad:
-  // - Linestop: 8 Areas (Sanding, Sealing, Topcoat, Touch Up, Drop Cabin CED, Cooling Tunnel, Oven CED, Mezzanine)
-  // - Linestop Maintenance: 2 Areas (Oven CED, Mezzanine)
-  const ipadAreaConfigs = useMemo(() => {
-    const list =
-      formType === "mtc"
-        ? [
-            { key: "area-oven-ced", name: "Oven CED", code: "OVEN-CED" },
-            { key: "area-mezzanine", name: "Mezzanine", code: "MEZZANINE" },
-          ]
-        : [
-            { key: "area-sanding", name: "Sanding Area", code: "SANDING" },
-            { key: "area-sealing", name: "Sealing Area", code: "SEALING" },
-            { key: "area-topcoat", name: "Topcoat Area", code: "TOPCOAT" },
-            { key: "area-touch-up", name: "Touch Up Area", code: "TOUCH-UP" },
-            { key: "area-drop-ced", name: "Drop Cabin CED", code: "DROP-CED" },
-            { key: "area-cooling-tunnel", name: "Cooling Tunnel", code: "COOLING-TUNNEL" },
-            { key: "area-oven-ced", name: "Oven CED", code: "OVEN-CED" },
-            { key: "area-mezzanine", name: "Mezzanine", code: "MEZZANINE" },
-          ];
-    const areas = appState?.areas || [];
-    return list.map((item) => {
-      const found = areas.find(
-        (a) =>
-          a &&
-          (a.id === item.key ||
-            a.code?.toUpperCase() === item.code ||
-            (typeof a.name === "string" && a.name.toLowerCase().includes(item.code.toLowerCase().slice(0, 4))))
-      );
-      return {
-        id: found?.id ?? item.key,
-        name: item.name,
-        code: found?.code ?? item.code,
-      };
-    });
-  }, [formType, appState?.areas]);
-
-  const [selectedAreaId, setSelectedAreaId] = useState<string>(() => ipadAreaConfigs[0]?.id ?? "area-sanding");
-
-  // Ensure selected area is valid for the current form type
-  useEffect(() => {
-    if (ipadAreaConfigs.length > 0 && !ipadAreaConfigs.some((a) => a.id === selectedAreaId)) {
-      const firstArea = ipadAreaConfigs[0]!;
-      setSelectedAreaId(firstArea.id);
-      if (firstArea.id === "area-oven-ced" || firstArea.id === "area-mezzanine") {
-        setSelectedStationId("");
-      } else {
-        const st = (appState?.stations || []).filter((s) => s && s.areaId === firstArea.id);
-        if (st.length > 0) setSelectedStationId(st[0]!.id);
+  const location = useLocation();
+  const search = useMemo(() => {
+    const s = (location.search || {}) as Record<string, any>;
+    let areaId = typeof s.areaId === "string" ? s.areaId : undefined;
+    let stationId = typeof s.stationId === "string" ? s.stationId : undefined;
+    if (typeof window !== "undefined") {
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        if (!areaId && sp.get("areaId")) areaId = sp.get("areaId") || undefined;
+        if (!stationId && sp.get("stationId")) stationId = sp.get("stationId") || undefined;
+      } catch {
+        // ignore
       }
     }
-  }, [ipadAreaConfigs, selectedAreaId, appState?.stations]);
+    return { areaId, stationId };
+  }, [location.search]);
 
-  const currentAreaConfig = useMemo(() => {
-    return ipadAreaConfigs.find((a) => a.id === selectedAreaId) ?? ipadAreaConfigs[0] ?? { id: "area-sanding", name: "Sanding Area", code: "SANDING" };
-  }, [ipadAreaConfigs, selectedAreaId]);
-
-  // Stations associated with the selected area (Oven CED and Mezzanine have no stations for now)
-  const areaStations = useMemo(() => {
-    if (selectedAreaId === "area-oven-ced" || selectedAreaId === "area-mezzanine") {
-      return [];
-    }
-    const stations = appState?.stations || [];
-    return stations.filter((s) => s && s.areaId === selectedAreaId);
-  }, [appState?.stations, selectedAreaId]);
-
-  const [selectedStationId, setSelectedStationId] = useState<string>(() => {
-    const stations = appState?.stations || [];
-    const initialStations = stations.filter((s) => s && s.areaId === (ipadAreaConfigs[0]?.id ?? "area-sanding"));
-    return initialStations[0]?.id ?? stations[0]?.id ?? "st-sand-1";
-  });
-
-  // Ensure selected station belongs to the active area
-  useEffect(() => {
-    if (areaStations.length > 0 && !areaStations.some((s) => s.id === selectedStationId)) {
-      setSelectedStationId(areaStations[0]!.id);
-    } else if (areaStations.length === 0) {
-      setSelectedStationId("");
-    }
-  }, [areaStations, selectedStationId]);
-
+  // Target Station pre-obtained directly from clicked card in Station Live
   const targetStation = useMemo(() => {
-    return (appState?.stations || []).find((s) => s && s.id === selectedStationId);
-  }, [appState?.stations, selectedStationId]);
+    const stations = appState?.stations || [];
+    if (search.stationId) {
+      const found = stations.find((s) => s.id === search.stationId);
+      if (found) return found;
+    }
+    if (search.areaId) {
+      const found = stations.find((s) => s.areaId === search.areaId);
+      if (found) return found;
+    }
+    // Fallback: Find currently stopped station
+    const stoppedLive = Object.values(appState?.stationLive || {}).find((l) => l.state === "stopped");
+    if (stoppedLive) {
+      const found = stations.find((s) => s.id === stoppedLive.stationId);
+      if (found) return found;
+    }
+    return stations[0] || null;
+  }, [appState?.stations, appState?.stationLive, search.stationId, search.areaId]);
 
-  // Available categories based on Form Type and Category configuration:
-  // - Linestop: categories with forLinestop !== false
-  // - Linestop Maintenance: categories with forLinestopMaintenance === true
+  const targetArea = useMemo(() => {
+    if (!targetStation) return appState?.areas?.[0] || null;
+    return (appState?.areas || []).find((a) => a.id === targetStation.areaId) || null;
+  }, [appState?.areas, targetStation]);
+
+  const targetConveyor = useMemo(() => {
+    if (!targetStation?.conveyorId) return null;
+    return (appState?.conveyors || []).find((c) => c.id === targetStation.conveyorId) || null;
+  }, [appState?.conveyors, targetStation?.conveyorId]);
+
+  const targetLive = useMemo(() => {
+    if (!targetStation?.id) return null;
+    return appState?.stationLive?.[targetStation.id] || null;
+  }, [appState?.stationLive, targetStation?.id]);
+
+  const isOvenOrMezzanine = useMemo(() => {
+    const aId = targetStation?.areaId || targetArea?.id || search.areaId || "";
+    const aCode = (targetArea?.code || "").toUpperCase();
+    return (
+      aId === "area-oven-ced" ||
+      aId === "area-mezzanine" ||
+      aCode === "OVEN-CED" ||
+      aCode === "MEZZANINE"
+    );
+  }, [targetStation?.areaId, targetArea?.id, targetArea?.code, search.areaId]);
+
+  const formType: "linestop" | "mtc" = isOvenOrMezzanine ? "mtc" : "linestop";
+  const selectedStationId = targetStation?.id || "st-seal-3";
+  const selectedAreaId = targetStation?.areaId || targetArea?.id || "area-sealing";
+
+  // Active open stop for pre-obtained station
+  const activeStopForStation = useMemo(() => {
+    if (!targetStation?.id) return null;
+    return (appState?.stops || []).find(
+      (s) => s && s.stationId === targetStation.id && s.status === "open"
+    ) || null;
+  }, [appState?.stops, targetStation?.id]);
+
+  // Available categories: for Oven CED & Mezzanine, starts with "Dock pin stuck" and includes any newly added maintenance categories
   const availableCategories = useMemo(() => {
-    const all = appState?.categories || [];
-    if (formType === "linestop") {
-      const filtered = all.filter((c) => c && c.active && c.forLinestop !== false);
-      if (filtered.length > 0) return filtered;
-      return LINESTOP_CATEGORIES;
-    } else {
-      const filtered = all.filter((c) => c && c.active && c.forLinestopMaintenance === true);
-      if (filtered.length > 0) return filtered;
+    if (isOvenOrMezzanine) {
+      const all = appState?.categories || [];
+      const mtcList = all.filter(
+        (c) => c && c.active && (c.forLinestopMaintenance === true || c.id === "cat-dock-pin" || c.name.toLowerCase().includes("dock pin"))
+      );
+      if (mtcList.length > 0) return mtcList;
       return LINESTOP_MAINTENANCE_CATEGORIES;
     }
-  }, [formType, appState?.categories]);
+    const all = appState?.categories || [];
+    const filtered = all.filter((c) => c && c.active && c.forLinestop !== false);
+    if (filtered.length > 0) return filtered;
+    return LINESTOP_CATEGORIES;
+  }, [appState?.categories, isOvenOrMezzanine]);
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => "cat-full-cabin");
-  const [startTimeVal, setStartTimeVal] = useState<string>(() => toLocalInputValue(Date.now()));
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => {
+    if (
+      search.areaId === "area-oven-ced" ||
+      search.areaId === "area-mezzanine" ||
+      targetStation?.areaId === "area-oven-ced" ||
+      targetStation?.areaId === "area-mezzanine"
+    ) {
+      return "cat-dock-pin";
+    }
+    return "cat-full-cabin";
+  });
+
+  useEffect(() => {
+    if (isOvenOrMezzanine) {
+      if (!availableCategories.some((c) => c.id === selectedCategoryId)) {
+        setSelectedCategoryId(availableCategories[0]?.id || "cat-dock-pin");
+      }
+    } else if (selectedCategoryId === "cat-dock-pin") {
+      setSelectedCategoryId("cat-full-cabin");
+    }
+  }, [isOvenOrMezzanine, availableCategories]);
+
+  const [startTimeVal, setStartTimeVal] = useState<string>(() => {
+    if (activeStopForStation?.startMs) {
+      return toLocalInputValue(activeStopForStation.startMs);
+    }
+    const live = targetStation?.id ? appState?.stationLive?.[targetStation.id] : null;
+    if (live?.lastStopMs) {
+      return toLocalInputValue(live.lastStopMs);
+    }
+    return toLocalInputValue(Date.now());
+  });
+
+  useEffect(() => {
+    if (activeStopForStation?.startMs) {
+      setStartTimeVal(toLocalInputValue(activeStopForStation.startMs));
+    } else if (targetStation?.id) {
+      const live = appState?.stationLive?.[targetStation.id];
+      if (live?.lastStopMs) {
+        setStartTimeVal(toLocalInputValue(live.lastStopMs));
+      }
+    }
+  }, [activeStopForStation, targetStation?.id, appState?.stationLive]);
+
   const [endTimeVal, setEndTimeVal] = useState<string>("");
 
   // Technician / Operator Dropdown list
@@ -259,71 +296,6 @@ function IpadEFormPage() {
   const [newCatModalOpen, setNewCatModalOpen] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [newCatCode, setNewCatCode] = useState("");
-
-  // Select Area & automatically pick first station
-  const handleSelectArea = (areaId: string) => {
-    setSelectedAreaId(areaId);
-    if (areaId === "area-oven-ced" || areaId === "area-mezzanine") {
-      setSelectedStationId("");
-      return;
-    }
-    const stationsInArea = (appState?.stations || []).filter((s) => s && s.areaId === areaId);
-    if (stationsInArea.length > 0) {
-      setSelectedStationId(stationsInArea[0]!.id);
-    } else {
-      setSelectedStationId("");
-    }
-  };
-
-  // Change Form Type (Linestop vs Linestop Maintenance)
-  const handleFormTypeChange = (type: "linestop" | "mtc") => {
-    setFormType(type);
-    const targetConfigs =
-      type === "mtc"
-        ? [
-            { key: "area-oven-ced", name: "Oven CED", code: "OVEN-CED" },
-            { key: "area-mezzanine", name: "Mezzanine", code: "MEZZANINE" },
-          ]
-        : [
-            { key: "area-sanding", name: "Sanding Area", code: "SANDING" },
-            { key: "area-sealing", name: "Sealing Area", code: "SEALING" },
-            { key: "area-topcoat", name: "Topcoat Area", code: "TOPCOAT" },
-            { key: "area-touch-up", name: "Touch Up Area", code: "TOUCH-UP" },
-            { key: "area-drop-ced", name: "Drop Cabin CED", code: "DROP-CED" },
-            { key: "area-cooling-tunnel", name: "Cooling Tunnel", code: "COOLING-TUNNEL" },
-            { key: "area-oven-ced", name: "Oven CED", code: "OVEN-CED" },
-            { key: "area-mezzanine", name: "Mezzanine", code: "MEZZANINE" },
-          ];
-
-    const areas = appState?.areas || [];
-    const firstTarget = targetConfigs[0]!;
-    const foundFirstArea = areas.find(
-      (a) =>
-        a &&
-        (a.id === firstTarget.key ||
-          a.code?.toUpperCase() === firstTarget.code ||
-          (typeof a.name === "string" && a.name.toLowerCase().includes(firstTarget.code.toLowerCase().slice(0, 4))))
-    );
-    const targetAreaId = foundFirstArea?.id ?? firstTarget.key;
-    setSelectedAreaId(targetAreaId);
-
-    if (targetAreaId === "area-oven-ced" || targetAreaId === "area-mezzanine") {
-      setSelectedStationId("");
-    } else {
-      const st = (appState?.stations || []).filter((s) => s && s.areaId === targetAreaId);
-      if (st.length > 0) {
-        setSelectedStationId(st[0]!.id);
-      } else {
-        setSelectedStationId("");
-      }
-    }
-
-    if (type === "linestop") {
-      setSelectedCategoryId("cat-full-cabin");
-    } else {
-      setSelectedCategoryId("cat-dock-pin");
-    }
-  };
 
   // Live timer tick
   useEffect(() => {
@@ -377,8 +349,9 @@ function IpadEFormPage() {
   const handleSaveStop = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if ((areaStations.length > 0 && !selectedStationId) || !selectedCategoryId || !operatorBadge.trim()) {
-      toast.error("Please fill in all required fields (Station, Category, Technician/Operator).");
+    const effectiveOperator = operatorBadge.trim() || `${TECHNICIANS_PRESETS[0]!.name} (${TECHNICIANS_PRESETS[0]!.badge})`;
+    if (!selectedStationId || !selectedCategoryId) {
+      toast.error("Please select a problem category.");
       return;
     }
 
@@ -429,7 +402,7 @@ function IpadEFormPage() {
       startMs,
       endMs,
       categoryId: selectedCategoryId,
-      reportedBy: operatorBadge.trim(),
+      reportedBy: effectiveOperator,
       status: hasEndTime ? "closed" : "open",
       source: "form",
       note: note.trim() || undefined,
@@ -460,6 +433,12 @@ function IpadEFormPage() {
     setNote("");
     setStartTimeVal(toLocalInputValue(Date.now()));
     setEndTimeVal("");
+
+    setTimeout(() => {
+      if (typeof window !== "undefined") {
+        window.location.href = `/web/station-live?areaId=${selectedAreaId}`;
+      }
+    }, 700);
   };
 
   const handleAddNewCategory = () => {
@@ -491,40 +470,65 @@ function IpadEFormPage() {
     setNewCatModalOpen(false);
   };
 
+  const isWebEmbedded = useMemo(() => {
+    if (typeof window !== "undefined") {
+      return window.location.pathname.startsWith("/web");
+    }
+    return typeof location?.pathname === "string" && location.pathname.startsWith("/web");
+  }, [location?.pathname]);
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans select-none p-4 md:p-6 lg:p-8 transition-colors">
-      {/* Top Tablet Navigation */}
-      <header className="flex items-center justify-between border-b border-border pb-4 mb-6">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/web"
-            className="p-2.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-2xs"
-            title="Back to Web Dashboard"
+    <div
+      className={
+        isWebEmbedded
+          ? "space-y-5 w-full font-sans select-none"
+          : "min-h-screen bg-background text-foreground flex flex-col font-sans select-none p-4 md:p-6 lg:p-8 space-y-5 transition-colors"
+      }
+    >
+      {/* Top Header: Back button & Title matching Details Line Stop History */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3.5">
+          {/* Back Button matching Details Line Stop History */}
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  window.location.href = `/web/station-live?areaId=${selectedAreaId}`;
+                }
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-slate-200/90 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-100 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            title="Back to Station Live"
           >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <div className="flex items-center gap-2">
-              {formType === "mtc" ? (
-                <Wrench className="h-5 w-5 text-blue-500" />
-              ) : (
-                <Tablet className="h-5 w-5 text-cyan-500" />
-              )}
-              <h1 className="font-display text-xl md:text-2xl font-bold tracking-tight text-foreground uppercase">
-                {formType === "mtc" ? "Linestop Maintenance E-Form" : "Linestop E-Form"}
-              </h1>
-            </div>
+            <ChevronLeft className="h-4 w-4 stroke-[2.5]" />
+            <span>Back</span>
+          </button>
+
+          {/* Title with Eye Icon matching Details Line Stop History */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Eye className="h-4 w-4 text-[#001f3f] dark:text-sky-400 stroke-[2.2]" />
+            <h1 className="text-base sm:text-lg font-bold text-[#001f3f] dark:text-white tracking-tight">
+              Line-Stop E-Form
+            </h1>
+            {targetStation && (
+              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700">
+                {targetStation.name} ({targetStation.code || `#${targetStation.sequence}`})
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Live Clock */}
-        <div className="flex items-center">
-          <div className="flex flex-col text-right font-mono">
-            <span className="text-sm font-bold text-foreground">{fmtTime(nowMs)} WIB</span>
-            <span className="text-[10px] text-muted-foreground">{fmtDateTime(nowMs)}</span>
+        {/* Right side: Live Status indicator if stopped (Clock removed per user request) */}
+        {targetLive?.state === "stopped" && (
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-mono font-bold">
+            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+            <span>Currently STOPPED</span>
           </div>
-        </div>
-      </header>
+        )}
+      </div>
 
       {/* Main Container - Fill Screen Width */}
       <div className="w-full flex-1 flex flex-col justify-start">
@@ -539,164 +543,53 @@ function IpadEFormPage() {
           </div>
         )}
 
-        {/* Form Container */}
-        <div className="rounded-2xl border-2 border-border bg-card p-6 md:p-8 shadow-md">
+        {/* Form Container (Fill Container Card matching Details Line Stop History) */}
+        <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] p-6 sm:p-8 shadow-xs w-full">
           <form onSubmit={handleSaveStop} className="space-y-6">
-            {/* 0. Form Type Selector (Linestop vs Linestop Maintenance) */}
-            <div>
-              <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold mb-2">
-                E-Form Type:
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleFormTypeChange("linestop")}
-                  className={`p-3.5 rounded-xl border-2 font-display text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2.5 cursor-pointer ${
-                    formType === "linestop"
-                      ? "border-red-500 bg-red-600 text-white shadow-md shadow-red-600/30 scale-[1.01]"
-                      : "border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  <AlertTriangle className="h-5 w-5 shrink-0" />
-                  <div className="text-left">
-                    <span className="block leading-none text-base font-bold">Linestop</span>
-                    <span className="text-[10px] font-sans font-normal opacity-85">Operational & Production Stops (8 Areas)</span>
+            {/* Station & Area Information (Work Area, Station Conveyor Line, Station Name) */}
+            <div className="rounded-xl border border-red-500/30 bg-red-500/5 dark:bg-red-950/20 p-4 shadow-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1. Work Area */}
+                <div className="p-3 rounded-lg border border-border bg-card/80">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">
+                    Work Area
                   </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleFormTypeChange("mtc")}
-                  className={`p-3.5 rounded-xl border-2 font-display text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2.5 cursor-pointer ${
-                    formType === "mtc"
-                      ? "border-blue-500 bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.01]"
-                      : "border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  <Wrench className="h-5 w-5 shrink-0" />
-                  <div className="text-left">
-                    <span className="block leading-none text-base font-bold">Linestop Maintenance</span>
-                    <span className="text-[10px] font-sans font-normal opacity-85">Oven CED & Mezzanine Maintenance (2 Areas)</span>
+                  <div className="text-sm font-bold text-foreground mt-1 truncate">
+                    {targetArea?.name || "Production Area"}
                   </div>
-                </button>
-              </div>
-            </div>
+                </div>
 
-            {/* 1. Tablist Area (Linestop: 8 Areas, Linestop Maintenance: 2 Areas) */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                  1. Work Area Tablist ({formType === "mtc" ? "Oven CED & Mezzanine" : "8 Production Areas"}):
-                </label>
-                <span className="font-mono text-[11px] text-muted-foreground">
-                  {currentAreaConfig?.name} • {areaStations.length} Station(s)
-                </span>
-              </div>
+                {/* 2. Station Conveyor Line */}
+                <div className="p-3 rounded-lg border border-border bg-card/80">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">
+                    Station Conveyor Line
+                  </div>
+                  <div className="text-sm font-bold text-foreground mt-1 truncate">
+                    {targetConveyor?.name || "Main Conveyor Line"}
+                  </div>
+                </div>
 
-              <div
-                className={`grid gap-2 ${
-                  formType === "mtc"
-                    ? "grid-cols-2"
-                    : "grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8"
-                }`}
-              >
-                {ipadAreaConfigs.map((area) => {
-                  const isAreaSelected = selectedAreaId === area.id;
-                  const isAreaWithoutStations = area.id === "area-oven-ced" || area.id === "area-mezzanine";
-                  const count = isAreaWithoutStations
-                    ? 0
-                    : (appState?.stations || []).filter((s) => s && s.areaId === area.id).length;
-                  return (
-                    <button
-                      type="button"
-                      key={area.id}
-                      onClick={() => handleSelectArea(area.id)}
-                      className={`px-3 py-2.5 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
-                        isAreaSelected
-                          ? formType === "mtc"
-                            ? "border-blue-500 bg-blue-600 text-white font-bold shadow-sm"
-                            : "border-primary bg-primary text-primary-foreground font-bold shadow-sm"
-                          : "border-border bg-card hover:bg-muted text-foreground"
-                      }`}
-                    >
-                      <span className="text-xs font-bold truncate block">{area.name}</span>
-                      <span
-                        className={`text-[10px] font-mono ${
-                          isAreaSelected ? "text-white/80" : "text-muted-foreground"
-                        }`}
-                      >
-                        {count} Station{count !== 1 ? "s" : ""}
+                {/* 3. Station Name */}
+                <div className="p-3 rounded-lg border border-border bg-card/80">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">
+                    Station Name
+                  </div>
+                  <div className="text-sm font-bold text-foreground mt-1 flex items-center gap-2">
+                    <span className="truncate">{targetStation?.name || "Station"}</span>
+                    {targetStation?.code && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-bold border border-border shrink-0">
+                        {targetStation.code}
                       </span>
-                    </button>
-                  );
-                })}
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* 2. Stations in Selected Area */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                  2. Select Affected Station ({currentAreaConfig?.name}):
-                </label>
-                <span className="text-[11px] font-mono text-muted-foreground">
-                  {targetStation
-                    ? `${targetStation.name} (${targetStation.code || `#${targetStation.sequence}`})`
-                    : areaStations.length === 0
-                    ? "No stations for now"
-                    : ""}
-                </span>
-              </div>
-
-              {areaStations.length === 0 ? (
-                <div className="p-4 rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground font-mono">
-                  No stations registered in this area for now.
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {areaStations.map((station) => {
-                    const isSelected = selectedStationId === station.id;
-                    const live = appState?.stationLive?.[station.id];
-                    const isStopped = live?.state === "stopped";
-
-                    return (
-                      <button
-                        type="button"
-                        key={station.id}
-                        onClick={() => setSelectedStationId(station.id)}
-                        className={`p-3.5 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                          isSelected
-                            ? formType === "mtc"
-                              ? "border-blue-500 bg-blue-600 text-white font-bold shadow-md scale-[1.01]"
-                              : "border-primary bg-primary text-primary-foreground font-bold shadow-md scale-[1.01]"
-                            : isStopped
-                              ? "border-red-500/60 bg-red-500/10 text-red-600 dark:text-red-400 hover:border-red-500"
-                              : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-muted"
-                        }`}
-                      >
-                        <span className="text-xs font-bold leading-tight block truncate pr-1">
-                          {station.name}
-                        </span>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold shrink-0 ${
-                            isSelected
-                              ? "bg-white/20 text-white"
-                              : "bg-muted text-muted-foreground border border-border"
-                          }`}
-                        >
-                          {station.code || `#${station.sequence}`}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* 3. Stop Status & Timing (No Tablist, pure Incident Start Time & Incident End Time) */}
+            {/* 1. Stop Status & Timing (pure Incident Start Time & Incident End Time) */}
             <div className="rounded-xl border border-border bg-muted/30 p-4 sm:p-5 space-y-4">
               <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                3. Incident Timing:
+                1. Incident Timing:
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -730,13 +623,11 @@ function IpadEFormPage() {
               </div>
             </div>
 
-            {/* 4. Incident Category Selector */}
+            {/* 2. Incident Category Selector */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                  {formType === "mtc"
-                    ? "4. Incident Category (Linestop Maintenance):"
-                    : "4. Incident Category (Linestop):"}
+                  2. Category Problem:
                 </label>
                 <button
                   type="button"
@@ -765,9 +656,7 @@ function IpadEFormPage() {
                       onClick={() => setSelectedCategoryId(c.id)}
                       className={`min-h-[48px] px-3.5 py-2.5 rounded-xl border text-left text-xs transition-all flex items-center justify-between cursor-pointer ${
                         isSelected
-                          ? formType === "mtc"
-                            ? "border-blue-500 bg-blue-600 text-white font-bold shadow-xs scale-[1.01]"
-                            : "border-primary bg-primary text-primary-foreground font-bold shadow-xs scale-[1.01]"
+                          ? "border-red-500 bg-red-600 text-white font-bold shadow-xs scale-[1.01]"
                           : "border-border bg-card text-foreground hover:bg-muted"
                       }`}
                     >
@@ -802,57 +691,30 @@ function IpadEFormPage() {
               </div>
             </div>
 
-            {/* 5. Technician Dropdown & Notes */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold mb-1.5">
-                  Technician / Operator:
-                </label>
-                <select
-                  value={operatorBadge}
-                  onChange={(e) => setOperatorBadge(e.target.value)}
-                  className="w-full h-12 rounded-xl border border-input bg-background px-3 font-mono text-xs font-semibold text-foreground focus:outline-none focus:border-primary shadow-2xs cursor-pointer"
-                >
-                  {technicianList.map((tech) => (
-                    <option key={tech.badge} value={`${tech.name} (${tech.badge})`}>
-                      {tech.name} ({tech.badge}) — {tech.role}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold mb-1.5">
-                  Additional Notes / Corrective Actions:
-                </label>
-                <input
-                  type="text"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={
-                    formType === "mtc"
-                      ? "e.g. Cleared dock pin blockage, inspected skid lifter sensor..."
-                      : "e.g. Workpiece cleared from line, reset conveyor drive..."
-                  }
-                  className="w-full h-12 rounded-xl border border-input bg-background px-3 font-sans text-xs text-foreground focus:outline-none focus:border-primary shadow-2xs"
-                />
-              </div>
+            {/* 3. Reasons (Textarea) */}
+            <div>
+              <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold mb-1.5">
+                3. Reasons:
+              </label>
+              <textarea
+                rows={4}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="e.g. Workpiece cleared from line, reset conveyor drive, inspected sensor jamming..."
+                className="w-full rounded-xl border border-input bg-background p-3.5 font-sans text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary shadow-2xs resize-y leading-relaxed"
+              />
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
               className={`w-full h-14 rounded-xl font-display text-base font-bold tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
-                formType === "mtc"
-                  ? endTimeVal.trim()
-                    ? "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30"
-                    : "bg-blue-700 hover:bg-blue-600 text-white shadow-blue-700/30"
-                  : endTimeVal.trim()
-                    ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
-                    : "bg-red-600 hover:bg-red-500 text-white shadow-red-600/30"
+                endTimeVal.trim()
+                  ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+                  : "bg-red-600 hover:bg-red-500 text-white shadow-red-600/30"
               }`}
             >
-              {formType === "mtc" ? <Wrench className="h-5 w-5" /> : <Send className="h-5 w-5" />}
+              <Send className="h-5 w-5" />
               {endTimeVal.trim()
                 ? "Submit Incident Report (CLOSED)"
                 : "Save Incident Report (OPEN)"}
@@ -894,7 +756,7 @@ function IpadEFormPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder={formType === "mtc" ? "e.g. Dock pin stuck" : "e.g. Sensor Jamming"}
+                  placeholder={formType === "mtc" ? "e.g. Dock pin stuck / Lifter error" : "e.g. Sensor Jamming"}
                   value={newCatName}
                   onChange={(e) => setNewCatName(e.target.value)}
                   className="w-full h-12 rounded-lg border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary"

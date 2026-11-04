@@ -34,7 +34,7 @@ export interface AppState {
   simulating: boolean;
 }
 
-const STORAGE_KEY = "krm_conveyor_state_v5";
+const STORAGE_KEY = "krm_conveyor_state_v13";
 
 // Default Seed Data based on PRD & PT. Krama Yudha Ratu Motor Indonesia Factory Model
 export function createSeedData(): AppState {
@@ -42,57 +42,37 @@ export function createSeedData(): AppState {
   const dayMs = 86_400_000;
   const hourMs = 3_600_000;
   const minMs = 60_000;
+  const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date(now));
+  const nineAmToday = Date.parse(`${todayStr}T09:00:00+07:00`) || (now - 25 * minMs);
 
   const areas: Area[] = [
-    { id: "area-pted", code: "PTED", name: "PTED", note: "Pre-Treatment Electro-Deposition Area" },
-    { id: "area-ced", code: "CED", name: "CED", note: "Cathodic Electro-Deposition Area" },
+    { id: "area-sanding", code: "SANDING", name: "Sanding Area", note: "Sanding Area" },
+    { id: "area-sealing", code: "SEALING", name: "Sealing Area", note: "Body Sealing Line" },
+    { id: "area-topcoat", code: "TOPCOAT", name: "Topcoat Area", note: "Topcoat Paint Booth" },
+    { id: "area-touch-up", code: "TOUCH-UP", name: "Touch Up Area", note: "Final Touch Up & Finish" },
+    { id: "area-drop-ced", code: "DROP-CED", name: "Drop Cabin CED", note: "Drop Cabin Cathodic Electro-Deposition" },
+    { id: "area-cooling-tunnel", code: "COOLING-TUNNEL", name: "Cooling Tunnel", note: "Cooling Tunnel Section" },
     { id: "area-oven-ced", code: "OVEN-CED", name: "Oven CED", note: "Oven Cathodic Electro-Deposition" },
     { id: "area-mezzanine", code: "MEZZANINE", name: "Mezzanine", note: "Mezzanine Conveyor Line" },
-    { id: "area-drop-ced", code: "DROP-CED", name: "Drop Cabin CED", note: "Drop Cabin Cathodic Electro-Deposition" },
-    { id: "area-sanding", code: "SANDING", name: "Sanding", note: "Sanding Area" },
-    { id: "area-sealing", code: "SEALING", name: "Sealing", note: "Body Sealing Line" },
-    { id: "area-cooling-tunnel", code: "COOLING-TUNNEL", name: "Cooling Tunnel", note: "Cooling Tunnel Section" },
-    { id: "area-topcoat", code: "TOPCOAT", name: "Topcoat", note: "Topcoat Paint Booth" },
-    { id: "area-touch-up", code: "TOUCH-UP", name: "Touch Up", note: "Final Touch Up & Finish" },
   ];
 
   const conveyors: Conveyor[] = [
-    { id: "cv-pted-1", areaId: "area-pted", name: "Conveyor PTED Main Infeed" },
-    { id: "cv-pted-2", areaId: "area-pted", name: "Conveyor PTED Dip Tank" },
-    { id: "cv-ced-1", areaId: "area-ced", name: "Conveyor CED Main Line" },
-    { id: "cv-oven-1", areaId: "area-oven-ced", name: "Conveyor Oven CED" },
-    { id: "cv-mez-1", areaId: "area-mezzanine", name: "Conveyor Mezzanine Transfer" },
-    { id: "cv-drop-1", areaId: "area-drop-ced", name: "Conveyor Drop Cabin CED" },
     { id: "cv-sand-1", areaId: "area-sanding", name: "Conveyor Sanding Line" },
     { id: "cv-seal-1", areaId: "area-sealing", name: "Conveyor Sealing Line" },
-    { id: "cv-cool-1", areaId: "area-cooling-tunnel", name: "Conveyor Cooling Tunnel" },
     { id: "cv-tc-1", areaId: "area-topcoat", name: "Conveyor Topcoat Booth" },
     { id: "cv-tu-1", areaId: "area-touch-up", name: "Conveyor Touch Up Line" },
+    { id: "cv-drop-1", areaId: "area-drop-ced", name: "Conveyor Drop Cabin CED" },
+    { id: "cv-cool-1", areaId: "area-cooling-tunnel", name: "Conveyor Cooling Tunnel" },
+    { id: "cv-oven-1", areaId: "area-oven-ced", name: "Conveyor Oven CED" },
+    { id: "cv-mez-1", areaId: "area-mezzanine", name: "Conveyor Mezzanine Transfer" },
   ];
 
   const stations: Station[] = [
-    // 1. PTED Area
-    { id: "st-pted-1", code: "PTED-01", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Pre-Degreasing & Spray", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pted-2", code: "PTED-02", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Dip Tank & Ultrasonic", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pted-3", code: "PTED-03", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Surface Conditioning", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pted-4", code: "PTED-04", areaId: "area-pted", conveyorId: "cv-pted-2", name: "Phosphate Bath", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pted-5", code: "PTED-05", areaId: "area-pted", conveyorId: "cv-pted-2", name: "DI Water Rinsing", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pted-6", code: "PTED-06", areaId: "area-pted", conveyorId: "cv-pted-2", name: "Hot Air Dryer & Transfer", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
-
-    // 2. CED Area
-    { id: "st-ced-1", code: "CED-01", areaId: "area-ced", conveyorId: "cv-ced-1", name: "CED Main Tank", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-
-    // 3. Oven CED Area (No stations for now)
-    // 4. Mezzanine Area (No stations for now)
-
-    // 5. Drop Cabin CED Area
-    { id: "st-drop-1", code: "DROP-01", areaId: "area-drop-ced", conveyorId: "cv-drop-1", name: "Drop Cabin CED", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-
-    // 6. Sanding Area
+    // 1. Sanding Area
     { id: "st-sand-1", code: "SAND-01", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Sanding Outer", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-sand-2", code: "SAND-02", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Sanding Roof", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 7. Sealing Area
+    // 2. Sealing Area
     { id: "st-seal-1", code: "SEAL-01", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Underseal", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-seal-2", code: "SEAL-02", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Undercoat", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-seal-3", code: "SEAL-03", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Transfer Cabin Sealing", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
@@ -100,10 +80,7 @@ export function createSeedData(): AppState {
     { id: "st-seal-5", code: "SEAL-05", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Finishing Sealing", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-seal-6", code: "SEAL-06", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Quality Gate Sealing", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 8. Cooling Tunnel Area
-    { id: "st-cool-1", code: "COOL-01", areaId: "area-cooling-tunnel", conveyorId: "cv-cool-1", name: "Tunnel Cooling Fan", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-
-    // 9. Topcoat Area
+    // 3. Topcoat Area
     { id: "st-tc-1", code: "TC-01", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Transfer Cabin Touch Up", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-tc-2", code: "TC-02", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Airblow", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-tc-3", code: "TC-03", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Station 4", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
@@ -112,9 +89,21 @@ export function createSeedData(): AppState {
     { id: "st-tc-6", code: "TC-06", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Finishing", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-tc-7", code: "TC-07", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "ASM", sequence: 7, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 10. Touch Up Area
+    // 4. Touch Up Area
     { id: "st-tu-1", code: "TU-01", areaId: "area-touch-up", conveyorId: "cv-tu-1", name: "Panel Conveyor", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-tu-2", code: "TU-02", areaId: "area-touch-up", conveyorId: "cv-tu-1", name: "Repair", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 5. Drop Cabin CED
+    { id: "st-drop-1", code: "DROP-01", areaId: "area-drop-ced", conveyorId: "cv-drop-1", name: "Drop Cabin CED", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 6. Cooling Tunnel
+    { id: "st-cool-1", code: "COOL-01", areaId: "area-cooling-tunnel", conveyorId: "cv-cool-1", name: "Tunnel Cooling Fan", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 7. Oven CED Area
+    { id: "st-oven-1", code: "OVEN-01", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Oven CED", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 8. Mezzanine Area
+    { id: "st-mez-1", code: "MEZ-01", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Mezzanine", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
   ];
 
   const categories: Category[] = [
@@ -223,32 +212,120 @@ export function createSeedData(): AppState {
   ];
 
   const devices: Device[] = [
-    { id: "dev-1", name: "iPad PTED (ST-01 - ST-03)", type: "tablet", token: "tok_ipad_pted_84a1", revoked: false },
-    { id: "dev-2", name: "iPad PTED (ST-04 - ST-06)", type: "tablet", token: "tok_ipad_pted_93c2", revoked: false },
-    { id: "dev-3", name: "Andon Main Hall (Samsung 85\" TV)", type: "tv", token: "tok_andon_hall_44e8", revoked: false },
-    { id: "dev-4", name: "Andon Supervisor Bay (LG 65\" TV)", type: "tv", token: "tok_andon_supv_12b9", revoked: false },
+    { id: "dev-1", name: "iPad Sanding & Sealing", type: "tablet", token: "tok_ipad_sand_84a1", revoked: false },
+    { id: "dev-2", name: "iPad Topcoat & Touch Up", type: "tablet", token: "tok_ipad_tc_93c2", revoked: false },
   ];
 
-  // Seed stops across the last 7 days + 1 open stop right now on PTED-02
+  // Seed stops across the last 7 days + open line-stops right now across active areas
   const stops: LineStop[] = [
-    // Currently open stop on PTED-02
+    // 1. Single active open stop in Sealing Area: Transfer Cabin Sealing (st-seal-3) - Pending E-Form
     {
-      id: "stop-live-1",
-      areaId: "area-pted",
-      stationId: "st-pted-2",
-      startMs: now - 14 * minMs - 32 * 1000,
+      id: "stop-live-seal",
+      areaId: "area-sealing",
+      stationId: "st-seal-3",
+      startMs: nineAmToday,
       endMs: null,
-      categoryId: "cat-2",
-      reportedBy: "Rian Hidayat",
+      categoryId: "", // Kosong (belum diisi form)
+      reportedBy: "", // Kosong (belum diisi form)
       status: "open",
-      source: "form",
-      note: "Ultrasonic bath transducer sensor flagged warning",
+      source: "plc",
+      note: "", // Kosong (belum diisi form)
+      lastSpeed: 12.5,
+      totalRunMs: 14_400_000,
     },
-    // Completed stop earlier today on PTED-01
+    // 2. Active open stop in Oven CED: Oven CED (st-oven-1) - Pending E-Form
+    {
+      id: "stop-live-oven",
+      areaId: "area-oven-ced",
+      stationId: "st-oven-1",
+      startMs: now - 35 * minMs,
+      endMs: null,
+      categoryId: "", // Kosong (belum diisi form)
+      reportedBy: "", // Kosong (belum diisi form)
+      status: "open",
+      source: "plc",
+      note: "", // Kosong (belum diisi form)
+      lastSpeed: 0.95,
+      totalRunMs: 12_800_000,
+    },
+    // 3. Active open stop in Mezzanine: Mezzanine (st-mez-1) - Pending E-Form
+    {
+      id: "stop-live-mez",
+      areaId: "area-mezzanine",
+      stationId: "st-mez-1",
+      startMs: now - 22 * minMs,
+      endMs: null,
+      categoryId: "", // Kosong (belum diisi form)
+      reportedBy: "", // Kosong (belum diisi form)
+      status: "open",
+      source: "plc",
+      note: "", // Kosong (belum diisi form)
+      lastSpeed: 1.10,
+      totalRunMs: 11_200_000,
+    },
+    // Historical completed stop earlier today on Transfer Cabin Sealing (st-seal-3) - E-form already filled
+    {
+      id: "stop-today-seal-early",
+      areaId: "area-sealing",
+      stationId: "st-seal-3",
+      startMs: nineAmToday - 3 * hourMs, // 06:00 WIB
+      endMs: nineAmToday - 3 * hourMs + 16 * minMs, // 06:16 WIB
+      categoryId: "cat-full-cabin",
+      reportedBy: "Rian Hidayat (EMP-215)",
+      status: "closed",
+      source: "form",
+      note: "Full cabin accumulation sensor triggered, clearance verified",
+      lastSpeed: 12.5,
+      totalRunMs: 7_200_000,
+      submittedAtMs: nineAmToday - 3 * hourMs + 18 * minMs,
+    },
+    // Historical completed stop yesterday on Transfer Cabin Sealing (st-seal-3) - E-form already filled
+    {
+      id: "stop-yest-seal-3",
+      areaId: "area-sealing",
+      stationId: "st-seal-3",
+      startMs: now - 1 * dayMs - 4 * hourMs,
+      endMs: now - 1 * dayMs - 4 * hourMs + 24 * minMs,
+      categoryId: "cat-mtc-prob",
+      reportedBy: "Agus Pratama (EMP-108)",
+      status: "closed",
+      source: "form",
+      note: "Transfer carriage pneumatic cylinder seal adjustment and test run",
+      lastSpeed: 12.8,
+      totalRunMs: 19_800_000,
+      submittedAtMs: now - 1 * dayMs - 4 * hourMs + 26 * minMs,
+    },
+    // Completed stop earlier today on Sanding Roof (st-sand-2) - Closed
+    {
+      id: "stop-today-sand",
+      areaId: "area-sanding",
+      stationId: "st-sand-2",
+      startMs: now - 1 * hourMs - 20 * minMs,
+      endMs: now - 1 * hourMs,
+      categoryId: "cat-2", // Breakdown
+      reportedBy: "Rian Hidayat",
+      status: "closed",
+      source: "form",
+      note: "Sanding roller motor tension cleared",
+    },
+    // Completed stop earlier today on Station 4 (st-tc-3) - Closed
+    {
+      id: "stop-today-tc",
+      areaId: "area-topcoat",
+      stationId: "st-tc-3",
+      startMs: now - 2 * hourMs - 15 * minMs,
+      endMs: now - 2 * hourMs,
+      categoryId: "cat-incident", // Incident
+      reportedBy: "Dewi Lestari",
+      status: "closed",
+      source: "form",
+      note: "Pressure drop alarm on booth applicator line normalized",
+    },
+    // Completed stop earlier today on Sanding Outer (st-sand-1)
     {
       id: "stop-today-1",
-      areaId: "area-pted",
-      stationId: "st-pted-1",
+      areaId: "area-sanding",
+      stationId: "st-sand-1",
       startMs: now - 2 * hourMs,
       endMs: now - 2 * hourMs + 18 * minMs,
       categoryId: "cat-2", // Breakdown
@@ -257,11 +334,11 @@ export function createSeedData(): AppState {
       source: "form",
       note: "Emergency stop pulled due to workpiece carrier misaligned",
     },
-    // Unrecorded stop from PLC earlier today on PTED-04 (Source: PLC without E-form!)
+    // Unrecorded stop from PLC earlier today on Underseal (st-seal-1)
     {
       id: "stop-today-plc-unrecorded",
-      areaId: "area-pted",
-      stationId: "st-pted-4",
+      areaId: "area-sealing",
+      stationId: "st-seal-1",
       startMs: now - 3 * hourMs - 45 * minMs,
       endMs: now - 3 * hourMs - 22 * minMs,
       categoryId: "cat-2", // Breakdown
@@ -270,100 +347,100 @@ export function createSeedData(): AppState {
       source: "plc",
       note: "PLC zero-speed event detected without matching operator E-form entry",
     },
-    // Another stop earlier today on PTED-05
+    // Another stop earlier today on Airblow (st-tc-2)
     {
       id: "stop-today-2",
-      areaId: "area-pted",
-      stationId: "st-pted-5",
+      areaId: "area-topcoat",
+      stationId: "st-tc-2",
       startMs: now - 4 * hourMs,
       endMs: now - 4 * hourMs + 12 * minMs,
       categoryId: "cat-1", // Process
       reportedBy: "Dewi Lestari",
       status: "closed",
       source: "form",
-      note: "Batch sample water conductivity verification",
+      note: "Airblow pressure calibration and nozzle check",
     },
     // Yesterday stops
     {
       id: "stop-yest-1",
-      areaId: "area-pted",
-      stationId: "st-pted-3",
+      areaId: "area-touch-up",
+      stationId: "st-tu-1",
       startMs: now - dayMs - 5 * hourMs,
       endMs: now - dayMs - 5 * hourMs + 35 * minMs,
       categoryId: "cat-2", // Breakdown
       reportedBy: "Budi Santoso",
       status: "closed",
       source: "form",
-      note: "Circulation pump pressure switch thermal trip reset",
+      note: "Conveyor chain drive alignment adjustment",
     },
     {
       id: "stop-yest-2",
-      areaId: "area-pted",
-      stationId: "st-pted-1",
+      areaId: "area-drop-ced",
+      stationId: "st-drop-1",
       startMs: now - dayMs - 8 * hourMs,
       endMs: now - dayMs - 8 * hourMs + 45 * minMs,
       categoryId: "cat-3", // Maintenance
       reportedBy: "Rian Hidayat",
       status: "closed",
       source: "form",
-      note: "Scheduled spray nozzle replacement and filter clean",
+      note: "Drop hoist limit switch inspection and clean",
     },
     // 2 days ago
     {
       id: "stop-d2-1",
-      areaId: "area-pted",
-      stationId: "st-pted-2",
+      areaId: "area-sealing",
+      stationId: "st-seal-3",
       startMs: now - 2 * dayMs - 3 * hourMs,
       endMs: now - 2 * dayMs - 3 * hourMs + 28 * minMs,
       categoryId: "cat-2", // Breakdown
       reportedBy: "Agus Pratama",
       status: "closed",
       source: "form",
-      note: "Carrier overhead chain guide roller tension adjusted",
+      note: "Transfer cabin sensor reflector cleaned",
     },
     {
       id: "stop-d2-2",
-      areaId: "area-pted",
-      stationId: "st-pted-4",
+      areaId: "area-sealing",
+      stationId: "st-seal-4",
       startMs: now - 2 * dayMs - 6 * hourMs,
       endMs: now - 2 * dayMs - 6 * hourMs + 15 * minMs,
       categoryId: "cat-4", // Part Issue
       reportedBy: "Rian Hidayat",
       status: "closed",
       source: "form",
-      note: "Waiting for chemical dosing replenishment",
+      note: "Waiting for sealant drum canister replacement",
     },
     // 3 days ago
     {
       id: "stop-d3-1",
-      areaId: "area-pted",
-      stationId: "st-pted-6",
+      areaId: "area-topcoat",
+      stationId: "st-tc-4",
       startMs: now - 3 * dayMs - 4 * hourMs,
       endMs: now - 3 * dayMs - 4 * hourMs + 20 * minMs,
       categoryId: "cat-3", // Maintenance
       reportedBy: "Rian Hidayat",
       status: "closed",
       source: "form",
-      note: "Hot air dryer blower filter maintenance",
+      note: "Exhaust ventilation filter replacement",
     },
     // 4 days ago
     {
       id: "stop-d4-1",
-      areaId: "area-pted",
-      stationId: "st-pted-1",
+      areaId: "area-cooling-tunnel",
+      stationId: "st-cool-1",
       startMs: now - 4 * dayMs - 7 * hourMs,
       endMs: now - 4 * dayMs - 7 * hourMs + 22 * minMs,
       categoryId: "cat-2", // Breakdown
       reportedBy: "Agus Pratama",
       status: "closed",
       source: "form",
-      note: "Emergency rope trip tested and cleared",
+      note: "Cooling fan vibration sensor alarm cleared",
     },
     // 5 days ago (another unrecorded PLC stop)
     {
       id: "stop-d5-plc",
-      areaId: "area-pted",
-      stationId: "st-pted-3",
+      areaId: "area-sanding",
+      stationId: "st-sand-1",
       startMs: now - 5 * dayMs - 2 * hourMs,
       endMs: now - 5 * dayMs - 2 * hourMs + 8 * minMs,
       categoryId: "cat-2", // Breakdown
@@ -384,7 +461,7 @@ export function createSeedData(): AppState {
       id: `prod-${dateStr}-s1`,
       date: dateStr,
       shiftId: "shift-1",
-      areaId: "area-pted",
+      areaId: "area-sanding",
       plannedMin: 480,
       totalCount: 1350 - i * 15,
       goodCount: 1320 - i * 18,
@@ -395,7 +472,7 @@ export function createSeedData(): AppState {
       id: `prod-${dateStr}-s2`,
       date: dateStr,
       shiftId: "shift-2",
-      areaId: "area-pted",
+      areaId: "area-sanding",
       plannedMin: 450,
       totalCount: 1220 - i * 12,
       goodCount: 1195 - i * 14,
@@ -403,18 +480,25 @@ export function createSeedData(): AppState {
     });
   }
 
-  // Initial station live telemetry for all stations
+  // Initial station live telemetry for all stations (Sealing, Oven CED, and Mezzanine stopped)
   const stationLive: Record<string, StationLive> = {};
+  const stoppedConfigs: Record<string, number> = {
+    "st-seal-3": now - nineAmToday,
+    "st-oven-1": 35 * minMs,
+    "st-mez-1": 22 * minMs,
+  };
+
   for (const st of stations) {
-    if (st.id === "st-pted-2") {
+    if (stoppedConfigs[st.id] !== undefined) {
+      const dur = stoppedConfigs[st.id]!;
       stationLive[st.id] = {
         stationId: st.id,
         state: "stopped",
         speed: 0.0,
         lastStartMs: now - 2 * hourMs - 10 * minMs,
-        lastStopMs: now - 14 * minMs - 32 * 1000,
+        lastStopMs: now - dur,
         totalRunMs: 4 * hourMs + 28 * minMs,
-        stoppedSinceMs: now - 14 * minMs - 32 * 1000,
+        stoppedSinceMs: now - dur,
         lastSeenMs: now,
       };
     } else {
@@ -491,12 +575,36 @@ let currentState: AppState = (() => {
         }));
 
         if (
-          !safeState.areas.some((a) => a.name === "PTED" || a.code === "PTED") ||
-          !safeState.stations.some((s) => s.name === "Sanding Outer")
+          !safeState.areas.some((a) => a.id === "area-sanding" || a.code === "SANDING") ||
+          safeState.areas.some((a) => a.id === "area-pted" || a.code === "PTED") ||
+          !safeState.stations.some((s) => s.id === "st-sand-1") ||
+          !safeState.stations.some((s) => s.id === "st-oven-1") ||
+          !safeState.stations.some((s) => s.id === "st-mez-1")
         ) {
           safeState.areas = seed.areas;
           safeState.conveyors = seed.conveyors;
           safeState.stations = seed.stations;
+          safeState.stops = seed.stops;
+          safeState.productionRecords = seed.productionRecords;
+          safeState.stationLive = seed.stationLive;
+        }
+
+        // Ensure newly defined stations exist in safeState
+        for (const s of seed.stations) {
+          if (!safeState.stations.some((x) => x.id === s.id)) {
+            safeState.stations.push(s);
+            if (!safeState.stationLive[s.id]) {
+              safeState.stationLive[s.id] = seed.stationLive[s.id]!;
+            }
+          }
+        }
+
+        const hasStoppedStation = Object.values(safeState.stationLive || {}).some((s) => s?.state === "stopped");
+        const hasOvenStopped = safeState.stationLive["st-oven-1"]?.state === "stopped";
+        const hasMezStopped = safeState.stationLive["st-mez-1"]?.state === "stopped";
+        if (!hasStoppedStation || !hasOvenStopped || !hasMezStopped) {
+          safeState.stationLive = seed.stationLive;
+          safeState.stops = seed.stops;
         }
 
         return safeState;
@@ -549,34 +657,64 @@ export const store = {
 
   // Stop Actions
   addStop: (stop: Omit<LineStop, "id">): LineStop => {
-    const newStop: LineStop = {
-      ...stop,
-      id: `stop-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    };
-    currentState = {
-      ...currentState,
-      stops: [newStop, ...currentState.stops],
-    };
+    // If there is already an open stop for this station (e.g. from PLC sensor or pending e-form),
+    // update it with the submitted E-form details while preserving the original stop start timestamp!
+    const existingOpenIndex = currentState.stops.findIndex(
+      (s) => s.stationId === stop.stationId && s.status === "open"
+    );
+
+    let resultingStop: LineStop;
+    if (existingOpenIndex >= 0) {
+      const existing = currentState.stops[existingOpenIndex]!;
+      resultingStop = {
+        ...existing,
+        ...stop,
+        id: existing.id,
+        startMs: existing.startMs, // keep initial line stop start time
+        source: "form",
+        submittedAtMs: Date.now(),
+        lastSpeed: existing.lastSpeed ?? currentState.stationLive[stop.stationId]?.speed ?? 12.5,
+        totalRunMs: existing.totalRunMs ?? currentState.stationLive[stop.stationId]?.totalRunMs ?? 14_400_000,
+      };
+      const updatedStops = [...currentState.stops];
+      updatedStops[existingOpenIndex] = resultingStop;
+      currentState = {
+        ...currentState,
+        stops: updatedStops,
+      };
+    } else {
+      resultingStop = {
+        ...stop,
+        id: `stop-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        submittedAtMs: stop.source === "form" ? Date.now() : undefined,
+        lastSpeed: stop.lastSpeed ?? currentState.stationLive[stop.stationId]?.speed ?? 12.5,
+        totalRunMs: stop.totalRunMs ?? currentState.stationLive[stop.stationId]?.totalRunMs ?? 14_400_000,
+      };
+      currentState = {
+        ...currentState,
+        stops: [resultingStop, ...currentState.stops],
+      };
+    }
 
     // If stop is open, update station live state to stopped
-    if (newStop.status === "open") {
-      const curLive = currentState.stationLive[newStop.stationId];
+    if (resultingStop.status === "open") {
+      const curLive = currentState.stationLive[resultingStop.stationId];
       if (curLive) {
         currentState.stationLive = {
           ...currentState.stationLive,
-          [newStop.stationId]: {
+          [resultingStop.stationId]: {
             ...curLive,
             state: "stopped",
             speed: 0,
-            lastStopMs: newStop.startMs,
-            stoppedSinceMs: newStop.startMs,
+            lastStopMs: resultingStop.startMs,
+            stoppedSinceMs: resultingStop.startMs,
           },
         };
       }
     }
 
     emitChange();
-    return newStop;
+    return resultingStop;
   },
 
   closeStop: (stopId: string, endMs: number = Date.now()) => {
@@ -1055,17 +1193,18 @@ export const store = {
 
   simulateStopTrigger: (stationId: string, categoryId: string = "cat-2", source: "form" | "plc" = "form") => {
     const now = Date.now();
+    const targetStation = currentState.stations.find((s) => s.id === stationId);
     const newStop: LineStop = {
       id: `stop-sim-${Date.now()}`,
-      areaId: "area-1",
+      areaId: targetStation?.areaId || "area-sanding",
       stationId,
       startMs: now,
       endMs: null,
-      categoryId,
-      reportedBy: source === "plc" ? "PLC Sensor Auto" : "Simulation Operator",
+      categoryId: source === "plc" ? "" : categoryId,
+      reportedBy: source === "plc" ? "" : "Simulation Operator",
       status: "open",
       source,
-      note: source === "plc" ? "Unrecorded stop detected by PLC tag monitor" : "Simulated line-stop emergency trigger",
+      note: source === "plc" ? "" : "Simulated line-stop emergency trigger",
     };
     const curLive = currentState.stationLive[stationId];
     currentState = {

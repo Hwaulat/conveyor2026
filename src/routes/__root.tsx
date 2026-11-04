@@ -30,13 +30,7 @@ function NotFoundComponent() {
             to="/web"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Dashboard
-          </Link>
-          <Link
-            to="/andon"
-            className="inline-flex items-center justify-center rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-          >
-            Andon TV
+            Monitoring Conveyor
           </Link>
           <Link
             to="/ipad"
@@ -93,8 +87,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "PT. Krama Yudha Ratu Motor Indonesia — Conveyor Line-Stop, Andon & OEE" },
-      { name: "description", content: "Line-Stop Monitoring, Andon TV & OEE System for PT. Krama Yudha Ratu Motor Indonesia" },
+      { title: "PT. Krama Yudha Ratu Motor Indonesia — Conveyor Line-Stop & OEE" },
+      { name: "description", content: "Line-Stop Monitoring & OEE System for PT. Krama Yudha Ratu Motor Indonesia" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },

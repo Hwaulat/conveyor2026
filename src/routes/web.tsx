@@ -19,7 +19,6 @@ import {
   RotateCcw,
   Square,
   Play,
-  Tv,
   Tablet,
   ExternalLink,
   Globe,
@@ -110,7 +109,7 @@ export function WebLayout() {
   // Sidebar navigation features matching actual app features
   const coreFunctions: NavItem[] = [
     {
-      label: "Dashboard",
+      label: "Monitoring Conveyor",
       to: "/web",
       exact: true,
       icon: LayoutGrid,
@@ -170,9 +169,9 @@ export function WebLayout() {
       return;
     }
     const target = runningStations[Math.floor(Math.random() * runningStations.length)]!;
-    store.simulateStopTrigger(target.id, "cat-2", "form");
+    store.simulateStopTrigger(target.id, "", "plc");
     toast.error(`Stop simulated on ${target.name}`, {
-      description: "Jam sensor detected. Andon board & iPad automatically updated.",
+      description: "Sensor stop detected. E-Form line stop is now active for operator input.",
     });
   };
 
@@ -201,15 +200,25 @@ export function WebLayout() {
         } w-[210px] flex-col border-r border-[#152a47] bg-[#0d1b2e] text-white sticky top-0 h-screen select-none transition-all duration-200 z-40 shrink-0`}
       >
         {/* Brand Header */}
-        <div className="flex h-14 items-center px-4 border-b border-[#152a47] bg-[#0d1b2e] shrink-0">
+        <div className="flex h-14 items-center px-3.5 border-b border-[#152a47] bg-[#0d1b2e] shrink-0">
           <Link
             to="/web"
-            className="flex items-center min-w-0 hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2.5 min-w-0 hover:opacity-90 transition-opacity"
             title="Conveyor System"
           >
-            <span className="text-[15px] font-bold text-white tracking-tight leading-tight font-display truncate">
-              Conveyor System
-            </span>
+            <img
+              src="/brand-orb.png"
+              alt="Conveyor System"
+              className="h-7 w-7 object-contain shrink-0 drop-shadow-[0_0_8px_rgba(31,90,166,0.6)]"
+            />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[13px] font-bold text-white tracking-tight leading-tight truncate">
+                Conveyor System
+              </span>
+              <span className="text-[10px] text-sky-400 font-medium leading-tight truncate">
+                Management System
+              </span>
+            </div>
           </Link>
         </div>
 
@@ -568,13 +577,6 @@ export function WebLayout() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/andon" target="_blank" className="flex items-center gap-2 text-xs cursor-pointer">
-                    <Tv className="h-3.5 w-3.5 text-emerald-500" />
-                    <span>Open Andon Display (TV)</span>
-                    <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
                   <Link to="/ipad" target="_blank" className="flex items-center gap-2 text-xs cursor-pointer">
                     <Tablet className="h-3.5 w-3.5 text-sky-500" />
                     <span>Open Tablet E-Form (iPad)</span>
@@ -681,18 +683,11 @@ export function WebLayout() {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2 border-t border-[#152a47]">
-              <Link
-                to="/andon"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex-1 text-center py-2 rounded-lg bg-[#091524] border border-[#152a47] text-emerald-400 text-xs font-mono font-bold hover:bg-[#0e2138]"
-              >
-                Open Andon (TV)
-              </Link>
+            <div className="pt-2 border-t border-[#152a47]">
               <Link
                 to="/ipad"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex-1 text-center py-2 rounded-lg bg-[#091524] border border-[#152a47] text-cyan-400 text-xs font-mono font-bold hover:bg-[#0e2138]"
+                className="block w-full text-center py-2 rounded-lg bg-[#091524] border border-[#152a47] text-cyan-400 text-xs font-mono font-bold hover:bg-[#0e2138]"
               >
                 Open Tablet (E-form)
               </Link>

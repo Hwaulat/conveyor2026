@@ -67,8 +67,8 @@ function MasterDataPage() {
   const defaultAreaId = useMemo(() => {
     return (
       appState.areas.find(
-        (a) => a.name.toLowerCase() === "pted" || a.code?.toLowerCase() === "pted",
-      )?.id ?? appState.areas[0]?.id ?? "area-pted"
+        (a) => a.id === "area-sanding" || a.code?.toUpperCase() === "SANDING",
+      )?.id ?? appState.areas[0]?.id ?? "area-sanding"
     );
   }, [appState.areas]);
 
@@ -88,7 +88,7 @@ function MasterDataPage() {
 
   // Modal: Batch Add Stations under Area & Conveyor
   const [batchModalOpen, setBatchModalOpen] = useState(false);
-  const [areaInput, setAreaInput] = useState("PTED");
+  const [areaInput, setAreaInput] = useState("Sanding Area");
   const [conveyorInput, setConveyorInput] = useState("");
   const [stationRows, setStationRows] = useState<StationDraftRow[]>([
     { id: "row-1", code: "", name: "" },
@@ -176,7 +176,7 @@ function MasterDataPage() {
 
   // Batch Add Station Handlers
   const handleOpenBatchModal = () => {
-    const defaultArea = appState.areas[0]?.name ?? "PTED";
+    const defaultArea = appState.areas[0]?.name ?? "Sanding Area";
     const defaultCv = appState.conveyors[0]?.name ?? "Conveyor CV-01";
     setAreaInput(defaultArea);
     setConveyorInput(defaultCv);
@@ -528,12 +528,12 @@ function MasterDataPage() {
               </button>
             </div>
 
-            {/* Table: ACTION, NAMA AREA, NAMA KONVEYOR, NAMA STASIUN, STATUS */}
+            {/* Table: ACTION, NAMA AREA, NAMA KONVEYOR, NAMA STASIUN */}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-sans border-collapse">
                 <thead>
                   <tr className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
-                    <th className="py-3 px-4 w-28 whitespace-nowrap">ACTION</th>
+                    <th className="py-3 px-4 w-20 whitespace-nowrap">ACTION</th>
                     <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         AREA NAME
@@ -552,18 +552,12 @@ function MasterDataPage() {
                         <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
-                    <th className="py-3 px-4 text-center w-36 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1">
-                        STATUS
-                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
-                      </span>
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                   {paginatedConveyorRows.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-12 text-center text-muted-foreground font-mono">
+                      <td colSpan={4} className="py-12 text-center text-muted-foreground font-mono">
                         <Layers className="h-8 w-8 mx-auto mb-2 opacity-30" />
                         <p className="font-medium text-sm">No station or conveyor data found</p>
                         <p className="text-xs mt-1">Try adjusting your search keywords or area filter.</p>
@@ -577,7 +571,7 @@ function MasterDataPage() {
                           : row.stations
                             .map(
                               (st) =>
-                                `(${st.code || `ST-${String(st.sequence).padStart(2, "0")}`} - ${st.name})`,
+                                `${st.code || `ST-${String(st.sequence).padStart(2, "0")}`} - ${st.name}`,
                             )
                             .join(", ");
 
@@ -589,16 +583,6 @@ function MasterDataPage() {
                           {/* Action Column on Left */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
-                              {/* View Button [ 👁 ] */}
-                              <button
-                                type="button"
-                                onClick={() => setViewingConveyorRow(row)}
-                                className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 shadow-2xs transition-colors"
-                                title="View Conveyor Line & Station Details"
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                              </button>
-
                               {/* Edit Button [ ✏ ] */}
                               <button
                                 type="button"
@@ -631,43 +615,10 @@ function MasterDataPage() {
                             {row.conveyorName}
                           </td>
 
-                          {/* Nama Stasiun (Format: (ST-001 - Station Name), koma jika > 1) */}
+                          {/* Nama Stasiun (Format: ST-001 - Station Name, koma jika > 1) */}
                           <td className="py-3.5 px-4 text-foreground">
                             <div className="font-mono text-xs leading-relaxed max-w-xl">
                               {stationText}
-                            </div>
-                          </td>
-
-                          {/* Status Live diganti jadi Toggle Switch Active & Inactive */}
-                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            <div className="inline-flex items-center justify-center gap-2">
-                              <button
-                                type="button"
-                                role="switch"
-                                aria-checked={row.isActive}
-                                onClick={() => {
-                                  store.toggleConveyorActive(row.conveyorId);
-                                  toast.success(
-                                    `Conveyor "${row.conveyorName}" status changed to ${!row.isActive ? "Active" : "Inactive"}`,
-                                  );
-                                }}
-                                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${row.isActive ? "bg-emerald-600 dark:bg-emerald-500" : "bg-slate-300 dark:bg-zinc-700"
-                                  }`}
-                                title={row.isActive ? "Click to deactivate" : "Click to activate"}
-                              >
-                                <span className="sr-only">Toggle conveyor status</span>
-                                <span
-                                  aria-hidden="true"
-                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${row.isActive ? "translate-x-5" : "translate-x-0"
-                                    }`}
-                                />
-                              </button>
-                              <span
-                                className={`text-[11px] font-bold font-mono ${row.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
-                                  }`}
-                              >
-                                {row.isActive ? "Active" : "Inactive"}
-                              </span>
                             </div>
                           </td>
                         </tr>
@@ -748,18 +699,12 @@ function MasterDataPage() {
                         <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
-                    <th className="py-3 px-4 text-center whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1">
-                        STATUS
-                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
-                      </span>
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                   {paginatedCategories.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-muted-foreground font-mono">
+                      <td colSpan={5} className="py-12 text-center text-muted-foreground font-mono">
                         <Tag className="h-8 w-8 mx-auto mb-2 opacity-30" />
                         <p className="font-medium text-sm">No category problems found</p>
                         <p className="text-xs mt-1">Use the &quot;Add Category Problem&quot; button to add new data.</p>
@@ -795,11 +740,9 @@ function MasterDataPage() {
                             </div>
                           </td>
 
-                          {/* Kode Kategori */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className="inline-block px-2.5 py-1 rounded font-mono font-bold bg-muted text-foreground border border-border text-xs">
-                              {catCode}
-                            </span>
+                          {/* Kode Kategori (Pure text tanpa pembungkus rectangle) */}
+                          <td className="py-3.5 px-4 font-mono font-bold text-foreground text-xs whitespace-nowrap">
+                            {catCode}
                           </td>
 
                           {/* Nama Category Problem */}
@@ -843,39 +786,6 @@ function MasterDataPage() {
                                 <span>Non-Breakdown</span>
                               </span>
                             )}
-                          </td>
-
-                          {/* Status Live diganti jadi Toggle Switch Active & Inactive */}
-                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            <div className="inline-flex items-center justify-center gap-2">
-                              <button
-                                type="button"
-                                role="switch"
-                                aria-checked={cat.active}
-                                onClick={() => {
-                                  store.updateCategory(cat.id, { active: !cat.active });
-                                  toast.success(
-                                    `Status "${cat.name}" changed to ${!cat.active ? "Active" : "Inactive"}`,
-                                  );
-                                }}
-                                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary ${cat.active ? "bg-emerald-600 dark:bg-emerald-500" : "bg-slate-300 dark:bg-zinc-700"
-                                  }`}
-                                title={cat.active ? "Click to deactivate" : "Click to activate"}
-                              >
-                                <span className="sr-only">Toggle category status</span>
-                                <span
-                                  aria-hidden="true"
-                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${cat.active ? "translate-x-5" : "translate-x-0"
-                                    }`}
-                                />
-                              </button>
-                              <span
-                                className={`text-[11px] font-bold font-mono ${cat.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
-                                  }`}
-                              >
-                                {cat.active ? "Active" : "Inactive"}
-                              </span>
-                            </div>
                           </td>
                         </tr>
                       );

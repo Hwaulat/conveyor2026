@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { createFileRoute, useLocation, Link } from "@tanstack/react-router";
+import { useState, useMemo, useEffect } from "react";
 import {
   History,
   Filter,
@@ -14,7 +14,6 @@ import {
   Check,
   X,
   Plus,
-  ShieldAlert,
 } from "lucide-react";
 import { useI18n } from "../../lib/i18n";
 import { useAppStore, store } from "../../lib/store";
@@ -38,6 +37,13 @@ import { DateRangePicker } from "../../components/DateRangePicker";
 import { Eye, ArrowUpDown } from "lucide-react";
 
 export const Route = createFileRoute("/web/logs")({
+  validateSearch: (search: Record<string, unknown> = {}) => {
+    return {
+      stationId: typeof search?.["stationId"] === "string" ? String(search["stationId"]) : undefined,
+      areaId: typeof search?.["areaId"] === "string" ? String(search["areaId"]) : undefined,
+    };
+  },
+  errorComponent: LogsErrorFallback,
   head: () => ({
     meta: [
       { title: "PT. Krama Yudha Ratu Motor Indonesia — Log History & Audit" },
@@ -46,6 +52,38 @@ export const Route = createFileRoute("/web/logs")({
   }),
   component: LogHistoryPage,
 });
+
+function LogsErrorFallback({ error, reset }: { error: unknown; reset: () => void }) {
+  console.error("Logs page error:", error);
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+      <div className="max-w-md w-full rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4">
+        <h3 className="text-lg font-bold text-foreground">Error Loading Logs</h3>
+        <p className="text-sm text-muted-foreground">
+          Terjadi kendala saat memuat filter log history stasiun. Silakan reset filter untuk memuat seluruh riwayat.
+        </p>
+        <div className="flex gap-2 justify-center pt-2">
+          <button
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.location.href = "/web/logs";
+              }
+            }}
+            className="px-4 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-xs cursor-pointer"
+          >
+            Reset Filters & View All
+          </button>
+          <button
+            onClick={() => reset()}
+            className="px-4 py-2 border border-border bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-lg text-xs cursor-pointer"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type ViewMode = "list" | "summary";
 
@@ -73,11 +111,61 @@ function LogHistoryPage() {
     return { rangeStartMs: start, rangeEndMs: end };
   }, [startDate, endDate, nowMs]);
 
-  const [selectedStation, setSelectedStation] = useState<string>("all");
+  const location = useLocation();
+  const search = useMemo(() => {
+    const s = (location.search || {}) as Record<string, any>;
+    let areaId = typeof s.areaId === "string" ? s.areaId : undefined;
+    let stationId = typeof s.stationId === "string" ? s.stationId : undefined;
+    if (typeof window !== "undefined") {
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        if (!areaId && sp.get("areaId")) areaId = sp.get("areaId") || undefined;
+        if (!stationId && sp.get("stationId")) stationId = sp.get("stationId") || undefined;
+      } catch {
+        // ignore
+      }
+    }
+    return { areaId, stationId };
+  }, [location.search]);
+
+  const searchAreaId = useMemo(() => {
+    if (search.areaId) return search.areaId;
+    if (search.stationId) {
+      const found = (appState?.stations || []).find((s) => s && s.id === search.stationId);
+      if (found) return found.areaId;
+    }
+    return undefined;
+  }, [search.areaId, search.stationId, appState?.stations]);
+
+  const [selectedArea, setSelectedArea] = useState<string>(() => searchAreaId || "all");
+  const [selectedStation, setSelectedStation] = useState<string>(() => search.stationId || "all");
+
+  useEffect(() => {
+    if (searchAreaId) setSelectedArea(searchAreaId);
+    if (search.stationId) setSelectedStation(search.stationId);
+  }, [searchAreaId, search.stationId]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedStationId, setExpandedStationId] = useState<string | null>(null);
+
+  // Available stations filtered by selected area
+  const availableStations = useMemo(() => {
+    if (selectedArea === "all") return appState.stations;
+    return appState.stations.filter((s) => s.areaId === selectedArea);
+  }, [selectedArea, appState.stations]);
+
+  const handleAreaChange = (newAreaId: string) => {
+    setSelectedArea(newAreaId);
+    if (newAreaId !== "all" && selectedStation !== "all") {
+      const match = appState.stations.some(
+        (s) => s.id === selectedStation && s.areaId === newAreaId,
+      );
+      if (!match) {
+        setSelectedStation("all");
+      }
+    }
+  };
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -103,6 +191,9 @@ function LogHistoryPage() {
 
     result = result.filter((s) => s.startMs >= rangeStartMs && s.startMs <= rangeEndMs);
 
+    if (selectedArea !== "all") {
+      result = result.filter((s) => s.areaId === selectedArea);
+    }
     if (selectedStation !== "all") {
       result = result.filter((s) => s.stationId === selectedStation);
     }
@@ -132,17 +223,13 @@ function LogHistoryPage() {
     }
 
     return result;
-  }, [appState.stops, rangeStartMs, rangeEndMs, selectedStation, selectedCategory, selectedStatus, searchQuery, appState.categories, appState.stations]);
+  }, [appState.stops, rangeStartMs, rangeEndMs, selectedArea, selectedStation, selectedCategory, selectedStatus, searchQuery, appState.categories, appState.stations]);
 
   // Paginated Stops for Table View
   const paginatedStops = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredStops.slice(start, start + pageSize);
   }, [filteredStops, currentPage, pageSize]);
-
-  const unrecordedStops = useMemo(() => {
-    return appState.stops.filter((s) => s.source === "plc" && s.startMs >= rangeStartMs && s.startMs <= rangeEndMs);
-  }, [appState.stops, rangeStartMs, rangeEndMs]);
 
   const stationSummary = useMemo(() => {
     return appState.stations.map((station) => {
@@ -252,51 +339,6 @@ function LogHistoryPage() {
         </div>
       </div>
 
-      {/* Unrecorded PLC Stops Alert Banner */}
-      {unrecordedStops.length > 0 && (
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
-          <div className="flex items-start gap-3">
-            <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                  {t("logs.unrecorded")} ({unrecordedStops.length} Occurrences)
-                </h4>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
-                  Needs Verification
-                </span>
-              </div>
-              <p className="text-xs text-amber-700/80 dark:text-amber-200/80 mt-1">
-                {t("logs.unrecordedHint")}
-              </p>
-
-              {/* Unrecorded list inline */}
-              <div className="mt-3 divide-y divide-border rounded-lg border border-border bg-card">
-                {unrecordedStops.map((s) => {
-                  const st = appState.stations.find((x) => x.id === s.stationId);
-                  return (
-                    <div key={s.id} className="flex items-center justify-between p-2.5 text-xs">
-                      <div className="flex items-center gap-2 font-mono">
-                        <span className="text-foreground font-bold">{st?.name ?? s.stationId}</span>
-                        <span className="text-muted-foreground">•</span>
-                        <span className="text-amber-600 dark:text-amber-400">{fmtDateTime(s.startMs)}</span>
-                        <span className="text-muted-foreground">({fmtDuration(stopDurationMs(s, nowMs))})</span>
-                      </div>
-                      <button
-                        onClick={() => handleOpenCorrectModal(s)}
-                        className="rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 font-mono text-[11px] text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-colors font-bold"
-                      >
-                        {t("logs.correct")} / Record Form
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Main View Content */}
       {viewMode === "list" ? (
         /* LIST VIEW TABLE - Unified Card matching Reference Style */
@@ -316,11 +358,27 @@ function LogHistoryPage() {
               <div className="w-36 sm:w-44">
                 <SelectInput
                   hideClear
+                  value={selectedArea}
+                  onChange={(val) => handleAreaChange(val ?? "all")}
+                  datalist={[
+                    { value: "all", label: `All Areas (${appState.areas.length})` },
+                    ...appState.areas.map((a) => ({
+                      value: a.id,
+                      label: a.name,
+                    })),
+                  ]}
+                  placeholder="All Areas"
+                />
+              </div>
+
+              <div className="w-36 sm:w-44">
+                <SelectInput
+                  hideClear
                   value={selectedStation}
                   onChange={(val) => setSelectedStation(val ?? "all")}
                   datalist={[
-                    { value: "all", label: "All Stations" },
-                    ...appState.stations.map((st) => ({
+                    { value: "all", label: `All Stations (${availableStations.length})` },
+                    ...availableStations.map((st) => ({
                       value: st.id,
                       label: st.name,
                     })),
@@ -381,6 +439,7 @@ function LogHistoryPage() {
 
               <button
                 onClick={() => {
+                  setSelectedArea("all");
                   setSelectedStation("all");
                   setSelectedCategory("all");
                   setSelectedStatus("all");

@@ -45,6 +45,9 @@ export type LineStop = {
   source: "form" | "plc"; // form = E-form entry, plc = detected without E-form
   note?: string | undefined;
   formType?: "linestop" | "mtc" | undefined;
+  lastSpeed?: number | undefined;
+  totalRunMs?: number | undefined;
+  submittedAtMs?: number | undefined;
 };
 
 export type Shift = { id: string; name: string; startHour: number; startMinute: number };

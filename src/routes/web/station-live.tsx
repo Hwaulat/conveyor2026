@@ -1,32 +1,47 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import {
-  Radio,
   CheckCircle2,
   AlertTriangle,
   AlertOctagon,
   Clock,
-  Tv,
   Building2,
-  ArrowUpRight,
-  Filter,
+  History,
+  ClipboardList,
 } from "lucide-react";
 import { useI18n } from "../../lib/i18n";
 import { useAppStore } from "../../lib/store";
-import { fmtDuration, dayStartMs, fmtTime } from "../../lib/format";
+import { fmtDuration, dayStartMs, fmtTime, fmtTimeShort } from "../../lib/format";
 import { SelectInput } from "../../components/ui/select-input";
+import { IpadEFormPage } from "../ipad";
 
 export const Route = createFileRoute("/web/station-live")({
+  validateSearch: (search: Record<string, unknown>): { stationId?: string; areaId?: string } => {
+    return {
+      stationId: typeof search["stationId"] === "string" ? search["stationId"] : undefined,
+      areaId: typeof search["areaId"] === "string" ? search["areaId"] : undefined,
+    };
+  },
   head: () => ({
     meta: [
       { title: "PT. Krama Yudha Ratu Motor Indonesia — Station Live Monitoring" },
-      { name: "description", content: "Real-time Conveyor line station telemetry, speeds, and live Andon status." },
+      { name: "description", content: "Real-time Conveyor line station telemetry, speeds, and live status." },
     ],
   }),
   component: StationLivePage,
 });
 
 function StationLivePage() {
+  const location = useLocation();
+  const isEForm =
+    location.pathname.endsWith("/e-form") ||
+    location.pathname.includes("/station-live/e-form") ||
+    (typeof window !== "undefined" && window.location.pathname.includes("/e-form"));
+
+  if (isEForm) {
+    return <IpadEFormPage />;
+  }
+
   const { t } = useI18n();
   const appState = useAppStore();
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
@@ -37,16 +52,16 @@ function StationLivePage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Default Area: PTED
+  // Default Area: Sealing Area (where single active line-stop is located)
   const defaultAreaId = useMemo(() => {
     return (
       appState.areas.find(
-        (a) => a.name.toLowerCase() === "pted" || a.code?.toLowerCase() === "pted",
-      )?.id ?? appState.areas[0]?.id ?? "area-pted"
+        (a) => a.id === "area-sealing" || a.code?.toUpperCase() === "SEALING",
+      )?.id ?? appState.areas[0]?.id ?? "area-sealing"
     );
   }, [appState.areas]);
 
-  // Filter by Area (default: PTED)
+  // Filter by Area (default: Sealing Area)
   const [selectedAreaId, setSelectedAreaId] = useState<string>(() => defaultAreaId);
 
   useEffect(() => {
@@ -101,24 +116,15 @@ function StationLivePage() {
   return (
     <div className="space-y-6 w-full">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              <Radio className="h-3 w-3 animate-pulse" />
-              LIVE TELEMETRY
-            </span>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
-              Station Live
-            </h1>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Live monitoring of each conveyor station condition, running/stopped status, actual speed, and stop duration in real-time.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
+            Station Live
+          </h1>
         </div>
 
-        {/* Action Bar: Filter Area + Link Andon TV */}
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Action Bar: Filter Area */}
+        <div className="flex items-center gap-3">
           <div className="w-56 sm:w-64">
             <SelectInput
               hideClear
@@ -128,22 +134,10 @@ function StationLivePage() {
               placeholder="Filter Station Area"
             />
           </div>
-
-          <a
-            href="/andon"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-mono font-medium rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-xs"
-            title="Open Andon TV broadcast view in a new tab"
-          >
-            <Tv className="h-3.5 w-3.5 text-primary" />
-            <span>Open Andon TV</span>
-            <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
-          </a>
         </div>
       </div>
 
-      {/* Summary KPI Strip (4 Cards matching Andon) */}
+      {/* Summary KPI Strip (4 Cards) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. Stations Running */}
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/20 p-4 sm:p-5 flex flex-col justify-between shadow-xs">
@@ -263,10 +257,21 @@ function StationLivePage() {
             const activeStop = isStopped
               ? appState.stops.find((s) => s.stationId === station.id && s.status === "open")
               : null;
-            const activeCat = activeStop
+            // E-Form dianggap sudah terisi jika source adalah form dan field operator & kategori telah diisi
+            const isFormFilled = Boolean(
+              activeStop &&
+              activeStop.source === "form" &&
+              Boolean(activeStop.reportedBy?.trim()) &&
+              Boolean(activeStop.categoryId?.trim())
+            );
+            const activeCat = isFormFilled && activeStop?.categoryId
               ? appState.categories.find((c) => c.id === activeStop.categoryId)
               : null;
             const stationArea = appState.areas.find((a) => a.id === station.areaId);
+
+            // Waktu terjadinya line stop (format 09:00)
+            const stopTimestamp = live?.lastStopMs ?? live?.stoppedSinceMs ?? activeStop?.startMs;
+            const stopTimeStr = isStopped && stopTimestamp ? fmtTimeShort(stopTimestamp) : null;
 
             return (
               <div
@@ -300,7 +305,7 @@ function StationLivePage() {
                     </span>
                   </div>
 
-                  {/* Big State Banner matching Andon */}
+                  {/* Big State Banner */}
                   <div
                     className={`rounded-xl p-4 my-3 text-center border-2 font-mono ${
                       isStopped
@@ -310,8 +315,13 @@ function StationLivePage() {
                         : "bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300"
                     }`}
                   >
-                    <div className="text-2xl md:text-3xl font-black tracking-widest">
-                      {isStopped ? "STOPPED" : isNoSignal ? "NO SIGNAL" : "RUNNING"}
+                    <div className="text-2xl md:text-3xl font-black tracking-widest flex items-center justify-center gap-2 flex-wrap">
+                      <span>{isStopped ? "STOPPED" : isNoSignal ? "NO SIGNAL" : "RUNNING"}</span>
+                      {isStopped && stopTimeStr && (
+                        <span className="text-xl md:text-2xl font-bold opacity-90 tracking-normal font-mono">
+                          ({stopTimeStr})
+                        </span>
+                      )}
                     </div>
 
                     {/* Running stop timer & details */}
@@ -323,20 +333,25 @@ function StationLivePage() {
                         <span className="text-2xl md:text-3xl font-black tracking-wider text-white block">
                           {fmtDuration(stoppedDuration)}
                         </span>
-                        {activeCat && (
-                          <div className="mt-1 font-sans text-xs bg-black/40 text-white py-1 px-2.5 rounded inline-block">
-                            Reason: <span className="font-bold">{activeCat.name}</span>
-                          </div>
-                        )}
-                        {activeStop?.reportedBy && (
-                          <div className="text-[11px] font-sans opacity-90 block">
-                            Operator: <span className="font-semibold">{activeStop.reportedBy}</span>
-                          </div>
-                        )}
-                        {activeStop?.note && (
-                          <p className="text-[11px] italic font-sans opacity-85 truncate max-w-xs mx-auto">
-                            "{activeStop.note}"
-                          </p>
+                        {/* Jika sudah terisi semuanya: tampilkan reason, operator, dan notes. Jika belum terisi: masih kosong */}
+                        {isFormFilled && (
+                          <>
+                            {activeCat && (
+                              <div className="mt-1 font-sans text-xs bg-black/40 text-white py-1 px-2.5 rounded inline-block">
+                                Reason: <span className="font-bold">{activeCat.name}</span>
+                              </div>
+                            )}
+                            {activeStop?.reportedBy && (
+                              <div className="text-[11px] font-sans opacity-90 block">
+                                Operator: <span className="font-semibold">{activeStop.reportedBy}</span>
+                              </div>
+                            )}
+                            {activeStop?.note && (
+                              <p className="text-[11px] italic font-sans opacity-85 truncate max-w-xs mx-auto">
+                                "{activeStop.note}"
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
@@ -372,6 +387,53 @@ function StationLivePage() {
                       Last Start: {live?.lastStartMs ? fmtTime(live.lastStartMs) : "—"}
                     </span>
                   </div>
+                </div>
+
+                {/* Card Actions: E-Form Line Stop & History */}
+                <div className="pt-3.5 mt-3 border-t border-border grid grid-cols-2 gap-2">
+                  {/* Button 1: E-Form Line Stop (Active & Red when STOPPED but NOT YET FILLED; Disabled if already filled or RUNNING) */}
+                  {isStopped && !isFormFilled ? (
+                    <Link
+                      to="/web/station-live/e-form"
+                      search={{ areaId: station.areaId, stationId: station.id }}
+                      onClick={(e) => {
+                        if (typeof window !== "undefined") {
+                          window.location.href = `/web/station-live/e-form?areaId=${station.areaId}&stationId=${station.id}`;
+                          e.preventDefault();
+                        }
+                      }}
+                      className="inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-700 text-white shadow-xs transition-colors cursor-pointer text-center"
+                      title="Open E-Form Line Stop"
+                    >
+                      <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">E-Form Line Stop</span>
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-zinc-800/60 text-slate-400 dark:text-zinc-600 border border-slate-200/50 dark:border-zinc-800 cursor-not-allowed text-center select-none"
+                      title={
+                        isStopped && isFormFilled
+                          ? "E-Form sudah diisi lengkap untuk line stop ini"
+                          : "E-Form Line Stop hanya aktif saat status station STOPPED"
+                      }
+                    >
+                      <ClipboardList className="h-3.5 w-3.5 shrink-0 opacity-40" />
+                      <span className="truncate">E-Form Line Stop</span>
+                    </button>
+                  )}
+
+                  {/* Button 2: History (Always Active) */}
+                  <Link
+                    to="/web/station-history"
+                    search={{ areaId: station.areaId, stationId: station.id }}
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-foreground transition-colors cursor-pointer shadow-2xs text-center"
+                    title={`View Line Stop History for ${station.name}`}
+                  >
+                    <History className="h-3.5 w-3.5 text-slate-500 dark:text-zinc-400 shrink-0" />
+                    <span className="truncate">History</span>
+                  </Link>
                 </div>
               </div>
             );
