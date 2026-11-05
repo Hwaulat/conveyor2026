@@ -424,9 +424,9 @@ function ProductionPage() {
       </div>
 
       {/* Production Records & OEE Calculation Table */}
-      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
         {/* Table Toolbar with Search (Fill Container) */}
-        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 bg-white dark:bg-[#0b1320] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-[#152a47] bg-white dark:bg-[#0b1320] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <Search
             containerClassName="flex-1 w-full"
             placeholder="Search by date, shift name, or area..."
@@ -440,7 +440,7 @@ function ProductionPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-sans border-collapse">
-            <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+            <thead className="border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
               <tr>
                 <th className="py-3 px-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">

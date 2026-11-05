@@ -49,7 +49,7 @@ export function TablePagination({
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-card border-t border-slate-100 dark:border-zinc-800/80 font-sans text-xs text-slate-500 dark:text-zinc-400 select-none",
+        "flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-card border-t border-slate-100 dark:border-[#152a47] font-sans text-xs text-slate-500 dark:text-zinc-400 select-none",
         className
       )}
     >
@@ -64,7 +64,7 @@ export function TablePagination({
                 onPageSizeChange(Number(e.target.value));
                 onPageChange(1);
               }}
-              className="h-7 px-2 rounded-md border border-slate-200 dark:border-zinc-700 bg-background text-slate-700 dark:text-zinc-200 font-medium text-xs focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs"
+              className="h-7 px-2 rounded-md border border-slate-200 dark:border-[#152a47] bg-background text-slate-700 dark:text-zinc-200 font-medium text-xs focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs"
             >
               {pageSizeOptions.map((opt) => (
                 <option key={opt} value={opt}>
@@ -87,7 +87,7 @@ export function TablePagination({
           onClick={() => onPageChange(1)}
           disabled={currentPage <= 1}
           title="First Page"
-          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
+          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-[#152a47] bg-background hover:bg-slate-50 dark:hover:bg-[#132742] text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
           <ChevronsLeft className="h-3.5 w-3.5" />
         </button>
@@ -98,7 +98,7 @@ export function TablePagination({
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
           title="Previous Page"
-          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
+          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-[#152a47] bg-background hover:bg-slate-50 dark:hover:bg-[#132742] text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
@@ -115,7 +115,7 @@ export function TablePagination({
                 "h-7 min-w-[28px] px-2 inline-flex items-center justify-center rounded-md font-semibold text-xs transition-colors shadow-2xs",
                 isActive
                   ? "bg-[#1d4ed8] dark:bg-blue-600 text-white"
-                  : "border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300"
+                  : "border border-transparent hover:border-slate-200 dark:hover:border-[#152a47] hover:bg-slate-50 dark:hover:bg-[#132742] text-slate-600 dark:text-zinc-300"
               )}
             >
               {p}
@@ -129,7 +129,7 @@ export function TablePagination({
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
           title="Next Page"
-          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
+          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-[#152a47] bg-background hover:bg-slate-50 dark:hover:bg-[#132742] text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
@@ -140,7 +140,7 @@ export function TablePagination({
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage >= totalPages}
           title="Last Page"
-          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700 bg-background hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
+          className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-[#152a47] bg-background hover:bg-slate-50 dark:hover:bg-[#132742] text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
         >
           <ChevronsRight className="h-3.5 w-3.5" />
         </button>

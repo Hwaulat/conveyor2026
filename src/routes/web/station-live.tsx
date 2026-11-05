@@ -412,7 +412,7 @@ function StationLivePage() {
                     <button
                       type="button"
                       disabled
-                      className="inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-zinc-800/60 text-slate-400 dark:text-zinc-600 border border-slate-200/50 dark:border-zinc-800 cursor-not-allowed text-center select-none"
+                      className="inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-[#132742]/50 text-slate-400 dark:text-[#527299] border border-slate-200/50 dark:border-[#152a47] cursor-not-allowed text-center select-none"
                       title={
                         isStopped && isFormFilled
                           ? "E-Form sudah diisi lengkap untuk line stop ini"
@@ -428,7 +428,7 @@ function StationLivePage() {
                   <Link
                     to="/web/station-history"
                     search={{ areaId: station.areaId, stationId: station.id }}
-                    className="inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-foreground transition-colors cursor-pointer shadow-2xs text-center"
+                    className="inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-[#152a47] bg-white dark:bg-[#132742] hover:bg-slate-50 dark:hover:bg-[#1c3860] text-foreground transition-colors cursor-pointer shadow-2xs text-center"
                     title={`View Line Stop History for ${station.name}`}
                   >
                     <History className="h-3.5 w-3.5 text-slate-500 dark:text-zinc-400 shrink-0" />

@@ -500,7 +500,7 @@ export function IpadEFormPage() {
                 }
               }
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-slate-200/90 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-100 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-slate-200/90 dark:border-[#152a47] bg-white dark:bg-[#132742] hover:bg-slate-50 dark:hover:bg-[#1c3860] text-slate-800 dark:text-zinc-100 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
             title="Back to Station Live"
           >
             <ChevronLeft className="h-4 w-4 stroke-[2.5]" />
@@ -514,7 +514,7 @@ export function IpadEFormPage() {
               Line-Stop E-Form
             </h1>
             {targetStation && (
-              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700">
+              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-[#132742] text-slate-600 dark:text-zinc-200 border border-slate-200 dark:border-[#152a47]">
                 {targetStation.name} ({targetStation.code || `#${targetStation.sequence}`})
               </span>
             )}
@@ -544,7 +544,7 @@ export function IpadEFormPage() {
         )}
 
         {/* Form Container (Fill Container Card matching Details Line Stop History) */}
-        <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] p-6 sm:p-8 shadow-xs w-full">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] p-6 sm:p-8 shadow-xs w-full">
           <form onSubmit={handleSaveStop} className="space-y-6">
             {/* Station & Area Information (Work Area, Station Conveyor Line, Station Name) */}
             <div className="rounded-xl border border-red-500/30 bg-red-500/5 dark:bg-red-950/20 p-4 shadow-xs">

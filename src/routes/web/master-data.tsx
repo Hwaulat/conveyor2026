@@ -506,9 +506,9 @@ function MasterDataPage() {
       {activeView === "stations" && (
         <div className="space-y-6">
           {/* Main Station Master Table Card */}
-          <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs space-y-0">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs space-y-0">
             {/* Toolbar: Search (Fill Container) & Add Station Button */}
-            <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
+            <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-[#152a47] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
               {/* Search Bar (Fill Container) */}
               <Search
                 containerClassName="flex-1 w-full"
@@ -532,7 +532,7 @@ function MasterDataPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-sans border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
+                  <tr className="border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
                     <th className="py-3 px-4 w-20 whitespace-nowrap">ACTION</th>
                     <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
@@ -647,9 +647,9 @@ function MasterDataPage() {
       {activeView === "categories" && (
         <div className="space-y-6">
           {/* Main Category Table Card */}
-          <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs space-y-0">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs space-y-0">
             {/* Toolbar: Search (Fill Container) & Add Category Problem Button */}
-            <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
+            <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-[#152a47] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
               {/* Search Bar (Fill Container) */}
               <Search
                 containerClassName="flex-1 w-full"
@@ -673,7 +673,7 @@ function MasterDataPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-sans border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
+                  <tr className="border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
                     <th className="py-3 px-4 w-24 whitespace-nowrap">ACTION</th>
                     <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">

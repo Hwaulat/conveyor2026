@@ -452,7 +452,7 @@ export function WebLayout() {
             >
               <PanelLeft className="h-4.5 w-4.5" />
             </button>
-            <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
+            <div className="h-4 w-px bg-slate-200 dark:bg-[#152a47]" />
           </div>
 
           {/* Right: Moon (Theme), Date & Time, Divider, Bell with 99+ Badge, User Profile */}
@@ -482,7 +482,7 @@ export function WebLayout() {
             </div>
 
             {/* Thin vertical separator line */}
-            <div className="hidden sm:block h-5 w-px bg-slate-200 dark:bg-slate-700" />
+            <div className="hidden sm:block h-5 w-px bg-slate-200 dark:bg-[#152a47]" />
 
             {/* Notification Bell with 99+ Red Badge */}
             <DropdownMenu>

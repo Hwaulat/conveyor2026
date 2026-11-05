@@ -124,7 +124,7 @@ export function StationHistoryPage() {
           {/* Back Button matching screenshot */}
           <Link
             to="/web/station-live"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-slate-200/90 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-100 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-slate-200/90 dark:border-[#152a47] bg-white dark:bg-[#132742] hover:bg-slate-50 dark:hover:bg-[#1c3860] text-slate-800 dark:text-zinc-100 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
           >
             <ChevronLeft className="h-4 w-4 stroke-[2.5]" />
             <span>Back</span>
@@ -137,7 +137,7 @@ export function StationHistoryPage() {
               Details Line Stop History
             </h1>
             {activeStation && (
-              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700">
+              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-[#132742] text-slate-600 dark:text-zinc-200 border border-slate-200 dark:border-[#152a47]">
                 {activeStation.name} ({activeStation.code || `#${activeStation.sequence}`})
               </span>
             )}
@@ -154,9 +154,9 @@ export function StationHistoryPage() {
       </div>
 
       {/* Main Table Card (Exact Master Data Style) */}
-      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs space-y-0">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs space-y-0">
         {/* Toolbar: Pure Search Bar (Matching Master Data) */}
-        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 bg-white dark:bg-[#0b1320]">
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-[#152a47] bg-white dark:bg-[#0b1320]">
           <Search
             containerClassName="w-full"
             placeholder="Search code, operator, reason, category..."
@@ -172,7 +172,7 @@ export function StationHistoryPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-sans border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
+              <tr className="border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
                 <th className="py-3 px-4 whitespace-nowrap">ACTION</th>
                 <th className="py-3 px-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
@@ -300,7 +300,7 @@ export function StationHistoryPage() {
                           <button
                             type="button"
                             disabled
-                            className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-zinc-800/70 text-slate-400 dark:text-zinc-600 border border-slate-200 dark:border-zinc-800 cursor-not-allowed select-none whitespace-nowrap"
+                            className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-[#132742]/50 text-slate-400 dark:text-[#527299] border border-slate-200 dark:border-[#152a47] cursor-not-allowed select-none whitespace-nowrap"
                             title="E-Form sudah diisi lengkap untuk incident ini"
                           >
                             <ClipboardList className="h-3.5 w-3.5 opacity-40 shrink-0" />

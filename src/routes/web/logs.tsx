@@ -342,9 +342,9 @@ function LogHistoryPage() {
       {/* Main View Content */}
       {viewMode === "list" ? (
         /* LIST VIEW TABLE - Unified Card matching Reference Style */
-        <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
           {/* Top Filter Toolbar */}
-          <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
+          <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-[#152a47] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
             {/* Search on Left (Fill Container) */}
             <Search
               containerClassName="flex-1 w-full"
@@ -460,7 +460,7 @@ function LogHistoryPage() {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-sans border-collapse">
-              <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+              <thead className="border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="py-3 px-4 w-28 whitespace-nowrap">ACTION</th>
                   <th className="py-3 px-4 whitespace-nowrap">

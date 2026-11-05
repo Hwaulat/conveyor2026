@@ -384,9 +384,9 @@ function ReportsPage() {
       </div>
 
       {/* Main Table Preview Section with Search & Download Button */}
-      <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
         {/* Table Toolbar: Search (Fill Container) on Left, Date Range Picker & Download Button on Right */}
-        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800/80 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-[#152a47] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
           {/* Search Input (Fill Container) */}
           <Search
             containerClassName="flex-1 w-full"
@@ -432,7 +432,7 @@ function ReportsPage() {
           {/* 1. Stop Summary Table */}
           {activeReport === "stop-summary" && (
             <table className="w-full text-left text-xs font-sans border-collapse">
-              <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+              <thead className="border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 w-16 text-center whitespace-nowrap">ACTION</th>
                   <th className="py-3.5 px-4 w-12 text-center">NO</th>
@@ -540,7 +540,7 @@ function ReportsPage() {
           {/* 2. MTTR & MTBF Table */}
           {activeReport === "mttr-mtbf" && (
             <table className="w-full text-left text-xs font-sans border-collapse">
-              <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+              <thead className="border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 w-12 text-center">NO</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
@@ -642,7 +642,7 @@ function ReportsPage() {
           {/* 3. OEE Table */}
           {activeReport === "oee" && (
             <table className="w-full text-left text-xs font-sans border-collapse">
-              <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+              <thead className="border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 w-12 text-center">NO</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
@@ -753,7 +753,7 @@ function ReportsPage() {
           {/* 4. Log Detail Table */}
           {activeReport === "log-detail" && (
             <table className="w-full text-left text-xs font-sans border-collapse">
-              <thead className="border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+              <thead className="border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 w-12 text-center">NO</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">
@@ -936,9 +936,9 @@ function ReportsPage() {
             </div>
 
             {/* Occurrences list */}
-            <div className="overflow-y-auto flex-1 rounded-xl border border-slate-200/80 dark:border-zinc-800">
+            <div className="overflow-y-auto flex-1 rounded-xl border border-slate-200/80 dark:border-[#152a47]">
               <table className="w-full text-left text-xs font-sans border-collapse">
-                <thead className="sticky top-0 border-b border-slate-100 dark:border-zinc-800/80 bg-[#f8fafc] dark:bg-[#121c2d] text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+                <thead className="sticky top-0 border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                   <tr>
                     <th className="py-2.5 px-3 w-10 text-center">NO</th>
                     <th className="py-2.5 px-3 whitespace-nowrap">START TIME (WIB)</th>

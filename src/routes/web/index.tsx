@@ -385,11 +385,11 @@ function DashboardPage() {
   }, [appState.productionRecords, appState.stops, selectedAreaId, selectedStation, selectedStationId, rangeStartMs, rangeEndMs]);
 
   const chartTooltipStyle = isDark
-    ? { backgroundColor: "#09090b", border: "1px solid #27272a", borderRadius: "8px", color: "#ffffff" }
+    ? { backgroundColor: "#0d1b2e", border: "1px solid #152a47", borderRadius: "8px", color: "#ffffff" }
     : { backgroundColor: "#ffffff", border: "1px solid #e4e4e7", borderRadius: "8px", color: "#18181b", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" };
 
-  const chartGridStroke = isDark ? "#222" : "#e5e7eb";
-  const chartAxisStroke = isDark ? "#666" : "#71717a";
+  const chartGridStroke = isDark ? "#152a47" : "#e5e7eb";
+  const chartAxisStroke = isDark ? "#6582a6" : "#71717a";
 
   return (
     <div className="space-y-6 w-full">
