@@ -3,10 +3,10 @@ import { IpadEFormPage } from "../ipad";
 
 export const Route = createFileRoute("/web/station-live/e-form")({
   validateSearch: (search: Record<string, unknown>): { stationId?: string; areaId?: string } => {
-    return {
-      stationId: typeof search["stationId"] === "string" ? search["stationId"] : undefined,
-      areaId: typeof search["areaId"] === "string" ? search["areaId"] : undefined,
-    };
+    const res: { stationId?: string; areaId?: string } = {};
+    if (typeof search["stationId"] === "string" && search["stationId"]) res.stationId = search["stationId"];
+    if (typeof search["areaId"] === "string" && search["areaId"]) res.areaId = search["areaId"];
+    return res;
   },
   head: () => ({
     meta: [

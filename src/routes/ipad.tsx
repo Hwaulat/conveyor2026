@@ -13,6 +13,7 @@ import {
   Moon,
   Wrench,
   Plus,
+  CheckCircle2,
 } from "lucide-react";
 import { useTheme } from "../lib/theme";
 import { useAppStore, store } from "../lib/store";
@@ -25,15 +26,21 @@ import {
   fromLocalInputValue,
   shiftOf,
 } from "../lib/format";
+import {
+  getShiftForTimestamp,
+  getShiftForStop,
+  SHIFT_PAGI,
+  SHIFT_MALAM,
+} from "../lib/shift";
 import { stopDurationMs } from "../lib/calc";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/ipad")({
   validateSearch: (search: Record<string, unknown>): { stationId?: string; areaId?: string } => {
-    return {
-      stationId: typeof search["stationId"] === "string" ? search["stationId"] : undefined,
-      areaId: typeof search["areaId"] === "string" ? search["areaId"] : undefined,
-    };
+    const res: { stationId?: string; areaId?: string } = {};
+    if (typeof search["stationId"] === "string" && search["stationId"]) res.stationId = search["stationId"];
+    if (typeof search["areaId"] === "string" && search["areaId"]) res.areaId = search["areaId"];
+    return res;
   },
   head: () => ({
     meta: [
@@ -132,9 +139,9 @@ export function IpadEFormPage() {
 
   const location = useLocation();
   const search = useMemo(() => {
-    const s = (location.search || {}) as Record<string, any>;
-    let areaId = typeof s.areaId === "string" ? s.areaId : undefined;
-    let stationId = typeof s.stationId === "string" ? s.stationId : undefined;
+    const s = (location.search || {}) as Record<string, unknown>;
+    let areaId = typeof s["areaId"] === "string" ? s["areaId"] : undefined;
+    let stationId = typeof s["stationId"] === "string" ? s["stationId"] : undefined;
     if (typeof window !== "undefined") {
       try {
         const sp = new URLSearchParams(window.location.search);
@@ -266,6 +273,31 @@ export function IpadEFormPage() {
   }, [activeStopForStation, targetStation?.id, appState?.stationLive]);
 
   const [endTimeVal, setEndTimeVal] = useState<string>("");
+
+  // Active / Selected Operational Shift (Shift Pagi: 07:00 - 16:20, Shift Malam: 22:00 - 06:00)
+  const [selectedShiftId, setSelectedShiftId] = useState<string>(() => {
+    const startMs = fromLocalInputValue(startTimeVal);
+    const def = getShiftForTimestamp(!isNaN(startMs) && startMs > 0 ? startMs : Date.now());
+    return def.id === "shift-malam" ? "shift-malam" : "shift-pagi";
+  });
+
+  // Auto-detect shift when startTimeVal changes
+  useEffect(() => {
+    const startMs = fromLocalInputValue(startTimeVal);
+    if (!isNaN(startMs) && startMs > 0) {
+      const detected = getShiftForTimestamp(startMs);
+      if (detected.id === "shift-pagi" || detected.id === "shift-malam") {
+        setSelectedShiftId(detected.id);
+      }
+    }
+  }, [startTimeVal]);
+
+  const currentShiftInfo = useMemo(() => {
+    if (selectedShiftId === "shift-pagi") return SHIFT_PAGI;
+    if (selectedShiftId === "shift-malam") return SHIFT_MALAM;
+    const startMs = fromLocalInputValue(startTimeVal);
+    return getShiftForTimestamp(!isNaN(startMs) && startMs > 0 ? startMs : nowMs);
+  }, [selectedShiftId, startTimeVal, nowMs]);
 
   // Technician / Operator Dropdown list
   const technicianList = useMemo(() => {
@@ -407,6 +439,7 @@ export function IpadEFormPage() {
       source: "form",
       note: note.trim() || undefined,
       formType,
+      shiftId: selectedShiftId,
     };
 
     if (effectiveOnline) {
@@ -546,9 +579,9 @@ export function IpadEFormPage() {
         {/* Form Container (Fill Container Card matching Details Line Stop History) */}
         <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] p-6 sm:p-8 shadow-xs w-full">
           <form onSubmit={handleSaveStop} className="space-y-6">
-            {/* Station & Area Information (Work Area, Station Conveyor Line, Station Name) */}
+            {/* Station & Area Information (Work Area, Station Conveyor Line, Station Name, Operational Shift) */}
             <div className="rounded-xl border border-red-500/30 bg-red-500/5 dark:bg-red-950/20 p-4 shadow-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* 1. Work Area */}
                 <div className="p-3 rounded-lg border border-border bg-card/80">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">
@@ -583,14 +616,33 @@ export function IpadEFormPage() {
                     )}
                   </div>
                 </div>
+
+                {/* 4. Active Shift */}
+                <div className="p-3 rounded-lg border border-border bg-card/80">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">
+                    Operational Shift
+                  </div>
+                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-bold border ${currentShiftInfo.badgeClass}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${currentShiftInfo.dotClass} animate-pulse`} />
+                      {currentShiftInfo.shortName}
+                    </span>
+                    <span className="text-[10px] font-mono text-muted-foreground">({currentShiftInfo.timeRange})</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* 1. Stop Status & Timing (pure Incident Start Time & Incident End Time) */}
+            {/* 1. Stop Status & Timing & Shift Selection */}
             <div className="rounded-xl border border-border bg-muted/30 p-4 sm:p-5 space-y-4">
-              <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
-                1. Incident Timing:
-              </label>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground font-bold">
+                  1. Incident Timing & Shift:
+                </label>
+                <span className="text-[11px] font-mono font-semibold text-muted-foreground">
+                  Detected: <strong className="text-foreground">{currentShiftInfo.shortName}</strong>
+                </span>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -621,6 +673,56 @@ export function IpadEFormPage() {
                   </span>
                 </div>
               </div>
+
+              {/* Shift Selector Buttons */}
+              <div>
+                <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">
+                  Select Shift (Shift Pagi / Shift Malam):
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedShiftId("shift-pagi")}
+                    className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                      selectedShiftId === "shift-pagi"
+                        ? "border-sky-500 bg-sky-500/10 text-sky-800 dark:text-sky-200 font-bold ring-1 ring-sky-500/40"
+                        : "border-border bg-card text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-sky-500" />
+                      <div>
+                        <span className="text-xs font-bold block text-foreground">Shift Pagi</span>
+                        <span className="text-[10px] font-mono text-muted-foreground block">07:00 — 16:20 WIB (Day Shift)</span>
+                      </div>
+                    </div>
+                    {selectedShiftId === "shift-pagi" && (
+                      <CheckCircle2 className="h-4 w-4 text-sky-500 shrink-0" />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedShiftId("shift-malam")}
+                    className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                      selectedShiftId === "shift-malam"
+                        ? "border-indigo-500 bg-indigo-500/10 text-indigo-800 dark:text-indigo-200 font-bold ring-1 ring-indigo-500/40"
+                        : "border-border bg-card text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                      <div>
+                        <span className="text-xs font-bold block text-foreground">Shift Malam</span>
+                        <span className="text-[10px] font-mono text-muted-foreground block">22:00 — 06:00 WIB (Night Shift)</span>
+                      </div>
+                    </div>
+                    {selectedShiftId === "shift-malam" && (
+                      <CheckCircle2 className="h-4 w-4 text-indigo-500 shrink-0" />
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* 2. Incident Category Selector */}
@@ -645,7 +747,7 @@ export function IpadEFormPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
                 {availableCategories.map((c) => {
                   if (!c) return null;
                   const isSelected = selectedCategoryId === c.id;

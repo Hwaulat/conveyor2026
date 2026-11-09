@@ -20,7 +20,6 @@ import {
   Line,
   CartesianGrid,
   Legend,
-  ReferenceLine,
 } from "recharts";
 import { useI18n } from "../../lib/i18n";
 import { useTheme } from "../../lib/theme";
@@ -37,6 +36,7 @@ import {
 import { fmtDuration, fmtMinutes, dayStartMs } from "../../lib/format";
 import { DateRangePicker } from "../../components/DateRangePicker";
 import { SelectInput } from "../../components/ui/select-input";
+import { DowntimeShiftTimeline } from "../../components/DowntimeShiftTimeline";
 
 export const Route = createFileRoute("/web/")({
   head: () => ({
@@ -45,8 +45,41 @@ export const Route = createFileRoute("/web/")({
       { name: "description", content: "Real-time Conveyor line performance, MTTR, MTBF and OEE metrics." },
     ],
   }),
+  errorComponent: DashboardErrorFallback,
   component: DashboardPage,
 });
+
+function DashboardErrorFallback({ error, reset }: { error: unknown; reset: () => void }) {
+  console.error("Dashboard error:", error);
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+      <div className="max-w-md w-full rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4">
+        <h3 className="text-lg font-bold text-foreground">Error Loading Dashboard</h3>
+        <p className="text-sm text-muted-foreground">
+          Terjadi kendala saat memuat grafik atau KPI dashboard. Silakan muat ulang untuk melanjutkan.
+        </p>
+        <div className="flex gap-2 justify-center pt-2">
+          <button
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.location.reload();
+              }
+            }}
+            className="px-4 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-xs cursor-pointer"
+          >
+            Reload Dashboard
+          </button>
+          <button
+            onClick={() => reset()}
+            className="px-4 py-2 border border-border bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-lg text-xs cursor-pointer"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function DashboardPage() {
   const { t } = useI18n();
@@ -563,6 +596,12 @@ function DashboardPage() {
         </div>
       </div>
 
+      {/* Downtime Shift Timeline (Shift Pagi 07:00 - 16:20 & Shift Malam 22:00 - 06:00) */}
+      <DowntimeShiftTimeline
+        selectedAreaId={selectedAreaId}
+        selectedStationId={selectedStationId}
+      />
+
       {/* Line Chart: Trend Speed by Minute */}
       <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
@@ -634,28 +673,6 @@ function DashboardPage() {
                 labelFormatter={(label) => `Time: ${label} WIB`}
               />
               <Legend wrapperStyle={{ fontSize: "11px", fontFamily: "monospace" }} />
-              <ReferenceLine
-                y={speedByMinuteData.threshold}
-                stroke="#f43f5e"
-                strokeDasharray="4 4"
-                label={{
-                  value: `Threshold Stop (${speedByMinuteData.threshold} ${speedByMinuteData.unit})`,
-                  fill: "#f43f5e",
-                  fontSize: 10,
-                  position: "insideBottomRight",
-                }}
-              />
-              <ReferenceLine
-                y={1.2}
-                stroke="#10b981"
-                strokeDasharray="3 3"
-                label={{
-                  value: `Target Normal (1.20 ${speedByMinuteData.unit})`,
-                  fill: "#10b981",
-                  fontSize: 10,
-                  position: "insideTopRight",
-                }}
-              />
               <Line
                 type="monotone"
                 dataKey="speed"

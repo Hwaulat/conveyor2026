@@ -200,7 +200,7 @@ export function createSeedData(): AppState {
   const shifts: Shift[] = [
     { id: "shift-1", name: "Shift 1 (Pagi)", startHour: 7, startMinute: 0 },
     { id: "shift-2", name: "Shift 2 (Siang)", startHour: 15, startMinute: 30 },
-    { id: "shift-3", name: "Shift 3 (Malam)", startHour: 23, startMinute: 0 },
+    { id: "shift-3", name: "Shift 3 (Malam)", startHour: 22, startMinute: 0 },
   ];
 
   const users: UserRow[] = [

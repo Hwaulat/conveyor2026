@@ -17,10 +17,10 @@ import { IpadEFormPage } from "../ipad";
 
 export const Route = createFileRoute("/web/station-live")({
   validateSearch: (search: Record<string, unknown>): { stationId?: string; areaId?: string } => {
-    return {
-      stationId: typeof search["stationId"] === "string" ? search["stationId"] : undefined,
-      areaId: typeof search["areaId"] === "string" ? search["areaId"] : undefined,
-    };
+    const res: { stationId?: string; areaId?: string } = {};
+    if (typeof search["stationId"] === "string" && search["stationId"]) res.stationId = search["stationId"];
+    if (typeof search["areaId"] === "string" && search["areaId"]) res.areaId = search["areaId"];
+    return res;
   },
   head: () => ({
     meta: [
@@ -362,14 +362,9 @@ function StationLivePage() {
                 <div className="pt-3 border-t border-border space-y-2 font-mono text-xs">
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Speed:</span>
-                    <div className="text-right">
-                      <span className="text-base font-bold text-foreground">
-                        {isStopped ? "0.00" : live ? live.speed.toFixed(2) : "0.00"} {station.speedUnit}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground block">
-                        Threshold: &gt; {station.runningThreshold} {station.speedUnit}
-                      </span>
-                    </div>
+                    <span className="text-base font-bold text-foreground">
+                      {isStopped ? "0.00" : live ? live.speed.toFixed(2) : "0.00"} {station.speedUnit}
+                    </span>
                   </div>
 
                   <div className="flex justify-between items-center text-muted-foreground">

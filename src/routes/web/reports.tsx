@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
 import {
@@ -28,6 +28,7 @@ import { TablePagination } from "../../components/TablePagination";
 import { Search } from "../../components/ui/search";
 import { Tabs } from "../../components/ui/tablist";
 import { DateRangePicker } from "../../components/DateRangePicker";
+import { SelectInput } from "../../components/ui/select-input";
 
 export const Route = createFileRoute("/web/reports")({
   head: () => ({
@@ -36,10 +37,43 @@ export const Route = createFileRoute("/web/reports")({
       { name: "description", content: "Production reports, MTTR, MTBF, and Line-Stop data preview and Excel export." },
     ],
   }),
+  errorComponent: ReportsErrorFallback,
   component: ReportsPage,
 });
 
-type ReportType = "stop-summary" | "mttr-mtbf" | "oee" | "log-detail";
+function ReportsErrorFallback({ error, reset }: { error: unknown; reset: () => void }) {
+  console.error("Reports page error:", error);
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+      <div className="max-w-md w-full rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4">
+        <h3 className="text-lg font-bold text-foreground">Error Loading Reports</h3>
+        <p className="text-sm text-muted-foreground">
+          Terjadi kendala saat memuat laporan data stop. Silakan muat ulang halaman.
+        </p>
+        <div className="flex gap-2 justify-center pt-2">
+          <button
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.location.reload();
+              }
+            }}
+            className="px-4 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-xs cursor-pointer"
+          >
+            Reload Page
+          </button>
+          <button
+            onClick={() => reset()}
+            className="px-4 py-2 border border-border bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-lg text-xs cursor-pointer"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type ReportType = "stop-summary" | "mttr-mtbf" | "oee";
 
 function ReportsPage() {
   const { t } = useI18n();
@@ -56,19 +90,10 @@ function ReportsPage() {
   });
 
   const [activeReport, setActiveReport] = useState<ReportType>("stop-summary");
+  const [selectedArea, setSelectedArea] = useState<string>("area-sanding");
   const [searchQuery, setSearchQuery] = useState("");
   const [reportPage, setReportPage] = useState(1);
   const [reportPageSize, setReportPageSize] = useState(10);
-  const [viewingStationStopSummary, setViewingStationStopSummary] = useState<{
-    stationId: string;
-    stationName: string;
-    conveyorId: string;
-    totalStops: number;
-    breakdownStops: number;
-    totalDowntimeMs: number;
-    avgDurationMs: number;
-    thresholdSpeed: string;
-  } | null>(null);
 
   const { rangeStartMs, rangeEndMs, daysCount } = useMemo(() => {
     const sDate = startDate || new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10);
@@ -83,14 +108,13 @@ function ReportsPage() {
     return appState.stops.filter((s) => s.startMs >= rangeStartMs && s.startMs <= rangeEndMs);
   }, [appState.stops, rangeStartMs, rangeEndMs]);
 
-  const stationDetailStops = useMemo(() => {
-    if (!viewingStationStopSummary) return [];
-    return filteredStops.filter((s) => s.stationId === viewingStationStopSummary.stationId);
-  }, [viewingStationStopSummary, filteredStops]);
-
   // --- 1. Dataset: Stop Summary ---
   const stopSummaryData = useMemo(() => {
-    return appState.stations.map((station) => {
+    const targetStations = selectedArea && selectedArea !== "all"
+      ? appState.stations.filter((st) => st.areaId === selectedArea)
+      : appState.stations;
+
+    return targetStations.map((station) => {
       const stStops = filteredStops.filter((s) => s.stationId === station.id);
       const totalDur = stStops.reduce((sum, s) => sum + stopDurationMs(s, nowMs), 0);
       const avgDur = stStops.length > 0 ? totalDur / stStops.length : 0;
@@ -101,16 +125,16 @@ function ReportsPage() {
 
       return {
         stationId: station.id,
+        areaId: station.areaId,
         stationName: station.name,
         conveyorId: station.conveyorId,
         totalStops: stStops.length,
         breakdownStops: breakdowns.length,
         totalDowntimeMs: totalDur,
         avgDurationMs: avgDur,
-        thresholdSpeed: `${station.runningThreshold} ${station.speedUnit}`,
       };
     });
-  }, [appState.stations, filteredStops, appState.categories, nowMs]);
+  }, [appState.stations, filteredStops, appState.categories, selectedArea, nowMs]);
 
   const filteredStopSummary = useMemo(() => {
     if (!searchQuery.trim()) return stopSummaryData;
@@ -126,8 +150,11 @@ function ReportsPage() {
   // --- 2. Dataset: MTTR & MTBF ---
   const mttrData = useMemo(() => {
     const operatingMs = daysCount * 16 * 3_600_000;
+    const targetStations = selectedArea && selectedArea !== "all"
+      ? appState.stations.filter((st) => st.areaId === selectedArea)
+      : appState.stations;
 
-    return appState.stations.map((station) => {
+    return targetStations.map((station) => {
       const stStops = filteredStops.filter((s) => s.stationId === station.id);
       const mttr = mttrMs(stStops, appState.categories);
       const mtbf = mtbfMs(stStops, appState.categories, operatingMs);
@@ -148,7 +175,7 @@ function ReportsPage() {
         operatingHours: operatingMs / 3_600_000,
       };
     });
-  }, [appState.stations, filteredStops, appState.categories, daysCount, nowMs]);
+  }, [appState.stations, filteredStops, appState.categories, selectedArea, daysCount, nowMs]);
 
   const filteredMttr = useMemo(() => {
     if (!searchQuery.trim()) return mttrData;
@@ -165,7 +192,9 @@ function ReportsPage() {
     return appState.productionRecords
       .filter((rec) => {
         const recMs = Date.parse(`${rec.date}T00:00:00+07:00`);
-        return recMs >= rangeStartMs && recMs <= rangeEndMs;
+        const inDate = recMs >= rangeStartMs && recMs <= rangeEndMs;
+        const inArea = !selectedArea || selectedArea === "all" || rec.areaId === selectedArea;
+        return inDate && inArea;
       })
       .map((rec) => {
         const shift = appState.shifts.find((s) => s.id === rec.shiftId);
@@ -188,7 +217,7 @@ function ReportsPage() {
           oee,
         };
       });
-  }, [appState.productionRecords, appState.shifts, appState.areas, appState.stops, rangeStartMs, rangeEndMs]);
+  }, [appState.productionRecords, appState.shifts, appState.areas, appState.stops, selectedArea, rangeStartMs, rangeEndMs]);
 
   const filteredOee = useMemo(() => {
     if (!searchQuery.trim()) return oeeData;
@@ -200,44 +229,6 @@ function ReportsPage() {
         r.areaName.toLowerCase().includes(q),
     );
   }, [oeeData, searchQuery]);
-
-  // --- 4. Dataset: Log Detail ---
-  const logDetailData = useMemo(() => {
-    return filteredStops.map((s) => {
-      const st = appState.stations.find((x) => x.id === s.stationId);
-      const cat = appState.categories.find((c) => c.id === s.categoryId);
-      const durationMs = stopDurationMs(s, nowMs);
-
-      return {
-        id: s.id,
-        stationName: st?.name ?? s.stationId,
-        categoryName: cat?.name ?? s.categoryId,
-        isBreakdown: !!cat?.countsAsBreakdown,
-        isDowntime: cat?.countsAsDowntime !== false,
-        startMs: s.startMs,
-        endMs: s.endMs,
-        durationMs,
-        status: s.status,
-        source: s.source,
-        reportedBy: s.reportedBy,
-        note: s.note ?? "",
-      };
-    });
-  }, [filteredStops, appState.stations, appState.categories, nowMs]);
-
-  const filteredLogDetail = useMemo(() => {
-    if (!searchQuery.trim()) return logDetailData;
-    const q = searchQuery.toLowerCase();
-    return logDetailData.filter(
-      (r) =>
-        r.id.toLowerCase().includes(q) ||
-        r.stationName.toLowerCase().includes(q) ||
-        r.categoryName.toLowerCase().includes(q) ||
-        r.reportedBy.toLowerCase().includes(q) ||
-        r.note.toLowerCase().includes(q) ||
-        r.status.toLowerCase().includes(q),
-    );
-  }, [logDetailData, searchQuery]);
 
   const paginatedStopSummary = useMemo(() => {
     const s = (reportPage - 1) * reportPageSize;
@@ -254,13 +245,17 @@ function ReportsPage() {
     return filteredOee.slice(s, s + reportPageSize);
   }, [filteredOee, reportPage, reportPageSize]);
 
-  const paginatedLogDetail = useMemo(() => {
-    const s = (reportPage - 1) * reportPageSize;
-    return filteredLogDetail.slice(s, s + reportPageSize);
-  }, [filteredLogDetail, reportPage, reportPageSize]);
-
   // --- Excel Exporters ---
   const handleExportCurrentReport = () => {
+    if (!isAreaFilled) {
+      toast.error("Silakan pilih Area terlebih dahulu untuk mengunduh laporan");
+      return;
+    }
+    if (!isDateRangeFilled) {
+      toast.error("Silakan pilih Date Range terlebih dahulu untuk mengunduh laporan");
+      return;
+    }
+
     const dateStamp = fmtDateKey(nowMs);
     const rangeTag = `${startDate}_to_${endDate}`;
 
@@ -272,7 +267,6 @@ function ReportsPage() {
         Breakdown_Stops: r.breakdownStops,
         Total_Downtime_Min: Math.round(r.totalDowntimeMs / 60_000),
         Average_Duration_Min: (r.avgDurationMs / 60_000).toFixed(1),
-        Threshold_Speed: r.thresholdSpeed,
       }));
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
@@ -309,26 +303,6 @@ function ReportsPage() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "OEE_Report");
       XLSX.writeFile(wb, `Laporan_OEE_${rangeTag}_${dateStamp}.xlsx`);
-    } else {
-      const rows = filteredLogDetail.map((r) => ({
-        Stop_ID: r.id,
-        Station_Name: neutralizeExcelCell(r.stationName),
-        Category_Name: neutralizeExcelCell(r.categoryName),
-        Breakdown_Flag: r.isBreakdown ? "YES" : "NO",
-        Downtime_Flag: r.isDowntime ? "YES" : "NO",
-        Start_Time_WIB: fmtDateTime(r.startMs),
-        End_Time_WIB: r.endMs ? fmtDateTime(r.endMs) : "OPEN",
-        Duration_Minutes: (r.durationMs / 60_000).toFixed(1),
-        Duration_Formatted: fmtDuration(r.durationMs),
-        Status: r.status.toUpperCase(),
-        Source: r.source.toUpperCase(),
-        Reported_By: neutralizeExcelCell(r.reportedBy),
-        Notes: neutralizeExcelCell(r.note),
-      }));
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Log_Detail");
-      XLSX.writeFile(wb, `Laporan_Log_Detail_${rangeTag}_${dateStamp}.xlsx`);
     }
 
     toast.success(t("rep.exported"), {
@@ -345,10 +319,12 @@ function ReportsPage() {
         return filteredMttr.length;
       case "oee":
         return filteredOee.length;
-      case "log-detail":
-        return filteredLogDetail.length;
     }
-  }, [activeReport, filteredStopSummary.length, filteredMttr.length, filteredOee.length, filteredLogDetail.length]);
+  }, [activeReport, filteredStopSummary.length, filteredMttr.length, filteredOee.length]);
+
+  const isAreaFilled = Boolean(selectedArea && selectedArea.trim() !== "");
+  const isDateRangeFilled = Boolean(startDate && startDate.trim() !== "" && endDate && endDate.trim() !== "");
+  const canDownload = isAreaFilled && isDateRangeFilled && activeRowCount > 0;
 
   return (
     <div className="space-y-6 w-full">
@@ -377,7 +353,6 @@ function ReportsPage() {
               { value: "stop-summary", label: "Stop Summary", badge: filteredStopSummary.length },
               { value: "mttr-mtbf", label: "MTTR & MTBF", badge: filteredMttr.length },
               { value: "oee", label: "Production OEE", badge: filteredOee.length },
-              { value: "log-detail", label: "Log Detail", badge: filteredLogDetail.length },
             ]}
           />
         </div>
@@ -385,7 +360,7 @@ function ReportsPage() {
 
       {/* Main Table Preview Section with Search & Download Button */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
-        {/* Table Toolbar: Search (Fill Container) on Left, Date Range Picker & Download Button on Right */}
+        {/* Table Toolbar: Search (Fill Container) on Left, Area Dropdown, Date Range Picker & Download Button on Right */}
         <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-[#152a47] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
           {/* Search Input (Fill Container) */}
           <Search
@@ -395,8 +370,28 @@ function ReportsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
 
-          {/* Right: Date Range Picker on Left of Download Report Button */}
+          {/* Right: Area Dropdown, Date Range Picker on Left of Download Report Button */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {/* Area Select Dropdown to the left of Date Range Picker */}
+            <div className="w-40 sm:w-48">
+              <SelectInput
+                hideClear
+                value={selectedArea}
+                onChange={(val) => {
+                  setSelectedArea(val ?? "");
+                  setReportPage(1);
+                }}
+                datalist={[
+                  { value: "all", label: `All Areas (${appState.areas.length})` },
+                  ...appState.areas.map((a) => ({
+                    value: a.id,
+                    label: a.name,
+                  })),
+                ]}
+                placeholder="Select Area"
+              />
+            </div>
+
             <DateRangePicker
               startDate={startDate}
               endDate={endDate}
@@ -415,11 +410,20 @@ function ReportsPage() {
               }}
             />
 
-            {/* Download Report Button (Orange Style Matching Reference) */}
+            {/* Download Report Button (Active if Area and Date Range are filled) */}
             <button
               onClick={handleExportCurrentReport}
-              disabled={activeRowCount === 0}
-              className="flex items-center gap-2 rounded-lg bg-[#ff5a1f] hover:bg-[#e04810] text-white px-4 py-2 font-sans text-xs font-semibold shadow-xs transition-colors shrink-0 disabled:opacity-50 disabled:pointer-events-none cursor-pointer h-10"
+              disabled={!canDownload}
+              title={
+                !isAreaFilled
+                  ? "Pilih Area terlebih dahulu untuk mengunduh laporan"
+                  : !isDateRangeFilled
+                  ? "Pilih Date Range terlebih dahulu untuk mengunduh laporan"
+                  : activeRowCount === 0
+                  ? "Tidak ada data untuk diunduh"
+                  : "Download Report"
+              }
+              className="flex items-center gap-2 rounded-lg bg-[#ff5a1f] hover:bg-[#e04810] text-white px-4 py-2 font-sans text-xs font-semibold shadow-xs transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer h-10"
             >
               <Download className="h-4 w-4" />
               <span>Download Report</span>
@@ -466,17 +470,12 @@ function ReportsPage() {
                       AVERAGE DURATION <ArrowUpDown className="h-3 w-3 text-slate-400" />
                     </span>
                   </th>
-                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      THRESHOLD SPEED <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                 {paginatedStopSummary.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-muted-foreground font-mono text-xs">
+                    <td colSpan={8} className="py-12 text-center text-muted-foreground font-mono text-xs">
                       {t("rep.noData")}
                     </td>
                   </tr>
@@ -484,14 +483,14 @@ function ReportsPage() {
                   paginatedStopSummary.map((row, idx) => (
                     <tr key={row.stationId} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => setViewingStationStopSummary(row)}
+                        <Link
+                          to="/web/station-history"
+                          search={{ areaId: row.areaId, stationId: row.stationId }}
                           className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 shadow-2xs transition-colors cursor-pointer"
-                          title="View Stop & Breakdown Detail"
+                          title="View Station Detail History"
                         >
                           <Eye className="h-3.5 w-3.5" />
-                        </button>
+                        </Link>
                       </td>
                       <td className="py-3.5 px-4 text-center font-mono text-muted-foreground">
                         {(reportPage - 1) * reportPageSize + idx + 1}
@@ -524,11 +523,6 @@ function ReportsPage() {
                       </td>
                       <td className="py-3.5 px-4 text-right font-mono text-muted-foreground whitespace-nowrap">
                         {row.avgDurationMs > 0 ? (row.avgDurationMs / 60_000).toFixed(1) + " m" : "0 m"}
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-mono text-muted-foreground whitespace-nowrap">
-                        <span className="rounded bg-muted px-2 py-0.5 text-[11px] font-mono">
-                          {row.thresholdSpeed}
-                        </span>
                       </td>
                     </tr>
                   ))
@@ -749,125 +743,6 @@ function ReportsPage() {
               </tbody>
             </table>
           )}
-
-          {/* 4. Log Detail Table */}
-          {activeReport === "log-detail" && (
-            <table className="w-full text-left text-xs font-sans border-collapse">
-              <thead className="border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
-                <tr>
-                  <th className="py-3.5 px-4 w-12 text-center">NO</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      ID STOP <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      START TIME (WIB) <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      STATION <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      CATEGORY <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      TYPE <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      DURATION <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      STATUS <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 text-center whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      SOURCE <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      REPORTER <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      NOTES <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
-                {paginatedLogDetail.length === 0 ? (
-                  <tr>
-                    <td colSpan={11} className="py-12 text-center text-muted-foreground font-mono text-xs">
-                      {t("rep.noData")}
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedLogDetail.map((row, idx) => (
-                    <tr key={row.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
-                      <td className="py-3.5 px-4 text-center font-mono text-muted-foreground">
-                        {(reportPage - 1) * reportPageSize + idx + 1}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-foreground whitespace-nowrap">{row.id}</td>
-                      <td className="py-3.5 px-4 font-mono text-muted-foreground text-[11px] whitespace-nowrap">
-                        <div>{fmtDateTime(row.startMs)}</div>
-                        {row.endMs && <div className="text-[10px] text-muted-foreground/70">to {fmtDateTime(row.endMs)}</div>}
-                      </td>
-                      <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">{row.stationName}</td>
-                      <td className="py-3.5 px-4 text-foreground whitespace-nowrap">{row.categoryName}</td>
-                      <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap">
-                        {row.isBreakdown ? (
-                          <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                            BREAKDOWN
-                          </span>
-                        ) : (
-                          <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border">
-                            PLANNED
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-foreground whitespace-nowrap">
-                        {fmtDuration(row.durationMs)}
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase ${
-                            row.status === "open"
-                              ? "bg-rose-500/20 text-rose-500 border-rose-500/40 animate-pulse"
-                              : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                          }`}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-mono text-[10px] whitespace-nowrap">
-                        <span className="rounded bg-muted px-2 py-0.5 text-muted-foreground uppercase font-semibold">
-                          {row.source}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-muted-foreground whitespace-nowrap">{row.reportedBy}</td>
-                      <td className="py-3.5 px-4 text-muted-foreground max-w-[200px] truncate" title={row.note}>
-                        {row.note || "-"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
         </div>
 
         {/* Pagination Bar */}
@@ -879,138 +754,12 @@ function ReportsPage() {
               ? filteredStopSummary.length
               : activeReport === "mttr-mtbf"
               ? filteredMttr.length
-              : activeReport === "oee"
-              ? filteredOee.length
-              : filteredLogDetail.length
+              : filteredOee.length
           }
           onPageChange={setReportPage}
           onPageSizeChange={setReportPageSize}
         />
       </div>
-
-      {/* Detail Modal: Station Total Stop & Breakdown Details */}
-      {viewingStationStopSummary && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
-          <div className="w-full max-w-4xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-            <div className="flex items-start justify-between border-b border-border pb-3 shrink-0">
-              <div>
-                <h3 className="font-display text-base font-bold text-foreground flex items-center gap-2">
-                  <span>Station Stop & Breakdown Details</span>
-                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                    {viewingStationStopSummary.stationName}
-                  </span>
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Conveyor: {viewingStationStopSummary.conveyorId} • Period: {startDate} to {endDate}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewingStationStopSummary(null)}
-                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Quick KPI stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
-              <div className="rounded-xl border border-border bg-muted/30 p-3">
-                <span className="text-[11px] text-muted-foreground font-medium block">Total Line Stops</span>
-                <span className="text-lg font-bold font-mono text-foreground">{viewingStationStopSummary.totalStops}</span>
-              </div>
-              <div className="rounded-xl border border-border bg-rose-500/10 p-3 border-rose-500/20">
-                <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium block">Breakdown Stops</span>
-                <span className="text-lg font-bold font-mono text-rose-600 dark:text-rose-400">{viewingStationStopSummary.breakdownStops}</span>
-              </div>
-              <div className="rounded-xl border border-border bg-muted/30 p-3">
-                <span className="text-[11px] text-muted-foreground font-medium block">Total Downtime</span>
-                <span className="text-lg font-bold font-mono text-foreground">{fmtDuration(viewingStationStopSummary.totalDowntimeMs)}</span>
-              </div>
-              <div className="rounded-xl border border-border bg-muted/30 p-3">
-                <span className="text-[11px] text-muted-foreground font-medium block">Average Duration</span>
-                <span className="text-lg font-bold font-mono text-foreground">
-                  {viewingStationStopSummary.avgDurationMs > 0 ? (viewingStationStopSummary.avgDurationMs / 60_000).toFixed(1) + " min" : "0 min"}
-                </span>
-              </div>
-            </div>
-
-            {/* Occurrences list */}
-            <div className="overflow-y-auto flex-1 rounded-xl border border-slate-200/80 dark:border-[#152a47]">
-              <table className="w-full text-left text-xs font-sans border-collapse">
-                <thead className="sticky top-0 border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
-                  <tr>
-                    <th className="py-2.5 px-3 w-10 text-center">NO</th>
-                    <th className="py-2.5 px-3 whitespace-nowrap">START TIME (WIB)</th>
-                    <th className="py-2.5 px-3 whitespace-nowrap">DURATION</th>
-                    <th className="py-2.5 px-3 whitespace-nowrap">PROBLEM CATEGORY</th>
-                    <th className="py-2.5 px-3 text-center whitespace-nowrap">TYPE</th>
-                    <th className="py-2.5 px-3 whitespace-nowrap">OPERATOR</th>
-                    <th className="py-2.5 px-3 whitespace-nowrap">NOTES</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
-                  {stationDetailStops.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-8 text-center text-muted-foreground font-mono">
-                        No stop occurrences recorded for this station in the selected period.
-                      </td>
-                    </tr>
-                  ) : (
-                    stationDetailStops.map((s, idx) => {
-                      const cat = appState.categories.find((c) => c.id === s.categoryId);
-                      const isBreakdown = !!cat?.countsAsBreakdown;
-                      const dur = stopDurationMs(s, nowMs);
-                      return (
-                        <tr key={s.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/30 transition-colors">
-                          <td className="py-2.5 px-3 text-center font-mono text-muted-foreground">{idx + 1}</td>
-                          <td className="py-2.5 px-3 font-mono text-muted-foreground whitespace-nowrap">
-                            <div>{fmtDateTime(s.startMs)}</div>
-                            {s.endMs && <div className="text-[10px] text-muted-foreground/70">to {fmtTime(s.endMs)}</div>}
-                          </td>
-                          <td className="py-2.5 px-3 font-mono font-semibold text-foreground whitespace-nowrap">
-                            {fmtDuration(dur)}
-                          </td>
-                          <td className="py-2.5 px-3 font-medium text-foreground whitespace-nowrap">
-                            {cat?.name ?? s.categoryId}
-                          </td>
-                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                            {isBreakdown ? (
-                              <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25">
-                                BREAKDOWN
-                              </span>
-                            ) : (
-                              <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border">
-                                LINE STOP
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 font-mono text-muted-foreground whitespace-nowrap">
-                            {s.reportedBy}
-                          </td>
-                          <td className="py-2.5 px-3 text-muted-foreground text-[11px] max-w-xs truncate">
-                            {s.note || "—"}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-end pt-2 border-t border-border shrink-0">
-              <button
-                type="button"
-                onClick={() => setViewingStationStopSummary(null)}
-                className="px-4 py-2 rounded-lg bg-muted text-foreground text-xs font-semibold hover:bg-muted/80 transition-colors cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

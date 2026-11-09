@@ -13,18 +13,21 @@ import {
   fmtDateFullHuman,
   fmtDateTimeFull,
   fmtTime,
+  fmtTimeShort,
   fmtDuration,
 } from "../../lib/format";
 import { stopDurationMs } from "../../lib/calc";
 import { TablePagination } from "../../components/TablePagination";
 import { Search } from "../../components/ui/search";
+import { SelectInput } from "../../components/ui/select-input";
+import { getShiftForStop } from "../../lib/shift";
 
 export const Route = createFileRoute("/web/station-history")({
-  validateSearch: (search: Record<string, unknown> = {}) => {
-    return {
-      stationId: typeof search?.["stationId"] === "string" ? String(search["stationId"]) : undefined,
-      areaId: typeof search?.["areaId"] === "string" ? String(search["areaId"]) : undefined,
-    };
+  validateSearch: (search: Record<string, unknown> = {}): { stationId?: string; areaId?: string } => {
+    const res: { stationId?: string; areaId?: string } = {};
+    if (typeof search["stationId"] === "string" && search["stationId"]) res.stationId = search["stationId"];
+    if (typeof search["areaId"] === "string" && search["areaId"]) res.areaId = search["areaId"];
+    return res;
   },
   head: () => ({
     meta: [
@@ -32,8 +35,37 @@ export const Route = createFileRoute("/web/station-history")({
       { name: "description", content: "Historical telemetry and chronological records of line stops, duration, conveyor speed, and E-Form submissions." },
     ],
   }),
+  errorComponent: StationHistoryErrorFallback,
   component: StationHistoryPage,
 });
+
+function StationHistoryErrorFallback({ error, reset }: { error: unknown; reset: () => void }) {
+  console.error("Station history error:", error);
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+      <div className="max-w-md w-full rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4">
+        <h3 className="text-lg font-bold text-foreground">Error Loading Station History</h3>
+        <p className="text-sm text-muted-foreground">
+          Terjadi kendala saat memuat riwayat line-stop stasiun. Silakan kembali ke menu Station Live.
+        </p>
+        <div className="flex gap-2 justify-center pt-2">
+          <Link
+            to="/web/station-live"
+            className="px-4 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-xs cursor-pointer"
+          >
+            Back to Station Live
+          </Link>
+          <button
+            onClick={() => reset()}
+            className="px-4 py-2 border border-border bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-lg text-xs cursor-pointer"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function StationHistoryPage() {
   const appState = useAppStore();
@@ -48,9 +80,9 @@ export function StationHistoryPage() {
 
   // Parse search params from route or window
   const searchParams = useMemo(() => {
-    const s = (location.search || {}) as Record<string, any>;
-    let stationId = typeof s.stationId === "string" ? s.stationId : undefined;
-    let areaId = typeof s.areaId === "string" ? s.areaId : undefined;
+    const s = (location.search || {}) as Record<string, unknown>;
+    let stationId = typeof s["stationId"] === "string" ? s["stationId"] : undefined;
+    let areaId = typeof s["areaId"] === "string" ? s["areaId"] : undefined;
     if (typeof window !== "undefined") {
       try {
         const sp = new URLSearchParams(window.location.search);
@@ -64,6 +96,8 @@ export function StationHistoryPage() {
   }, [location.search]);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedShift, setSelectedShift] = useState<string>("all");
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -80,7 +114,7 @@ export function StationHistoryPage() {
     return appState.stationLive[activeStation.id] || null;
   }, [appState.stationLive, activeStation]);
 
-  // Filter line stops: station-scoped if stationId provided, and searched
+  // Filter line stops: station-scoped if stationId provided, category, and searched
   const filteredStops = useMemo(() => {
     let list = [...appState.stops].sort((a, b) => b.startMs - a.startMs);
 
@@ -91,24 +125,34 @@ export function StationHistoryPage() {
       list = list.filter((s) => s.areaId === searchParams.areaId);
     }
 
+    // Filter by category
+    if (selectedCategory && selectedCategory !== "all") {
+      list = list.filter((s) => s.categoryId === selectedCategory);
+    }
+
+    // Filter by shift
+    if (selectedShift && selectedShift !== "all") {
+      list = list.filter((s) => getShiftForStop(s).id === selectedShift);
+    }
+
     // Search query filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter((s) => {
-        const cat = appState.categories.find((c) => c.id === s.categoryId);
-        const st = appState.stations.find((x) => x.id === s.stationId);
+        const cat = appState.categories?.find((c) => c.id === s.categoryId);
+        const st = appState.stations?.find((x) => x.id === s.stationId);
         return (
-          s.reportedBy.toLowerCase().includes(q) ||
-          (s.note && s.note.toLowerCase().includes(q)) ||
-          (cat && cat.name.toLowerCase().includes(q)) ||
-          (cat?.code && cat.code.toLowerCase().includes(q)) ||
-          (st && st.name.toLowerCase().includes(q))
+          (s.reportedBy?.toLowerCase() ?? "").includes(q) ||
+          (s.note?.toLowerCase() ?? "").includes(q) ||
+          (cat?.name?.toLowerCase() ?? "").includes(q) ||
+          (cat?.code?.toLowerCase() ?? "").includes(q) ||
+          (st?.name?.toLowerCase() ?? "").includes(q)
         );
       });
     }
 
     return list;
-  }, [appState.stops, searchParams.stationId, searchParams.areaId, searchQuery, appState.categories, appState.stations]);
+  }, [appState.stops, searchParams.stationId, searchParams.areaId, selectedCategory, selectedShift, searchQuery, appState.categories, appState.stations]);
 
   // Paginated stops
   const paginatedStops = useMemo(() => {
@@ -124,6 +168,12 @@ export function StationHistoryPage() {
           {/* Back Button matching screenshot */}
           <Link
             to="/web/station-live"
+            onClick={(e) => {
+              if (typeof window !== "undefined" && window.history.length > 1) {
+                window.history.back();
+                e.preventDefault();
+              }
+            }}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-slate-200/90 dark:border-[#152a47] bg-white dark:bg-[#132742] hover:bg-slate-50 dark:hover:bg-[#1c3860] text-slate-800 dark:text-zinc-100 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
           >
             <ChevronLeft className="h-4 w-4 stroke-[2.5]" />
@@ -155,10 +205,10 @@ export function StationHistoryPage() {
 
       {/* Main Table Card (Exact Master Data Style) */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs space-y-0">
-        {/* Toolbar: Pure Search Bar (Matching Master Data) */}
-        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-[#152a47] bg-white dark:bg-[#0b1320]">
+        {/* Toolbar: Search on left, Shift & Category filters on right */}
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-[#152a47] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
           <Search
-            containerClassName="w-full"
+            containerClassName="flex-1 w-full"
             placeholder="Search code, operator, reason, category..."
             value={searchQuery}
             onChange={(e) => {
@@ -166,6 +216,42 @@ export function StationHistoryPage() {
               setCurrentPage(1);
             }}
           />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="w-full sm:w-44 shrink-0">
+              <SelectInput
+                hideClear
+                value={selectedShift}
+                onChange={(val) => {
+                  setSelectedShift(val ?? "all");
+                  setCurrentPage(1);
+                }}
+                datalist={[
+                  { value: "all", label: "All Shifts" },
+                  { value: "shift-pagi", label: "Shift Pagi (07:00 - 16:20)" },
+                  { value: "shift-malam", label: "Shift Malam (22:00 - 06:00)" },
+                ]}
+                placeholder="All Shifts"
+              />
+            </div>
+            <div className="w-full sm:w-52 shrink-0">
+              <SelectInput
+                hideClear
+                value={selectedCategory}
+                onChange={(val) => {
+                  setSelectedCategory(val ?? "all");
+                  setCurrentPage(1);
+                }}
+                datalist={[
+                  { value: "all", label: `All Categories (${appState.categories.length})` },
+                  ...appState.categories.map((c) => ({
+                    value: c.id,
+                    label: `${c.code ? c.code + " — " : ""}${c.name}`,
+                  })),
+                ]}
+                placeholder="All Categories"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Table: Master Data exact styling */}
@@ -177,6 +263,12 @@ export function StationHistoryPage() {
                 <th className="py-3 px-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
                     STOPPED
+                    <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                  </span>
+                </th>
+                <th className="py-3 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    SHIFT
                     <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                   </span>
                 </th>
@@ -218,7 +310,7 @@ export function StationHistoryPage() {
                 </th>
                 <th className="py-3 px-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
-                    STAT LINESTOP
+                    START LINESTOP
                     <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                   </span>
                 </th>
@@ -239,7 +331,7 @@ export function StationHistoryPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
               {paginatedStops.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-muted-foreground font-mono">
+                  <td colSpan={12} className="py-12 text-center text-muted-foreground font-mono">
                     <Layers className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     <p className="font-medium text-sm">No line stop records found</p>
                     <p className="text-xs mt-1">Try adjusting your search keywords or station filter.</p>
@@ -309,9 +401,23 @@ export function StationHistoryPage() {
                         )}
                       </td>
 
-                      {/* 2. STOPPED: (04 November 2026) */}
+                      {/* 2. STOPPED: (04 November 2026 (10:00)) */}
                       <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-slate-800 dark:text-zinc-200 font-medium">
-                        {fmtDateFullHuman(stop.startMs)}
+                        {fmtDateFullHuman(stop.startMs)}{" "}
+                        <span className="text-slate-500 dark:text-zinc-400 font-normal">({fmtTimeShort(stop.startMs)})</span>
+                      </td>
+
+                      {/* 3. SHIFT */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {(() => {
+                          const shiftInfo = getShiftForStop(stop);
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${shiftInfo.badgeClass}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${shiftInfo.dotClass}`} />
+                              <span>{shiftInfo.shortName}</span>
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* 3. STOP DURATION */}
@@ -367,7 +473,7 @@ export function StationHistoryPage() {
                         )}
                       </td>
 
-                      {/* 9. STAT LINESTOP (Start Linestop) */}
+                      {/* 9. START LINESTOP */}
                       <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-slate-800 dark:text-zinc-200 font-medium">
                         {fmtTime(stop.startMs)}
                       </td>

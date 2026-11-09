@@ -8,6 +8,7 @@ export interface DateRangePickerProps {
   endDate: string;   // YYYY-MM-DD
   onChange: (start: string, end: string) => void;
   onReset?: () => void;
+  hideClear?: boolean;
   className?: string;
 }
 
@@ -27,6 +28,7 @@ export function DateRangePicker({
   endDate,
   onChange,
   onReset,
+  hideClear = false,
   className,
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
@@ -128,16 +130,18 @@ export function DateRangePicker({
             {formattedRange}
           </span>
 
-          {/* Clear X Icon on Right */}
-          <button
-            type="button"
-            onClick={handleClear}
-            className="p-1 rounded-full hover:bg-muted text-muted-foreground/80 hover:text-foreground transition-colors shrink-0 cursor-pointer -mr-0.5"
-            title="Reset date range"
-            aria-label="Reset date range"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          {/* Clear X Icon on Right (hidden if hideClear) */}
+          {!hideClear && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="p-1 rounded-full hover:bg-muted text-muted-foreground/80 hover:text-foreground transition-colors shrink-0 cursor-pointer -mr-0.5"
+              title="Reset date range"
+              aria-label="Reset date range"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </PopoverTrigger>
 

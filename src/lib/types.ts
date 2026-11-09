@@ -48,6 +48,7 @@ export type LineStop = {
   lastSpeed?: number | undefined;
   totalRunMs?: number | undefined;
   submittedAtMs?: number | undefined;
+  shiftId?: string | undefined;
 };
 
 export type Shift = { id: string; name: string; startHour: number; startMinute: number };

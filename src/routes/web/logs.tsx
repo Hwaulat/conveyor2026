@@ -17,9 +17,10 @@ import {
 } from "lucide-react";
 import { useI18n } from "../../lib/i18n";
 import { useAppStore, store } from "../../lib/store";
-import type { LineStop } from "../../lib/types";
+import type { LineStop, Station, Category } from "../../lib/types";
 import {
   fmtDateTime,
+  fmtDateTimeFull,
   fmtTime,
   fmtDuration,
   toLocalInputValue,
@@ -35,13 +36,14 @@ import { TablePagination } from "../../components/TablePagination";
 import { Tabs } from "../../components/ui/tablist";
 import { DateRangePicker } from "../../components/DateRangePicker";
 import { Eye, ArrowUpDown } from "lucide-react";
+import { getShiftForStop, getShiftForTimestamp, SHIFT_PAGI, SHIFT_MALAM } from "../../lib/shift";
 
 export const Route = createFileRoute("/web/logs")({
-  validateSearch: (search: Record<string, unknown> = {}) => {
-    return {
-      stationId: typeof search?.["stationId"] === "string" ? String(search["stationId"]) : undefined,
-      areaId: typeof search?.["areaId"] === "string" ? String(search["areaId"]) : undefined,
-    };
+  validateSearch: (search: Record<string, unknown> = {}): { stationId?: string; areaId?: string } => {
+    const res: { stationId?: string; areaId?: string } = {};
+    if (typeof search["stationId"] === "string" && search["stationId"]) res.stationId = search["stationId"];
+    if (typeof search["areaId"] === "string" && search["areaId"]) res.areaId = search["areaId"];
+    return res;
   },
   errorComponent: LogsErrorFallback,
   head: () => ({
@@ -87,6 +89,341 @@ function LogsErrorFallback({ error, reset }: { error: unknown; reset: () => void
 
 type ViewMode = "list" | "summary";
 
+const CATEGORY_COLOR_PALETTES = [
+  { bg: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30", dot: "bg-blue-500" },
+  { bg: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30", dot: "bg-amber-500" },
+  { bg: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30", dot: "bg-emerald-500" },
+  { bg: "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30", dot: "bg-purple-500" },
+  { bg: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30", dot: "bg-rose-500" },
+  { bg: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30", dot: "bg-cyan-500" },
+  { bg: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30", dot: "bg-indigo-500" },
+  { bg: "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30", dot: "bg-teal-500" },
+  { bg: "bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30", dot: "bg-orange-500" },
+  { bg: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30", dot: "bg-violet-500" },
+  { bg: "bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-500/30", dot: "bg-fuchsia-500" },
+];
+
+const KNOWN_CATEGORY_COLORS: Record<string, { bg: string; dot: string }> = {
+  "cat-full-cabin": { bg: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30", dot: "bg-amber-500" },
+  "cat-mtc-prob": { bg: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30", dot: "bg-rose-500" },
+  "cat-incident": { bg: "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30", dot: "bg-purple-500" },
+  "cat-2": { bg: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30", dot: "bg-red-500" },
+  "cat-dock-pin": { bg: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30", dot: "bg-sky-500" },
+  "cat-1": { bg: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30", dot: "bg-emerald-500" },
+  "cat-3": { bg: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30", dot: "bg-blue-500" },
+  "cat-4": { bg: "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30", dot: "bg-teal-500" },
+};
+
+function getCategoryBadgeStyle(catId?: string, catName?: string): { bg: string; dot: string } {
+  if (catId && KNOWN_CATEGORY_COLORS[catId]) {
+    return KNOWN_CATEGORY_COLORS[catId]!;
+  }
+  const str = (catName || catId || "category").toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const idx = Math.abs(hash) % CATEGORY_COLOR_PALETTES.length;
+  return CATEGORY_COLOR_PALETTES[idx] ?? CATEGORY_COLOR_PALETTES[0]!;
+}
+
+function getRunningMonthRange() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const firstDay = `${year}-${month}-01`;
+  const today = now.toISOString().slice(0, 10);
+  return { start: firstDay, end: today };
+}
+
+interface StationOccurrenceTableProps {
+  stops: LineStop[];
+  station: Station;
+  categories: Category[];
+  nowMs: number;
+}
+
+function StationOccurrenceTable({ stops, station, categories, nowMs }: StationOccurrenceTableProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedShift, setSelectedShift] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+
+  const filtered = useMemo(() => {
+    let result = stops;
+
+    if (selectedCategory !== "all") {
+      result = result.filter((s) => s.categoryId === selectedCategory);
+    }
+
+    if (selectedShift !== "all") {
+      result = result.filter((s) => getShiftForStop(s).id === selectedShift);
+    }
+
+    if (selectedStatus === "open") {
+      result = result.filter((s) => s.status === "open");
+    } else if (selectedStatus === "closed") {
+      result = result.filter((s) => s.status === "closed");
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter((s) => {
+        const cat = categories.find((c) => c.id === s.categoryId);
+        const catName = cat?.name?.toLowerCase() ?? "";
+        const operator = s.reportedBy?.toLowerCase() ?? "";
+        const note = s.note?.toLowerCase() ?? "";
+        const durationStr = fmtDuration(stopDurationMs(s, nowMs)).toLowerCase();
+        return (
+          durationStr.includes(q) ||
+          operator.includes(q) ||
+          catName.includes(q) ||
+          note.includes(q)
+        );
+      });
+    }
+    return result;
+  }, [stops, selectedCategory, selectedShift, selectedStatus, searchQuery, categories, nowMs]);
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
+  return (
+    <div className="border-t border-slate-100 dark:border-[#152a47] bg-white dark:bg-[#0b1320] overflow-hidden space-y-0">
+      {/* Table Toolbar with Search Bar & Category/Shift/Status Filters */}
+      <div className="p-3 sm:p-3.5 border-b border-slate-100 dark:border-[#152a47] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0b1320]">
+        <Search
+          containerClassName="flex-1 w-full"
+          placeholder="Search by duration & operator"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Shift Filter */}
+          <div className="w-36 sm:w-44">
+            <SelectInput
+              hideClear
+              value={selectedShift}
+              onChange={(val) => {
+                setSelectedShift(val ?? "all");
+                setCurrentPage(1);
+              }}
+              datalist={[
+                { value: "all", label: "All Shifts" },
+                { value: "shift-pagi", label: "Shift Pagi (07:00 - 16:20)" },
+                { value: "shift-malam", label: "Shift Malam (22:00 - 06:00)" },
+              ]}
+              placeholder="All Shifts"
+            />
+          </div>
+          <div className="w-36 sm:w-44">
+            <SelectInput
+              hideClear
+              value={selectedCategory}
+              onChange={(val) => {
+                setSelectedCategory(val ?? "all");
+                setCurrentPage(1);
+              }}
+              datalist={[
+                { value: "all", label: "All Categories" },
+                ...categories.map((c) => ({
+                  value: c.id,
+                  label: c.name,
+                })),
+              ]}
+              placeholder="All Categories"
+            />
+          </div>
+          <div className="w-32 sm:w-36">
+            <SelectInput
+              hideClear
+              value={selectedStatus}
+              onChange={(val) => {
+                setSelectedStatus(val ?? "all");
+                setCurrentPage(1);
+              }}
+              datalist={[
+                { value: "all", label: "All Status" },
+                { value: "open", label: "Open (Running)" },
+                { value: "closed", label: "Closed" },
+              ]}
+              placeholder="All Status"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Table matching Master Data Stations & Area */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs font-sans border-collapse">
+          <thead>
+            <tr className="border-b border-slate-100 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#121c2d] font-sans text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold">
+              <th className="py-3 px-4 whitespace-nowrap">
+                <span className="inline-flex items-center gap-1">
+                  START TIME
+                  <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                </span>
+              </th>
+              <th className="py-3 px-4 whitespace-nowrap">
+                <span className="inline-flex items-center gap-1">
+                  END TIME
+                  <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                </span>
+              </th>
+              <th className="py-3 px-4 whitespace-nowrap">
+                <span className="inline-flex items-center gap-1">
+                  SHIFT
+                  <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                </span>
+              </th>
+              <th className="py-3 px-4 whitespace-nowrap">
+                <span className="inline-flex items-center gap-1">
+                  CATEGORY
+                  <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                </span>
+              </th>
+              <th className="py-3 px-4 whitespace-nowrap">
+                <span className="inline-flex items-center gap-1">
+                  DURATION
+                  <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                </span>
+              </th>
+              <th className="py-3 px-4 whitespace-nowrap">
+                <span className="inline-flex items-center gap-1">
+                  OPERATOR
+                  <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                </span>
+              </th>
+              <th className="py-3 px-4 whitespace-nowrap">
+                <span className="inline-flex items-center gap-1">
+                  STATUS
+                  <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                </span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+            {paginated.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-10 text-center text-muted-foreground font-mono">
+                  <p className="font-medium text-xs">No occurrence records found</p>
+                  {searchQuery && (
+                    <p className="text-[11px] mt-1 text-muted-foreground/70">
+                      No occurrences matching "{searchQuery}"
+                    </p>
+                  )}
+                </td>
+              </tr>
+            ) : (
+              paginated.map((stop) => {
+                const cat = categories.find((c) => c.id === stop.categoryId);
+                const isOpen = stop.status === "open";
+                const duration = stopDurationMs(stop, nowMs);
+                const badgeStyle = getCategoryBadgeStyle(stop.categoryId, cat?.name);
+                const shiftInfo = getShiftForStop(stop);
+
+                return (
+                  <tr
+                    key={stop.id}
+                    className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/30 transition-colors"
+                  >
+                    {/* Waktu Mulai */}
+                    <td className="py-3.5 px-4 font-mono text-[13px] text-foreground font-semibold whitespace-nowrap">
+                      {fmtDateTimeFull(stop.startMs)}
+                    </td>
+
+                    {/* Waktu Selesai */}
+                    <td className="py-3.5 px-4 font-mono text-[13px] text-muted-foreground whitespace-nowrap">
+                      {stop.endMs ? (
+                        fmtDateTimeFull(stop.endMs)
+                      ) : (
+                        <span className="text-amber-500 font-semibold">— still running —</span>
+                      )}
+                    </td>
+
+                    {/* Operational Shift */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${shiftInfo.badgeClass}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${shiftInfo.dotClass}`} />
+                        <span>{shiftInfo.shortName}</span>
+                      </span>
+                    </td>
+
+                    {/* Kategori Badge */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shadow-2xs ${badgeStyle.bg}`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${badgeStyle.dot}`} />
+                        <span className="font-sans font-semibold">{cat?.name ?? stop.categoryId}</span>
+                      </span>
+                    </td>
+
+                    {/* Durasi */}
+                    <td className="py-3.5 px-4 font-mono whitespace-nowrap">
+                      <span
+                        className={
+                          isOpen
+                            ? "text-red-600 dark:text-red-400 font-bold"
+                            : "text-foreground font-semibold"
+                        }
+                      >
+                        {fmtDuration(duration)}
+                      </span>
+                    </td>
+
+                    {/* Operator */}
+                    <td className="py-3.5 px-4 font-mono text-muted-foreground whitespace-nowrap">
+                      {stop.reportedBy || "—"}
+                    </td>
+
+                    {/* Status */}
+                    <td className="py-3.5 px-4 font-sans whitespace-nowrap">
+                      {isOpen ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full border border-rose-300 dark:border-rose-700/60 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-medium">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
+                          OPEN
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/50 text-slate-600 dark:text-slate-400 text-xs font-medium">
+                          CLOSED
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination if more than pageSize */}
+      {filtered.length > pageSize && (
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalItems={filtered.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+          pageSizeOptions={[5, 10, 20]}
+        />
+      )}
+    </div>
+  );
+}
+
 function LogHistoryPage() {
   const { t } = useI18n();
   const appState = useAppStore();
@@ -94,28 +431,11 @@ function LogHistoryPage() {
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
-  // Date Range state matching Dashboard
-  const [startDate, setStartDate] = useState<string>(() => {
-    const d = new Date(Date.now() - 6 * 86_400_000);
-    return d.toISOString().slice(0, 10);
-  });
-  const [endDate, setEndDate] = useState<string>(() => {
-    return new Date().toISOString().slice(0, 10);
-  });
-
-  const { rangeStartMs, rangeEndMs } = useMemo(() => {
-    const sDate = startDate || new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10);
-    const eDate = endDate || new Date().toISOString().slice(0, 10);
-    const start = Date.parse(`${sDate}T00:00:00+07:00`) || (nowMs - 7 * 86_400_000);
-    const end = Date.parse(`${eDate}T23:59:59.999+07:00`) || nowMs;
-    return { rangeStartMs: start, rangeEndMs: end };
-  }, [startDate, endDate, nowMs]);
-
   const location = useLocation();
   const search = useMemo(() => {
-    const s = (location.search || {}) as Record<string, any>;
-    let areaId = typeof s.areaId === "string" ? s.areaId : undefined;
-    let stationId = typeof s.stationId === "string" ? s.stationId : undefined;
+    const s = (location.search || {}) as Record<string, unknown>;
+    let areaId = typeof s["areaId"] === "string" ? s["areaId"] : undefined;
+    let stationId = typeof s["stationId"] === "string" ? s["stationId"] : undefined;
     if (typeof window !== "undefined") {
       try {
         const sp = new URLSearchParams(window.location.search);
@@ -137,14 +457,50 @@ function LogHistoryPage() {
     return undefined;
   }, [search.areaId, search.stationId, appState?.stations]);
 
+  // Date Range state matching Dashboard
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date(Date.now() - 6 * 86_400_000);
+    return d.toISOString().slice(0, 10);
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    return new Date().toISOString().slice(0, 10);
+  });
+
+  const { rangeStartMs, rangeEndMs } = useMemo(() => {
+    const sDate = startDate || new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10);
+    const eDate = endDate || new Date().toISOString().slice(0, 10);
+    const start = Date.parse(`${sDate}T00:00:00+07:00`) || (nowMs - 7 * 86_400_000);
+    const end = Date.parse(`${eDate}T23:59:59.999+07:00`) || nowMs;
+    return { rangeStartMs: start, rangeEndMs: end };
+  }, [startDate, endDate, nowMs]);
+
+  // Date Range & Area state for Summary by Station (default: Sanding Area, 1 bulan berjalan)
+  const [summaryAreaId, setSummaryAreaId] = useState<string>(() => {
+    return searchAreaId || "area-sanding";
+  });
+  const [summaryStartDate, setSummaryStartDate] = useState<string>(() => getRunningMonthRange().start);
+  const [summaryEndDate, setSummaryEndDate] = useState<string>(() => getRunningMonthRange().end);
+
+  const { summaryRangeStartMs, summaryRangeEndMs } = useMemo(() => {
+    const sDate = summaryStartDate || getRunningMonthRange().start;
+    const eDate = summaryEndDate || getRunningMonthRange().end;
+    const start = Date.parse(`${sDate}T00:00:00+07:00`) || (nowMs - 30 * 86_400_000);
+    const end = Date.parse(`${eDate}T23:59:59.999+07:00`) || nowMs;
+    return { summaryRangeStartMs: start, summaryRangeEndMs: end };
+  }, [summaryStartDate, summaryEndDate, nowMs]);
+
   const [selectedArea, setSelectedArea] = useState<string>(() => searchAreaId || "all");
   const [selectedStation, setSelectedStation] = useState<string>(() => search.stationId || "all");
 
   useEffect(() => {
-    if (searchAreaId) setSelectedArea(searchAreaId);
+    if (searchAreaId) {
+      setSelectedArea(searchAreaId);
+      setSummaryAreaId(searchAreaId);
+    }
     if (search.stationId) setSelectedStation(search.stationId);
   }, [searchAreaId, search.stationId]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedShift, setSelectedShift] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedStationId, setExpandedStationId] = useState<string | null>(null);
@@ -197,6 +553,9 @@ function LogHistoryPage() {
     if (selectedStation !== "all") {
       result = result.filter((s) => s.stationId === selectedStation);
     }
+    if (selectedShift !== "all") {
+      result = result.filter((s) => getShiftForStop(s).id === selectedShift);
+    }
     if (selectedCategory !== "all") {
       result = result.filter((s) => s.categoryId === selectedCategory);
     }
@@ -204,8 +563,6 @@ function LogHistoryPage() {
       result = result.filter((s) => s.status === "open");
     } else if (selectedStatus === "closed") {
       result = result.filter((s) => s.status === "closed");
-    } else if (selectedStatus === "unrecorded") {
-      result = result.filter((s) => s.source === "plc");
     }
 
     if (searchQuery.trim()) {
@@ -214,16 +571,16 @@ function LogHistoryPage() {
         const cat = appState.categories.find((c) => c.id === s.categoryId);
         const st = appState.stations.find((x) => x.id === s.stationId);
         return (
-          s.reportedBy.toLowerCase().includes(q) ||
-          (s.note && s.note.toLowerCase().includes(q)) ||
-          (cat && cat.name.toLowerCase().includes(q)) ||
-          (st && st.name.toLowerCase().includes(q))
+          (s.reportedBy?.toLowerCase() ?? "").includes(q) ||
+          (s.note?.toLowerCase() ?? "").includes(q) ||
+          (cat?.name?.toLowerCase() ?? "").includes(q) ||
+          (st?.name?.toLowerCase() ?? "").includes(q)
         );
       });
     }
 
     return result;
-  }, [appState.stops, rangeStartMs, rangeEndMs, selectedArea, selectedStation, selectedCategory, selectedStatus, searchQuery, appState.categories, appState.stations]);
+  }, [appState.stops, rangeStartMs, rangeEndMs, selectedArea, selectedStation, selectedShift, selectedCategory, selectedStatus, searchQuery, appState.categories, appState.stations]);
 
   // Paginated Stops for Table View
   const paginatedStops = useMemo(() => {
@@ -232,8 +589,14 @@ function LogHistoryPage() {
   }, [filteredStops, currentPage, pageSize]);
 
   const stationSummary = useMemo(() => {
-    return appState.stations.map((station) => {
-      const stStops = appState.stops.filter((s) => s.stationId === station.id && s.startMs >= rangeStartMs && s.startMs <= rangeEndMs);
+    const targetStations = summaryAreaId === "all"
+      ? appState.stations
+      : appState.stations.filter((st) => st.areaId === summaryAreaId);
+
+    return targetStations.map((station) => {
+      const stStops = appState.stops.filter(
+        (s) => s.stationId === station.id && s.startMs >= summaryRangeStartMs && s.startMs <= summaryRangeEndMs
+      );
       const totalDuration = stStops.reduce((sum, s) => sum + stopDurationMs(s, nowMs), 0);
       const avgDuration = stStops.length > 0 ? totalDuration / stStops.length : 0;
       return {
@@ -244,7 +607,7 @@ function LogHistoryPage() {
         stops: sortStops(stStops),
       };
     });
-  }, [appState.stations, appState.stops, rangeStartMs, rangeEndMs, nowMs]);
+  }, [appState.stations, appState.stops, summaryAreaId, summaryRangeStartMs, summaryRangeEndMs, nowMs]);
 
   const handleOpenCorrectModal = (stop: LineStop) => {
     setCorrectingStop(stop);
@@ -312,7 +675,7 @@ function LogHistoryPage() {
   return (
     <div className="space-y-6 w-full">
       {/* Page Title & View Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
             {t("logs.title")}
@@ -322,8 +685,8 @@ function LogHistoryPage() {
           </p>
         </div>
 
-        {/* Tablist on the Right */}
-        <div className="flex items-center">
+        {/* Tablist on the Right & Summary Controls */}
+        <div className="flex flex-wrap items-center gap-3 self-start xl:self-auto">
           <Tabs
             variant="primary"
             value={viewMode}
@@ -333,9 +696,45 @@ function LogHistoryPage() {
             }}
             items={[
               { value: "list", label: "List View", badge: filteredStops.length },
-              { value: "summary", label: "Summary View", badge: stationSummary.length },
+              { value: "summary", label: "Summary by Station", badge: stationSummary.length },
             ]}
           />
+
+          {viewMode === "summary" && (
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Field Select Dropdown for Area */}
+              <div className="w-44 sm:w-52">
+                <SelectInput
+                  hideClear
+                  value={summaryAreaId}
+                  onChange={(val) => {
+                    setSummaryAreaId(val ?? "all");
+                    setExpandedStationId(null);
+                  }}
+                  datalist={[
+                    { value: "all", label: `All Areas (${appState.areas.length})` },
+                    ...appState.areas.map((a) => ({ value: a.id, label: a.name })),
+                  ]}
+                  placeholder="All Areas"
+                />
+              </div>
+
+              {/* Date Range Picker (Default: 1 bulan berjalan) */}
+              <DateRangePicker
+                startDate={summaryStartDate}
+                endDate={summaryEndDate}
+                onChange={(start, end) => {
+                  setSummaryStartDate(start);
+                  setSummaryEndDate(end);
+                }}
+                onReset={() => {
+                  const init = getRunningMonthRange();
+                  setSummaryStartDate(init.start);
+                  setSummaryEndDate(init.end);
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -390,6 +789,23 @@ function LogHistoryPage() {
               <div className="w-36 sm:w-44">
                 <SelectInput
                   hideClear
+                  value={selectedShift}
+                  onChange={(val) => {
+                    setSelectedShift(val ?? "all");
+                    setCurrentPage(1);
+                  }}
+                  datalist={[
+                    { value: "all", label: "All Shifts" },
+                    { value: "shift-pagi", label: "Shift Pagi (07:00 - 16:20)" },
+                    { value: "shift-malam", label: "Shift Malam (22:00 - 06:00)" },
+                  ]}
+                  placeholder="All Shifts"
+                />
+              </div>
+
+              <div className="w-36 sm:w-44">
+                <SelectInput
+                  hideClear
                   value={selectedCategory}
                   onChange={(val) => setSelectedCategory(val ?? "all")}
                   datalist={[
@@ -412,7 +828,6 @@ function LogHistoryPage() {
                     { value: "all", label: "All Status" },
                     { value: "open", label: "Open (Running)" },
                     { value: "closed", label: "Closed" },
-                    { value: "unrecorded", label: "Stop PLC" },
                   ]}
                   placeholder="All Status"
                 />
@@ -420,6 +835,7 @@ function LogHistoryPage() {
 
               {/* Date Range Picker beside All Status Filter */}
               <DateRangePicker
+                hideClear
                 startDate={startDate}
                 endDate={endDate}
                 onChange={(start, end) => {
@@ -436,25 +852,6 @@ function LogHistoryPage() {
                   setCurrentPage(1);
                 }}
               />
-
-              <button
-                onClick={() => {
-                  setSelectedArea("all");
-                  setSelectedStation("all");
-                  setSelectedCategory("all");
-                  setSelectedStatus("all");
-                  setSearchQuery("");
-                  const now = new Date();
-                  const todayStr = now.toISOString().slice(0, 10);
-                  const past = new Date(Date.now() - 6 * 86_400_000);
-                  setStartDate(past.toISOString().slice(0, 10));
-                  setEndDate(todayStr);
-                  setCurrentPage(1);
-                }}
-                className="text-xs font-sans text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 px-3 h-9 rounded-lg border border-slate-200 dark:border-zinc-700/80 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs shrink-0 cursor-pointer"
-              >
-                Reset
-              </button>
             </div>
           </div>
 
@@ -477,6 +874,12 @@ function LogHistoryPage() {
                   </th>
                   <th className="py-3 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
+                      SHIFT
+                      <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                    </span>
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
                       STATION
                       <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                     </span>
@@ -490,12 +893,6 @@ function LogHistoryPage() {
                   <th className="py-3 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
                       DURATION
-                      <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
-                    </span>
-                  </th>
-                  <th className="py-3 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      SOURCE
                       <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                     </span>
                   </th>
@@ -529,53 +926,20 @@ function LogHistoryPage() {
 
                     return (
                       <tr key={stop.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/30 transition-colors">
-                        {/* Action Column on Left */}
+                        {/* Action Column on Left - only Close button */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            {/* View Button [ 👁 ] */}
+                          {isOpen ? (
                             <button
                               type="button"
-                              onClick={() => setViewingStop(stop)}
-                              className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 shadow-2xs transition-colors"
-                              title="View Log Detail"
+                              onClick={() => handleCloseStop(stop)}
+                              className="px-2.5 h-7 inline-flex items-center justify-center rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-2xs transition-colors cursor-pointer"
+                              title="Close Stop Status"
                             >
-                              <Eye className="h-3.5 w-3.5" />
+                              Close
                             </button>
-
-                            {/* Edit / Correct Button [ ✏ ] */}
-                            <button
-                              type="button"
-                              onClick={() => handleOpenCorrectModal(stop)}
-                              className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-blue-600 hover:border-blue-300 dark:hover:text-blue-400 shadow-2xs transition-colors"
-                              title="Correct / Edit Log"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-
-                            {/* Delete / Void Button [ 🗑 ] */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setVoidingStop(stop);
-                                setVoidReason("");
-                              }}
-                              className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 text-slate-400 hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 shadow-2xs transition-colors"
-                              title="Cancel / Void"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-
-                            {isOpen && (
-                              <button
-                                type="button"
-                                onClick={() => handleCloseStop(stop)}
-                                className="px-2 h-7 inline-flex items-center rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-2xs transition-colors"
-                                title="Close Stop Status"
-                              >
-                                Close
-                              </button>
-                            )}
-                          </div>
+                          ) : (
+                            <span className="text-muted-foreground/40 text-xs font-mono">—</span>
+                          )}
                         </td>
 
                         {/* Waktu Mulai */}
@@ -586,6 +950,19 @@ function LogHistoryPage() {
                         {/* Waktu Selesai */}
                         <td className="py-3.5 px-4 font-mono text-[13px] text-muted-foreground whitespace-nowrap">
                           {stop.endMs ? fmtTime(stop.endMs) : <span className="text-amber-500 font-semibold">— still running —</span>}
+                        </td>
+
+                        {/* Operational Shift */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          {(() => {
+                            const shiftInfo = getShiftForStop(stop);
+                            return (
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${shiftInfo.badgeClass}`}>
+                                <span className={`h-1.5 w-1.5 rounded-full ${shiftInfo.dotClass}`} />
+                                <span>{shiftInfo.shortName}</span>
+                              </span>
+                            );
+                          })()}
                         </td>
 
                         {/* Stasiun */}
@@ -600,19 +977,17 @@ function LogHistoryPage() {
 
                         {/* Kategori */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
-                          <div className="text-foreground font-medium">{cat?.name ?? stop.categoryId}</div>
-                          <div className="flex gap-1 mt-0.5">
-                            {cat?.countsAsBreakdown && (
-                              <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold">
-                                Breakdown
+                          {(() => {
+                            const badgeStyle = getCategoryBadgeStyle(stop.categoryId, cat?.name);
+                            return (
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shadow-2xs ${badgeStyle.bg}`}
+                              >
+                                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${badgeStyle.dot}`} />
+                                <span className="font-sans font-semibold">{cat?.name ?? stop.categoryId}</span>
                               </span>
-                            )}
-                            {cat?.custom && (
-                              <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-bold">
-                                Custom
-                              </span>
-                            )}
-                          </div>
+                            );
+                          })()}
                         </td>
 
                         {/* Durasi */}
@@ -620,23 +995,6 @@ function LogHistoryPage() {
                           <span className={isOpen ? "text-red-600 dark:text-red-400 font-bold" : "text-foreground font-semibold"}>
                             {fmtDuration(duration)}
                           </span>
-                        </td>
-
-                        {/* Sumber */}
-                        <td className="py-3.5 px-4 font-mono text-[11px] whitespace-nowrap">
-                          {stop.source === "plc" ? (
-                            <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold">
-                              PLC
-                            </span>
-                          ) : stop.formType === "mtc" ? (
-                            <span className="px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-bold">
-                              E-form (MTC)
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border">
-                              E-form
-                            </span>
-                          )}
                         </td>
 
                         {/* Operator */}
@@ -676,96 +1034,80 @@ function LogHistoryPage() {
         </div>
       ) : (
         /* SUMMARY BY STATION VIEW */
-        <div className="space-y-3">
-          {stationSummary.map((item) => {
-            const isExpanded = expandedStationId === item.station.id;
-            return (
-              <div
-                key={item.station.id}
-                className="rounded-xl border border-border bg-card overflow-hidden transition-colors shadow-xs"
-              >
+        stationSummary.length === 0 ? (
+          <div className="p-12 text-center rounded-2xl border border-dashed border-border bg-card text-muted-foreground font-mono">
+            <Layers className="h-8 w-8 mx-auto mb-2 opacity-30" />
+            <p className="font-medium text-sm text-foreground">No stations found for the selected area</p>
+            <p className="text-xs mt-1">Please select another area or choose "All Areas".</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {stationSummary.map((item) => {
+              const isExpanded = expandedStationId === item.station.id;
+              const stationArea = appState.areas.find((a) => a.id === item.station.areaId);
+
+              return (
                 <div
-                  onClick={() => setExpandedStationId(isExpanded ? null : item.station.id)}
-                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30"
+                  key={item.station.id}
+                  className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] overflow-hidden transition-colors shadow-xs"
                 >
-                  <div className="flex items-center gap-3">
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <div>
-                      <h4 className="font-mono text-sm font-bold text-foreground">{item.station.name}</h4>
-                      <p className="text-xs text-muted-foreground font-sans">
-                        Urutan #{item.station.sequence} • Threshold {item.station.runningThreshold} {item.station.speedUnit}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-6 font-mono text-xs">
-                    <div className="text-right">
-                      <span className="text-muted-foreground block text-[10px] uppercase">Frequency</span>
-                      <span className="text-foreground font-bold">{item.count}× occurrences</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-muted-foreground block text-[10px] uppercase">Total Duration</span>
-                      <span className="text-amber-600 dark:text-amber-400 font-bold">{fmtDuration(item.totalDuration)}</span>
-                    </div>
-                    <div className="text-right hidden sm:block">
-                      <span className="text-muted-foreground block text-[10px] uppercase">Average</span>
-                      <span className="text-foreground">{fmtDuration(item.avgDuration)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expanded Occurrences List */}
-                {isExpanded && (
-                  <div className="border-t border-border bg-muted/20 p-4">
-                    <h5 className="font-mono text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                      Occurrence Details ({item.stops.length})
-                    </h5>
-                    {item.stops.length === 0 ? (
-                      <p className="text-xs text-muted-foreground font-mono">No stop records for this station yet.</p>
-                    ) : (
-                      <div className="divide-y divide-border/60">
-                        {item.stops.map((s) => {
-                          const cat = appState.categories.find((c) => c.id === s.categoryId);
-                          return (
-                            <div key={s.id} className="py-2.5 flex items-center justify-between text-xs">
-                              <div className="space-y-0.5">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-foreground font-sans">{cat?.name ?? s.categoryId}</span>
-                                  {s.status === "open" && (
-                                    <span className="font-mono text-[9px] px-1 rounded bg-red-500/20 text-red-600 dark:text-red-400 font-bold">OPEN</span>
-                                  )}
-                                  {s.source === "plc" && (
-                                    <span className="font-mono text-[9px] px-1 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold">PLC</span>
-                                  )}
-                                </div>
-                                <div className="font-mono text-[11px] text-muted-foreground">
-                                  {fmtDateTime(s.startMs)} • Reported by: {s.reportedBy}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3 font-mono">
-                                <span className="font-bold text-foreground">{fmtDuration(stopDurationMs(s, nowMs))}</span>
-                                <button
-                                  onClick={() => handleOpenCorrectModal(s)}
-                                  className="text-xs text-muted-foreground hover:text-foreground underline"
-                                >
-                                  Correct
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
+                  <div
+                    onClick={() => setExpandedStationId(isExpanded ? null : item.station.id)}
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50/70 dark:hover:bg-zinc-800/20 select-none transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4 text-primary shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-display text-sm font-bold text-foreground">
+                            {item.station.name}
+                          </h4>
+                          {item.station.code && (
+                            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-semibold border border-border">
+                              {item.station.code}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground font-sans mt-0.5">
+                          {stationArea ? `${stationArea.name} • ` : ""}Sequence #{item.station.sequence} • Threshold: {item.station.runningThreshold} {item.station.speedUnit}
+                        </p>
                       </div>
-                    )}
+                    </div>
+
+                    <div className="flex items-center gap-5 sm:gap-7 font-mono text-xs">
+                      <div className="text-right">
+                        <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Frequency</span>
+                        <span className="text-foreground font-bold">{item.count}× occurrences</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Total Downtime</span>
+                        <span className="text-amber-600 dark:text-amber-400 font-bold">{fmtDuration(item.totalDuration)}</span>
+                      </div>
+                      <div className="text-right hidden sm:block">
+                        <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Average</span>
+                        <span className="text-foreground font-medium">{fmtDuration(item.avgDuration)}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+
+                  {/* Expanded Occurrences Table with Search matching Master Data Stations & Area */}
+                  {isExpanded && (
+                    <StationOccurrenceTable
+                      stops={item.stops}
+                      station={item.station}
+                      categories={appState.categories}
+                      nowMs={nowMs}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )
       )}
 
       {/* MODAL KOREKSI (Audit trail mandatory reason) */}
