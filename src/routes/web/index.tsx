@@ -5,8 +5,8 @@ import {
   Clock,
   TrendingDown,
   Activity,
-  ArrowUpRight,
   Gauge,
+  BarChart3,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -125,7 +125,6 @@ function DashboardPage() {
     return new Date().toISOString().slice(0, 10);
   });
   const [datePreset, setDatePreset] = useState<"today" | "7d" | "30d" | "thisMonth" | "custom">("7d");
-  const speedWindowMinutes = 60;
 
   // Available stations filtered by selected area
   const availableStations = useMemo(() => {
@@ -302,72 +301,113 @@ function DashboardPage() {
     return result;
   }, [startDate, endDate, appState.stops, appState.categories, selectedAreaId, selectedStationId]);
 
-  // Line Chart: Trend Speed by Minute (Telemetri Kecepatan Konveyor)
-  const speedByMinuteData = useMemo(() => {
-    const points = [];
-    const windowMinutes = speedWindowMinutes;
+  // Line Chart: Trend Speed by Day (Telemetri Kecepatan Konveyor per Hari mengikuti Date Range)
+  const speedByDayData = useMemo(() => {
+    const sDate = startDate || new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10);
+    const eDate = endDate || new Date().toISOString().slice(0, 10);
+    const startD = new Date(`${sDate}T00:00:00+07:00`);
+    const endD = new Date(`${eDate}T00:00:00+07:00`);
+
+    const diffDays = Math.max(1, Math.round((endD.getTime() - startD.getTime()) / 86_400_000) + 1);
     const targetStation = selectedStation;
     const targetThreshold = targetStation?.runningThreshold ?? 0.1;
     const targetUnit = targetStation?.speedUnit ?? "m/min";
-    const baseSpeed = targetStation ? 1.25 : 1.20;
+    const baseSpeed = targetStation?.nominalSpeed ?? (targetStation ? 1.25 : 1.20);
 
-    for (let i = windowMinutes - 1; i >= 0; i--) {
-      const minuteTimeMs = nowMs - i * 60_000;
-      const dateObj = new Date(minuteTimeMs);
-      const timeLabel = dateObj.toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      });
+    const points: Array<{
+      date: string;
+      fullDate: string;
+      speed: number;
+      threshold: number;
+      targetSpeed: number;
+      operatingHours: number;
+      stopCount: number;
+      downtimeMin: number;
+      status: "NORMAL" | "LOW" | "STOPPED";
+    }> = [];
 
-      // Check if any stop was active on this station/area during this minute
-      const wasStopped = appState.stops.some((s) => {
+    const plannedPerDayMs = 16 * 3_600_000; // 16 jam per hari (Shift Pagi 07:00-16:20 + Shift Malam 22:00-06:00)
+
+    for (let i = 0; i < diffDays; i++) {
+      const curStartMs = startD.getTime() + i * 86_400_000;
+      const curEndMs = curStartMs + 86_400_000;
+      const curDate = new Date(curStartMs);
+
+      const day = String(curDate.getDate()).padStart(2, "0");
+      const month = curDate.toLocaleDateString("id-ID", { month: "short" });
+      const dateLabel = `${day} ${month}`;
+      const fullDateStr = curDate.toISOString().slice(0, 10);
+
+      // Stops pada tanggal ini
+      const dayStops = appState.stops.filter((s) => {
+        const matchDate = s.startMs >= curStartMs && s.startMs < curEndMs;
         const matchArea = selectedAreaId === "all" ? true : s.areaId === selectedAreaId;
         const matchStation = selectedStationId === "all" ? true : s.stationId === selectedStationId;
-        if (!matchArea || !matchStation) return false;
-
-        const stopStart = s.startMs;
-        const stopEnd = s.endMs ?? nowMs;
-        return minuteTimeMs >= stopStart && minuteTimeMs <= stopEnd;
+        return matchDate && matchArea && matchStation;
       });
 
-      let speedVal: number;
-      if (wasStopped) {
-        speedVal = 0.0;
+      const stopCount = dayStops.length;
+      const totalDowntimeMs = dayStops.reduce((sum, s) => sum + stopDurationMs(s, curEndMs), 0);
+      const downtimeMin = Math.round(totalDowntimeMs / 60_000);
+
+      // Jam operasional
+      const effectiveEnd = Math.min(nowMs, curEndMs);
+      const effectivePlanned = curStartMs > nowMs ? 0 : Math.min(plannedPerDayMs, Math.max(0, effectiveEnd - curStartMs));
+      const opMs = effectivePlanned > 0
+        ? operatingTimeMs(effectivePlanned, dayStops, appState.categories, effectiveEnd)
+        : 0;
+      const opHours = +(opMs / 3_600_000).toFixed(1);
+
+      let daySpeed: number;
+      if (effectivePlanned === 0 && curStartMs > nowMs) {
+        daySpeed = 0;
       } else {
-        const hash = Math.sin((minuteTimeMs / 60000) * 12.9898) * 43758.5453;
-        const variance = (hash - Math.floor(hash) - 0.5) * 0.12;
-        speedVal = Math.max(0.2, Number((baseSpeed + variance).toFixed(2)));
+        const dayHash = Math.abs(Math.sin((curStartMs / 86_400_000) * 12.9898 + 43.123));
+        const variance = (dayHash - 0.5) * 0.06;
+        const opRatio = effectivePlanned > 0 ? Math.min(1, Math.max(0, opMs / effectivePlanned)) : 0;
+        if (opRatio <= 0.05) {
+          daySpeed = 0;
+        } else {
+          daySpeed = Math.max(0.1, +((baseSpeed + variance) * opRatio).toFixed(2));
+        }
       }
 
       points.push({
-        time: timeLabel,
-        timestampMs: minuteTimeMs,
-        speed: speedVal,
+        date: dateLabel,
+        fullDate: fullDateStr,
+        speed: daySpeed,
         threshold: targetThreshold,
-        status: speedVal <= targetThreshold ? "STOPPED" : "RUNNING",
+        targetSpeed: baseSpeed,
+        operatingHours: opHours,
+        stopCount,
+        downtimeMin,
+        status: daySpeed <= targetThreshold ? "STOPPED" : daySpeed < baseSpeed * 0.85 ? "LOW" : "NORMAL",
       });
     }
 
-    const current = points[points.length - 1]?.speed ?? 0;
-    const avg = points.length > 0
-      ? +(points.reduce((sum, p) => sum + p.speed, 0) / points.length).toFixed(2)
+    const validPoints = points.filter((p) => p.speed > 0);
+    const avgSpeed = validPoints.length > 0
+      ? +(validPoints.reduce((sum, p) => sum + p.speed, 0) / validPoints.length).toFixed(2)
       : 0;
-
-    // Rata-rata per hari (Daily Average Speed)
-    const todayPlannedMs = 16 * 3_600_000;
-    const todayOperatingMs = operatingTimeMs(todayPlannedMs, stopsToday, appState.categories, nowMs);
-    const dailyAvg = +(baseSpeed * Math.min(1, todayOperatingMs / todayPlannedMs)).toFixed(2);
+    const maxSpeed = validPoints.length > 0
+      ? Math.max(...validPoints.map((p) => p.speed))
+      : baseSpeed;
+    const minSpeed = validPoints.length > 0
+      ? Math.min(...validPoints.map((p) => p.speed))
+      : 0;
+    const latestSpeed = points[points.length - 1]?.speed ?? 0;
 
     return {
       points,
       unit: targetUnit,
       threshold: targetThreshold,
-      currentSpeed: current,
-      avgSpeed: avg,
-      dailyAvgSpeed: dailyAvg,
+      targetSpeed: baseSpeed,
+      avgSpeed,
+      maxSpeed,
+      minSpeed,
+      latestSpeed,
     };
-  }, [nowMs, speedWindowMinutes, appState.stops, selectedAreaId, selectedStationId, selectedStation, stopsToday, appState.categories]);
+  }, [startDate, endDate, selectedStation, appState.stops, selectedAreaId, selectedStationId, nowMs, appState.categories]);
 
   // OEE Calculation filtered by Area and Date Range
   const oeeSummary = useMemo(() => {
@@ -416,6 +456,26 @@ function DashboardPage() {
       oee: totalOee / n,
     };
   }, [appState.productionRecords, appState.stops, selectedAreaId, selectedStation, selectedStationId, rangeStartMs, rangeEndMs]);
+
+  // Target OEE/Availability per Area: Oven CED 90%, Topcoat 86%, lainnya tidak ada target
+  const areaOeeTarget = useMemo<number | null>(() => {
+    const targetArea = selectedArea 
+      ?? (selectedStation ? appState.areas.find((a) => a.id === selectedStation.areaId) : null);
+
+    if (!targetArea) return null;
+
+    const areaId = targetArea.id.toLowerCase();
+    const areaCode = (targetArea.code ?? "").toUpperCase();
+    const areaName = targetArea.name.toLowerCase();
+
+    if (areaId.includes("oven") || areaCode.includes("OVEN") || areaName.includes("oven")) {
+      return 90;
+    }
+    if (areaId.includes("topcoat") || areaCode.includes("TOPCOAT") || areaName.includes("topcoat")) {
+      return 86;
+    }
+    return null;
+  }, [selectedArea, selectedStation, appState.areas]);
 
   const chartTooltipStyle = isDark
     ? { backgroundColor: "#0d1b2e", border: "1px solid #152a47", borderRadius: "8px", color: "#ffffff" }
@@ -576,89 +636,153 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* 6. Overall OEE */}
+        {/* 6. Overall OEE / Availability */}
         <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-1">
             <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.oee")}</span>
             <span
-              className={`h-2 w-2 rounded-full ${oeeSummary.oee >= 0.85 ? "bg-emerald-500" : oeeSummary.oee >= 0.7 ? "bg-amber-400" : "bg-red-500"
-                }`}
+              className={`h-2 w-2 rounded-full ${
+                areaOeeTarget != null
+                  ? oeeSummary.availability >= areaOeeTarget / 100
+                    ? "bg-emerald-500"
+                    : "bg-red-500"
+                  : oeeSummary.availability >= 0.85
+                    ? "bg-emerald-500"
+                    : oeeSummary.availability >= 0.7
+                      ? "bg-amber-400"
+                      : "bg-red-500"
+              }`}
             />
           </div>
-          <div className="mt-2">
+          <div className="mt-2 flex items-baseline">
+            <span className="font-mono text-xs font-semibold text-muted-foreground mr-1.5">
+              Avail.
+            </span>
             <span className="font-mono text-2xl font-bold text-foreground tracking-tight">
-              {(oeeSummary.oee * 100).toFixed(1)}%
+              {(oeeSummary.availability * 100).toFixed(1)}%
             </span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-1">
-            Avail: {(oeeSummary.availability * 100).toFixed(0)}% • Perf: {(oeeSummary.performance * 100).toFixed(0)}%
+            Target: {areaOeeTarget != null ? `${areaOeeTarget}%` : "—"}
           </div>
         </div>
       </div>
 
-      {/* Downtime Shift Timeline (Shift Pagi 07:00 - 16:20 & Shift Malam 22:00 - 06:00) */}
-      <DowntimeShiftTimeline
-        selectedAreaId={selectedAreaId}
-        selectedStationId={selectedStationId}
-      />
+      {/* Row 1: Downtime Shift Timeline & Stop Frequency per Station (Sejajar di bawah Card Summary) */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+        {/* Downtime Shift Timeline (Switch Toggle Shift Pagi & Shift Malam) */}
+        <DowntimeShiftTimeline
+          selectedAreaId={selectedAreaId}
+          selectedStationId={selectedStationId}
+        />
 
-      {/* Line Chart: Trend Speed by Minute */}
-      <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        {/* Stop Frequency per Station */}
+        <div className="rounded-xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
+                <BarChart3 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wide">
+                  {t("dash.frequency")} per Station
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {selectedArea ? `Stop occurrences for stations in ${selectedArea.name}` : "Stop occurrence frequency per station"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 font-mono text-xs">
+              <div className="px-3.5 py-1.5 rounded-lg border border-border bg-muted/40">
+                <span className="text-muted-foreground text-[10px] block font-medium">Total Stops:</span>
+                <span className="font-bold text-foreground text-sm">
+                  {stationFrequencyData.reduce((acc, curr) => acc + curr.count, 0)} occurrences
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-64 sm:h-72 w-full pt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stationFrequencyData} margin={{ top: 10, right: 10, left: -10, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} opacity={0.6} />
+                <XAxis dataKey="name" stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
+                <YAxis stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
+                <Tooltip
+                  contentStyle={chartTooltipStyle}
+                  formatter={(val, _, item) => [`${val} Occurrences (${item.payload.durationMin} m)`, item.payload.fullName]}
+                />
+                <Bar dataKey="count" name="Occurrence Count" fill="#3b82f6" radius={[4, 4, 0, 0]}>
+                  {stationFrequencyData.map((entry) => (
+                    <Cell
+                      key={`st-${entry.name}`}
+                      fill={entry.count > 3 ? "#f43f5e" : entry.count > 0 ? "#3b82f6" : "#71717a"}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Line Chart: Speed Trend by Day (mengikuti rentang filter tanggal) */}
+      <div className="rounded-xl border border-border bg-card p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+            <div className="p-2.5 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 shrink-0">
               <Gauge className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-display text-sm font-semibold text-foreground">
-                  Speed Trend per Minute
+                <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wide">
+                  Speed Trend by Day
                 </h3>
                 <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${speedByMinuteData.currentSpeed > speedByMinuteData.threshold
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${speedByDayData.latestSpeed > speedByDayData.threshold
                       ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                       : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse"
                     }`}
                 >
                   <span
-                    className={`h-1.5 w-1.5 rounded-full ${speedByMinuteData.currentSpeed > speedByMinuteData.threshold ? "bg-emerald-500" : "bg-rose-500"
+                    className={`h-1.5 w-1.5 rounded-full ${speedByDayData.latestSpeed > speedByDayData.threshold ? "bg-emerald-500" : "bg-rose-500"
                       }`}
                   />
-                  {speedByMinuteData.currentSpeed > speedByMinuteData.threshold ? "NORMAL SPEED" : "LINE-STOP / BELOW THRESHOLD"}
+                  {speedByDayData.latestSpeed > speedByDayData.threshold ? "NORMAL SPEED" : "LINE-STOP / BELOW THRESHOLD"}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {selectedStation
-                  ? `Station ${selectedStation.name} (${selectedStation.code || selectedStation.id}) telemetry speed per minute`
+                  ? `Daily average conveyor speed for ${selectedStation.name} (${selectedStation.code || selectedStation.id})`
                   : selectedArea
-                    ? `Average conveyor speed ${selectedArea.name} per minute`
-                    : "Real-time conveyor speed telemetry monitoring per minute"}
+                    ? `Daily average conveyor speed for ${selectedArea.name} (${startDate} — ${endDate})`
+                    : `Daily average conveyor speed telemetry (${startDate} — ${endDate})`}
               </p>
             </div>
           </div>
 
-          {/* KPI Badge: Daily Average */}
-          <div className="flex items-center gap-2 font-mono text-xs">
+          {/* KPI Badges */}
+          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
             <div className="px-3.5 py-1.5 rounded-lg border border-border bg-muted/40">
-              <span className="text-muted-foreground text-[10px] block font-medium">Daily Average:</span>
+              <span className="text-muted-foreground text-[10px] block font-medium">Daily Avg:</span>
               <span className="font-bold text-foreground text-sm">
-                {speedByMinuteData.dailyAvgSpeed.toFixed(2)} {speedByMinuteData.unit}
+                {speedByDayData.avgSpeed.toFixed(2)} {speedByDayData.unit}
               </span>
             </div>
           </div>
         </div>
 
         {/* The Line Chart */}
-        <div className="h-64 w-full">
+        <div className="h-64 sm:h-72 w-full pt-1">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={speedByMinuteData.points} margin={{ top: 10, right: 15, left: -15, bottom: 0 }}>
+            <LineChart data={speedByDayData.points} margin={{ top: 12, right: 20, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} opacity={0.6} />
               <XAxis
-                dataKey="time"
+                dataKey="date"
                 stroke={chartAxisStroke}
                 fontSize={11}
                 fontFamily="monospace"
-                interval={speedWindowMinutes === 60 ? 5 : 3}
               />
               <YAxis
                 domain={[0, 1.8]}
@@ -669,18 +793,23 @@ function DashboardPage() {
               />
               <Tooltip
                 contentStyle={chartTooltipStyle}
-                formatter={(val, name) => [`${val} ${speedByMinuteData.unit}`, name]}
-                labelFormatter={(label) => `Time: ${label} WIB`}
+                formatter={(val, name) => {
+                  return [`${val} ${speedByDayData.unit}`, name];
+                }}
+                labelFormatter={(label, payload) => {
+                  const p = payload?.[0]?.payload;
+                  return p ? `${label} (${p.fullDate}) · ${p.operatingHours}h operating · ${p.downtimeMin}m downtime` : label;
+                }}
               />
               <Legend wrapperStyle={{ fontSize: "11px", fontFamily: "monospace" }} />
               <Line
                 type="monotone"
                 dataKey="speed"
-                name={`Speed (${speedByMinuteData.unit})`}
+                name={`Avg Daily Speed (${speedByDayData.unit})`}
                 stroke="#06b6d4"
                 strokeWidth={2.5}
-                dot={false}
-                activeDot={{ r: 5, fill: "#06b6d4" }}
+                dot={{ r: 4, fill: "#06b6d4" }}
+                activeDot={{ r: 6, fill: "#06b6d4" }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -786,144 +915,6 @@ function DashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </div>
-        </div>
-      </div>
-
-      {/* Row 2: Frequency per Station + OEE Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Frequency per Station (2 cols on LG) */}
-        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-display text-sm font-semibold text-foreground">
-                {t("dash.frequency")} per Station
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {selectedArea ? `Stations in area ${selectedArea.name}` : "Stop occurrence frequency per station"}
-              </p>
-            </div>
-            <span className="font-mono text-xs text-muted-foreground">
-              Total {stationFrequencyData.reduce((acc, curr) => acc + curr.count, 0)} occurrences
-            </span>
-          </div>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stationFrequencyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} opacity={0.6} />
-                <XAxis dataKey="name" stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
-                <YAxis stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
-                <Tooltip
-                  contentStyle={chartTooltipStyle}
-                  formatter={(val, _, item) => [`${val} Occurrences (${item.payload.durationMin} m)`, item.payload.fullName]}
-                />
-                <Bar dataKey="count" name="Occurrence Count" fill="#3b82f6" radius={[4, 4, 0, 0]}>
-                  {stationFrequencyData.map((entry) => (
-                    <Cell
-                      key={`st-${entry.name}`}
-                      fill={entry.count > 3 ? "#f43f5e" : entry.count > 0 ? "#3b82f6" : "#71717a"}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* OEE Overview Card (1 col on LG) */}
-        <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between shadow-xs">
-          <div>
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-sm font-semibold text-foreground">
-                {selectedStation ? `Area OEE — ${selectedStation.name}` : selectedArea ? `OEE — ${selectedArea.name}` : `${t("dash.oee")} — Overall Equipment Effectiveness`}
-              </h3>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {selectedStation ? `Estimated effectiveness for area ${selectedStation.areaId}` : selectedArea ? `Estimated effectiveness for ${selectedArea.name}` : t("dash.oeeNote")}
-            </p>
-
-            {/* Big OEE Number */}
-            <div className="my-5 p-4 rounded-lg border border-border bg-muted/30 flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-mono uppercase text-muted-foreground block font-bold">
-                  Overall OEE Score
-                </span>
-                <span className="text-4xl font-bold font-mono tracking-tight text-foreground">
-                  {(oeeSummary.oee * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="text-right">
-                <span
-                  className={`inline-flex px-2 py-1 rounded text-xs font-mono font-bold ${oeeSummary.oee >= 0.85
-                      ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                      : oeeSummary.oee >= 0.7
-                        ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
-                        : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
-                    }`}
-                >
-                  {oeeSummary.oee >= 0.85 ? "World Class" : oeeSummary.oee >= 0.7 ? "Moderate" : "Needs Action"}
-                </span>
-                <span className="text-[10px] text-muted-foreground block mt-1 font-mono">
-                  Target: 85.0%
-                </span>
-              </div>
-            </div>
-
-            {/* Availability, Performance, Quality 3 Bars */}
-            <div className="space-y-3.5">
-              {/* Availability */}
-              <div>
-                <div className="flex justify-between text-xs font-mono mb-1">
-                  <span className="text-muted-foreground">{t("dash.availability")} (A):</span>
-                  <span className="text-foreground font-bold">{(oeeSummary.availability * 100).toFixed(1)}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full"
-                    style={{ width: `${Math.min(100, oeeSummary.availability * 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Performance */}
-              <div>
-                <div className="flex justify-between text-xs font-mono mb-1">
-                  <span className="text-muted-foreground">{t("dash.performance")} (P):</span>
-                  <span className="text-foreground font-bold">{(oeeSummary.performance * 100).toFixed(1)}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-cyan-500 rounded-full"
-                    style={{ width: `${Math.min(100, oeeSummary.performance * 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Quality */}
-              <div>
-                <div className="flex justify-between text-xs font-mono mb-1">
-                  <span className="text-muted-foreground">{t("dash.quality")} (Q):</span>
-                  <span className="text-foreground font-bold">{(oeeSummary.quality * 100).toFixed(1)}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-purple-500 rounded-full"
-                    style={{ width: `${Math.min(100, oeeSummary.quality * 100)}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 mt-4 border-t border-border flex justify-between items-center text-xs">
-            <span className="text-muted-foreground font-mono">Formula: A × P × Q</span>
-            <a
-              href="/web/production"
-              className="text-foreground hover:underline font-medium inline-flex items-center gap-1 font-mono text-[11px]"
-            >
-              Manage Production <ArrowUpRight className="h-3 w-3" />
-            </a>
           </div>
         </div>
       </div>

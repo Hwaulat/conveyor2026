@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { Clock } from "lucide-react";
 import { useAppStore } from "../lib/store";
-import type { LineStop } from "../lib/types";
 import { getShiftForTimestamp } from "../lib/shift";
+import { Switch } from "./ui/switch";
 
 export interface ShiftCategory {
   id: string;
@@ -57,7 +57,6 @@ const MALAM_TICKS = [
   { label: "06:00", pct: 100 },
 ];
 
-const PAGI_START_MIN = 7 * 60; // 420
 const PAGI_SPAN_MIN = 16 * 60 + 20 - 420; // 560 min (07:00 - 16:20)
 const MALAM_SPAN_MIN = 8 * 60; // 480 min (22:00 - 06:00)
 
@@ -73,8 +72,11 @@ export function DowntimeShiftTimeline({
   className = "",
 }: DowntimeShiftTimelineProps) {
   const appState = useAppStore();
-  const [hoveredEventId, setHoveredEventId] = useState<string | null>("pagi-ev-1");
   const currentShift = useMemo(() => getShiftForTimestamp(Date.now()), []);
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>("pagi-ev-1");
+  const [activeShift, setActiveShift] = useState<"pagi" | "malam">(() => {
+    return currentShift?.id === "shift-malam" ? "malam" : "pagi";
+  });
 
   // Handler on clicking block -> opens E-Form
   const handleEventClick = (ev: TimelineEvent) => {
@@ -98,9 +100,9 @@ export function DowntimeShiftTimeline({
         areaId: "area-sanding",
         startTimeStr: "07:42",
         endTimeStr: "07:55",
-        startMinutes: 42, // (7*60 + 42) - 420 = 42
+        startMinutes: 42,
         durationMin: 13,
-        category: SHIFT_CATEGORIES[0]!, // Emergency Stop (Red)
+        category: SHIFT_CATEGORIES[0]!,
         note: "Emergency Stop triggered: carrier alignment alert",
       },
       {
@@ -111,9 +113,9 @@ export function DowntimeShiftTimeline({
         areaId: "area-sealing",
         startTimeStr: "08:30",
         endTimeStr: "08:45",
-        startMinutes: 90, // (8*60 + 30) - 420 = 90
+        startMinutes: 90,
         durationMin: 15,
-        category: SHIFT_CATEGORIES[2]!, // Downstream Blocked (Yellow)
+        category: SHIFT_CATEGORIES[2]!,
         note: "Full cabin sensor trigger",
       },
       {
@@ -124,9 +126,9 @@ export function DowntimeShiftTimeline({
         areaId: "area-sealing",
         startTimeStr: "11:30",
         endTimeStr: "11:45",
-        startMinutes: 270, // (11*60 + 30) - 420 = 270
+        startMinutes: 270,
         durationMin: 15,
-        category: SHIFT_CATEGORIES[3]!, // Material (Purple)
+        category: SHIFT_CATEGORIES[3]!,
         note: "Sealing compound batch replenishment",
       },
       {
@@ -137,9 +139,9 @@ export function DowntimeShiftTimeline({
         areaId: "area-sealing",
         startTimeStr: "14:10",
         endTimeStr: "14:22",
-        startMinutes: 430, // (14*60 + 10) - 420 = 430
+        startMinutes: 430,
         durationMin: 12,
-        category: SHIFT_CATEGORIES[5]!, // Process (Green)
+        category: SHIFT_CATEGORIES[5]!,
         note: "Manual masking seam process check",
       },
       {
@@ -150,21 +152,52 @@ export function DowntimeShiftTimeline({
         areaId: "area-sanding",
         startTimeStr: "16:10",
         endTimeStr: "16:20",
-        startMinutes: 550, // (16*60 + 10) - 420 = 550
+        startMinutes: 550,
         durationMin: 10,
-        category: SHIFT_CATEGORIES[0]!, // Emergency Stop (Red - ongoing/end)
+        category: SHIFT_CATEGORIES[0]!,
         isOpen: true,
         note: "Clamp release sensor check",
       },
     ];
 
-    const laneCodes = ["PC-13", "PC-15", "PC-12", "PC-14"];
-    return laneCodes.map((code) => ({
-      code,
-      name: rawEvents.find((e) => e.stationCode === code)?.stationName || code,
-      events: rawEvents.filter((e) => e.stationCode === code),
-    }));
-  }, []);
+    const filteredEvents = rawEvents.filter((ev) => {
+      const matchArea = selectedAreaId === "all" ? true : ev.areaId === selectedAreaId;
+      const matchStation = selectedStationId === "all" ? true : ev.stationId === selectedStationId;
+      return matchArea && matchStation;
+    });
+
+    if (selectedAreaId === "all") {
+      const laneCodes = ["PC-13", "PC-15", "PC-12", "PC-14"];
+      return laneCodes.map((code) => ({
+        code,
+        name: rawEvents.find((e) => e.stationCode === code)?.stationName || code,
+        events: filteredEvents.filter((e) => e.stationCode === code),
+      }));
+    }
+
+    const areaStations = appState.stations.filter((s) => s.areaId === selectedAreaId);
+    const targetStations = selectedStationId === "all"
+      ? areaStations
+      : areaStations.filter((s) => s.id === selectedStationId);
+
+    const STATION_CODE_MAP: Record<string, string> = {
+      "st-sand-1": "PC-10",
+      "st-sand-2": "PC-13",
+      "st-seal-1": "PC-12",
+      "st-seal-2": "PC-15",
+      "st-seal-3": "PC-14",
+      "st-tc-1": "PC-11",
+    };
+
+    return targetStations.map((st) => {
+      const displayCode = STATION_CODE_MAP[st.id] ?? st.code ?? st.id;
+      return {
+        code: displayCode,
+        name: st.name,
+        events: filteredEvents.filter((e) => e.stationId === st.id || e.stationCode === displayCode),
+      };
+    });
+  }, [selectedAreaId, selectedStationId, appState.stations]);
 
   // 2. Shift Malam Data: 22:00 - 06:00 (4 events, 36m)
   const malamStations = useMemo<StationLane[]>(() => {
@@ -177,9 +210,9 @@ export function DowntimeShiftTimeline({
         areaId: "area-topcoat",
         startTimeStr: "23:20",
         endTimeStr: "23:28",
-        startMinutes: 80, // 22:00 to 23:20 = 80 min
+        startMinutes: 80,
         durationMin: 8,
-        category: SHIFT_CATEGORIES[4]!, // Quality (Cyan)
+        category: SHIFT_CATEGORIES[4]!,
         note: "Surface finish inspection rework",
       },
       {
@@ -190,9 +223,9 @@ export function DowntimeShiftTimeline({
         areaId: "area-sealing",
         startTimeStr: "00:40",
         endTimeStr: "00:52",
-        startMinutes: 160, // 22:00 to 00:40 = 160 min
+        startMinutes: 160,
         durationMin: 12,
-        category: SHIFT_CATEGORIES[1]!, // Equipment Fault (Orange)
+        category: SHIFT_CATEGORIES[1]!,
         note: "Drive sprocket chain tensioner adjustment",
       },
       {
@@ -203,9 +236,9 @@ export function DowntimeShiftTimeline({
         areaId: "area-sanding",
         startTimeStr: "02:30",
         endTimeStr: "02:40",
-        startMinutes: 270, // 22:00 to 02:30 = 270 min
+        startMinutes: 270,
         durationMin: 10,
-        category: SHIFT_CATEGORIES[0]!, // Emergency Stop (Red)
+        category: SHIFT_CATEGORIES[0]!,
         note: "Interlock safety gate switch trip",
       },
       {
@@ -216,20 +249,51 @@ export function DowntimeShiftTimeline({
         areaId: "area-sealing",
         startTimeStr: "05:15",
         endTimeStr: "05:21",
-        startMinutes: 435, // 22:00 to 05:15 = 435 min
+        startMinutes: 435,
         durationMin: 6,
-        category: SHIFT_CATEGORIES[5]!, // Process (Green)
+        category: SHIFT_CATEGORIES[5]!,
         note: "Line handover cleaning procedure",
       },
     ];
 
-    const laneCodes = ["PC-11", "PC-12", "PC-10", "PC-14"];
-    return laneCodes.map((code) => ({
-      code,
-      name: rawEvents.find((e) => e.stationCode === code)?.stationName || code,
-      events: rawEvents.filter((e) => e.stationCode === code),
-    }));
-  }, []);
+    const filteredEvents = rawEvents.filter((ev) => {
+      const matchArea = selectedAreaId === "all" ? true : ev.areaId === selectedAreaId;
+      const matchStation = selectedStationId === "all" ? true : ev.stationId === selectedStationId;
+      return matchArea && matchStation;
+    });
+
+    if (selectedAreaId === "all") {
+      const laneCodes = ["PC-11", "PC-12", "PC-10", "PC-14"];
+      return laneCodes.map((code) => ({
+        code,
+        name: rawEvents.find((e) => e.stationCode === code)?.stationName || code,
+        events: filteredEvents.filter((e) => e.stationCode === code),
+      }));
+    }
+
+    const areaStations = appState.stations.filter((s) => s.areaId === selectedAreaId);
+    const targetStations = selectedStationId === "all"
+      ? areaStations
+      : areaStations.filter((s) => s.id === selectedStationId);
+
+    const STATION_CODE_MAP: Record<string, string> = {
+      "st-sand-1": "PC-10",
+      "st-sand-2": "PC-13",
+      "st-seal-1": "PC-12",
+      "st-seal-2": "PC-15",
+      "st-seal-3": "PC-14",
+      "st-tc-1": "PC-11",
+    };
+
+    return targetStations.map((st) => {
+      const displayCode = STATION_CODE_MAP[st.id] ?? st.code ?? st.id;
+      return {
+        code: displayCode,
+        name: st.name,
+        events: filteredEvents.filter((e) => e.stationId === st.id || e.stationCode === displayCode),
+      };
+    });
+  }, [selectedAreaId, selectedStationId, appState.stations]);
 
   const pagiTotalMinutes = useMemo(() => {
     return pagiStations.reduce(
@@ -253,242 +317,149 @@ export function DowntimeShiftTimeline({
     return malamStations.reduce((sum, lane) => sum + lane.events.length, 0);
   }, [malamStations]);
 
+  const currentStations = activeShift === "pagi" ? pagiStations : malamStations;
+  const currentTotalMinutes = activeShift === "pagi" ? pagiTotalMinutes : malamTotalMinutes;
+  const currentTotalEvents = activeShift === "pagi" ? pagiTotalEvents : malamTotalEvents;
+  const currentTicks = activeShift === "pagi" ? PAGI_TICKS : MALAM_TICKS;
+  const currentSpanMin = activeShift === "pagi" ? PAGI_SPAN_MIN : MALAM_SPAN_MIN;
+
   return (
     <div
-      className={`rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] p-4 sm:p-6 shadow-xs space-y-5 ${className}`}
+      className={`rounded-xl border border-border bg-card p-5 shadow-xs space-y-4 ${className}`}
     >
-      {/* 1. Header Row: Yellow Clock Icon, Title & Subtitle on Left, Category Legends on Right */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-slate-100 dark:border-[#152a47]">
-        {/* Left: Amber Clock Box + Title & Subtitle */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-amber-500 flex items-center justify-center text-zinc-950 font-bold shrink-0 shadow-xs">
-            <Clock className="h-5 w-5 stroke-[2.5]" />
-          </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-bold font-sans tracking-wide text-slate-900 dark:text-white uppercase">
-              DOWNTIME SHIFT TIMELINE
-            </h2>
-            <p className="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-zinc-400 uppercase tracking-wider mt-0.5 font-medium">
-              CLICK A DOWNTIME BLOCK OR LOG TO COMPLETE THE LINE-STOP FORM
-            </p>
-          </div>
+      {/* 1. Header Row (Tanpa Legend Category Problem & Tanpa Pagi Active) */}
+      <div className="flex items-center gap-3 pb-3 border-b border-border">
+        <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+          <Clock className="h-5 w-5" />
         </div>
-
-        {/* Right: Legends matching the 6 categories in screenshot */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-mono">
-          {SHIFT_CATEGORIES.map((cat) => (
-            <div key={cat.id} className="inline-flex items-center gap-1.5">
-              <span
-                className="w-3 h-3 rounded-[2px] shrink-0"
-                style={{ backgroundColor: cat.color }}
-              />
-              <span className="text-slate-600 dark:text-zinc-300 text-[11px] font-medium whitespace-nowrap">
-                {cat.name}
-              </span>
-            </div>
-          ))}
+        <div>
+          <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wide">
+            Downtime Shift Timeline
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Click downtime block or log to complete the line-stop form
+          </p>
         </div>
       </div>
 
-      {/* 2. Two Shift Columns: Shift Pagi (07:00 - 16:20) and Shift Malam (22:00 - 06:00) */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 divide-y xl:divide-y-0 xl:divide-x divide-slate-100 dark:divide-[#152a47] gap-6 xl:gap-8 pt-1">
-        {/* Left Panel: SHIFT PAGI */}
-        <div className="space-y-4">
-          {/* Shift Header & KPI */}
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sky-500 dark:text-sky-400 font-mono text-[11px] font-bold tracking-wider uppercase block">
-                  SHIFT PAGI
-                </span>
-                {currentShift.id === "shift-pagi" && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    ACTIVE NOW
-                  </span>
-                )}
-              </div>
-              <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900 dark:text-white block mt-0.5">
-                07:00 — 16:20
-              </span>
-            </div>
-            <div className="text-right">
-              <span className="text-2xl sm:text-3xl font-bold font-mono text-red-600 dark:text-red-500 block leading-tight">
-                {pagiTotalMinutes}m
-              </span>
-              <span className="text-[10px] font-mono uppercase text-slate-400 dark:text-zinc-500 font-semibold block tracking-wider mt-0.5">
-                {pagiTotalEvents} EVENTS
-              </span>
-            </div>
-          </div>
+      {/* 2. Control Bar Row: Switch Toggle Shift Pagi / Malam */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-0.5">
+        {/* Switch Toggle (Shift Pagi <-> Shift Malam) */}
+        <div className="inline-flex items-center gap-3 px-3.5 py-1.5 rounded-xl border border-border bg-muted/30 shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setActiveShift("pagi")}
+            className={`text-xs font-mono font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+              activeShift === "pagi"
+                ? "text-sky-600 dark:text-sky-400 font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <span
+              className={`h-2 w-2 rounded-full transition-transform ${
+                activeShift === "pagi" ? "bg-sky-500 ring-2 ring-sky-500/20" : "bg-muted-foreground/30"
+              }`}
+            />
+            <span>Shift Pagi</span>
+            <span className="text-[10px] text-muted-foreground font-normal hidden sm:inline">(07:00–16:20)</span>
+          </button>
 
-          {/* Timeline Chart Container */}
-          <div className="space-y-2 pt-1">
-            {/* Time Ticks */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-12 sm:w-14 shrink-0" />
-              <div className="flex-1 relative h-4">
-                {PAGI_TICKS.map((tick, idx) => (
-                  <span
-                    key={tick.label}
-                    style={{ left: `${tick.pct}%` }}
-                    className={`absolute top-0 text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-zinc-400 whitespace-nowrap ${
-                      idx === 0
-                        ? "translate-x-0"
-                        : idx === PAGI_TICKS.length - 1
-                        ? "-translate-x-full"
-                        : "-translate-x-1/2"
-                    }`}
-                  >
-                    {tick.label}
-                  </span>
-                ))}
-              </div>
-            </div>
+          <Switch
+            checked={activeShift === "malam"}
+            onCheckedChange={(checked) => setActiveShift(checked ? "malam" : "pagi")}
+            aria-label="Toggle Shift Pagi / Malam"
+            className="cursor-pointer data-[state=checked]:bg-indigo-600 data-[state=unchecked]:bg-sky-500"
+          />
 
-            {/* Station Lanes */}
-            <div className="space-y-2">
-              {pagiStations.map((station) => (
-                <div key={station.code} className="flex items-center gap-2 sm:gap-3">
-                  {/* Station Code */}
-                  <span className="w-12 sm:w-14 shrink-0 text-xs font-mono font-medium text-slate-700 dark:text-zinc-300 truncate">
-                    {station.code}
-                  </span>
-
-                  {/* Lane Track */}
-                  <div className="flex-1 h-8 sm:h-9 bg-slate-50/80 dark:bg-[#121c2d] rounded border border-slate-100 dark:border-[#152a47] relative">
-                    {/* Vertical Gridlines */}
-                    {PAGI_TICKS.map((tick) => (
-                      <div
-                        key={tick.label}
-                        className="absolute top-0 bottom-0 border-l border-slate-200/50 dark:border-[#152a47]/70 pointer-events-none"
-                        style={{ left: `${tick.pct}%` }}
-                      />
-                    ))}
-
-                    {/* Event Blocks */}
-                    {station.events.map((ev) => {
-                      const left = Math.max(0, Math.min(98.5, (ev.startMinutes / PAGI_SPAN_MIN) * 100));
-                      const width = Math.max(2.2, Math.min(100 - left, (ev.durationMin / PAGI_SPAN_MIN) * 100));
-                      const isHovered = hoveredEventId === ev.id;
-
-                      return (
-                        <div
-                          key={ev.id}
-                          className="absolute top-1 bottom-1"
-                          style={{ left: `${left}%`, width: `${width}%` }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => handleEventClick(ev)}
-                            onMouseEnter={() => setHoveredEventId(ev.id)}
-                            onMouseLeave={() => setHoveredEventId(null)}
-                            style={{ backgroundColor: ev.category.color }}
-                            className={`w-full h-full rounded-[2px] cursor-pointer transition-transform hover:scale-y-110 shadow-2xs ${
-                              ev.isOpen ? "opacity-75" : ""
-                            }`}
-                            title={`${ev.startTimeStr}–${ev.endTimeStr} · ${ev.category.name} · ${ev.durationMin} min`}
-                          />
-
-                          {/* Hover Tooltip styled exactly like screenshot */}
-                          {isHovered && (
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 px-2.5 py-1.5 rounded bg-zinc-900 dark:bg-zinc-950 text-white text-[11px] font-mono shadow-xl border border-white/10 whitespace-nowrap pointer-events-none">
-                              <span>{ev.startTimeStr}–{ev.endTimeStr}</span>
-                              <span className="mx-1.5 opacity-60">·</span>
-                              <span className="font-semibold text-white">{ev.category.name}</span>
-                              <span className="mx-1.5 opacity-60">·</span>
-                              <span>{ev.durationMin} min</span>
-                              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-950" />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveShift("malam")}
+            className={`text-xs font-mono font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+              activeShift === "malam"
+                ? "text-indigo-600 dark:text-indigo-400 font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <span
+              className={`h-2 w-2 rounded-full transition-transform ${
+                activeShift === "malam" ? "bg-indigo-500 ring-2 ring-indigo-500/20" : "bg-muted-foreground/30"
+              }`}
+            />
+            <span>Shift Malam</span>
+            <span className="text-[10px] text-muted-foreground font-normal hidden sm:inline">(22:00–06:00)</span>
+          </button>
         </div>
 
-        {/* Right Panel: SHIFT MALAM */}
-        <div className="space-y-4 xl:pl-8 pt-6 xl:pt-0">
-          {/* Shift Header & KPI */}
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-indigo-500 dark:text-indigo-400 font-mono text-[11px] font-bold tracking-wider uppercase block">
-                  SHIFT MALAM
+        {/* Right: Active Shift Total Downtime & Events */}
+        <div className="flex items-center gap-2 font-mono text-xs">
+          <div className="px-3.5 py-1.5 rounded-lg border border-border bg-muted/40 flex items-center gap-2">
+            <span className="text-muted-foreground text-[10px] font-medium uppercase">
+              Total Downtime:
+            </span>
+            <span className="font-bold text-rose-600 dark:text-rose-500 text-sm">
+              {currentTotalMinutes}m
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              ({currentTotalEvents} events)
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Single Shift Panel (Hanya 1 shift ditampilkan sesuai switch toggle) */}
+      <div className="space-y-3 pt-1">
+        {/* Timeline Chart Container */}
+        <div className="space-y-1.5">
+          {/* Time Ticks */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-12 sm:w-14 shrink-0" />
+            <div className="flex-1 relative h-3.5">
+              {currentTicks.map((tick, idx, arr) => (
+                <span
+                  key={tick.label}
+                  style={{ left: `${tick.pct}%` }}
+                  className={`absolute top-0 text-[10px] font-mono text-muted-foreground whitespace-nowrap ${
+                    idx === 0
+                      ? "translate-x-0"
+                      : idx === arr.length - 1
+                        ? "-translate-x-full"
+                        : "-translate-x-1/2"
+                  }`}
+                >
+                  {tick.label}
                 </span>
-                {currentShift.id === "shift-malam" && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    ACTIVE NOW
-                  </span>
-                )}
-              </div>
-              <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900 dark:text-white block mt-0.5">
-                22:00 — 06:00
-              </span>
-            </div>
-            <div className="text-right">
-              <span className="text-2xl sm:text-3xl font-bold font-mono text-red-600 dark:text-red-500 block leading-tight">
-                {malamTotalMinutes}m
-              </span>
-              <span className="text-[10px] font-mono uppercase text-slate-400 dark:text-zinc-500 font-semibold block tracking-wider mt-0.5">
-                {malamTotalEvents} EVENTS
-              </span>
+              ))}
             </div>
           </div>
 
-          {/* Timeline Chart Container */}
-          <div className="space-y-2 pt-1">
-            {/* Time Ticks */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-12 sm:w-14 shrink-0" />
-              <div className="flex-1 relative h-4">
-                {MALAM_TICKS.map((tick, idx) => (
-                  <span
-                    key={tick.label}
-                    style={{ left: `${tick.pct}%` }}
-                    className={`absolute top-0 text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-zinc-400 whitespace-nowrap ${
-                      idx === 0
-                        ? "translate-x-0"
-                        : idx === MALAM_TICKS.length - 1
-                        ? "-translate-x-full"
-                        : "-translate-x-1/2"
-                    }`}
-                  >
-                    {tick.label}
-                  </span>
-                ))}
+          {/* Station Lanes */}
+          <div className="space-y-1.5">
+            {currentStations.length === 0 ? (
+              <div className="p-6 text-center text-xs font-mono text-muted-foreground rounded border border-dashed border-border">
+                No station line-stops in this area during {activeShift === "pagi" ? "Shift Pagi" : "Shift Malam"}
               </div>
-            </div>
-
-            {/* Station Lanes */}
-            <div className="space-y-2">
-              {malamStations.map((station) => (
+            ) : (
+              currentStations.map((station) => (
                 <div key={station.code} className="flex items-center gap-2 sm:gap-3">
-                  {/* Station Code */}
-                  <span className="w-12 sm:w-14 shrink-0 text-xs font-mono font-medium text-slate-700 dark:text-zinc-300 truncate">
+                  <span
+                    className="w-12 sm:w-14 shrink-0 text-xs font-mono font-medium text-foreground truncate"
+                    title={station.name}
+                  >
                     {station.code}
                   </span>
 
-                  {/* Lane Track */}
-                  <div className="flex-1 h-8 sm:h-9 bg-slate-50/80 dark:bg-[#121c2d] rounded border border-slate-100 dark:border-[#152a47] relative">
-                    {/* Vertical Gridlines */}
-                    {MALAM_TICKS.map((tick) => (
+                  <div className="flex-1 h-7 sm:h-8 bg-muted/30 rounded border border-border/70 relative">
+                    {currentTicks.map((tick) => (
                       <div
                         key={tick.label}
-                        className="absolute top-0 bottom-0 border-l border-slate-200/50 dark:border-[#152a47]/70 pointer-events-none"
+                        className="absolute top-0 bottom-0 border-l border-border/40 pointer-events-none"
                         style={{ left: `${tick.pct}%` }}
                       />
                     ))}
 
-                    {/* Event Blocks */}
                     {station.events.map((ev) => {
-                      const left = Math.max(0, Math.min(98.5, (ev.startMinutes / MALAM_SPAN_MIN) * 100));
-                      const width = Math.max(2.2, Math.min(100 - left, (ev.durationMin / MALAM_SPAN_MIN) * 100));
+                      const left = Math.max(0, Math.min(98.5, (ev.startMinutes / currentSpanMin) * 100));
+                      const width = Math.max(2.2, Math.min(100 - left, (ev.durationMin / currentSpanMin) * 100));
                       const isHovered = hoveredEventId === ev.id;
 
                       return (
@@ -507,17 +478,16 @@ export function DowntimeShiftTimeline({
                               ev.isOpen ? "opacity-75" : ""
                             }`}
                             title={`${ev.startTimeStr}–${ev.endTimeStr} · ${ev.category.name} · ${ev.durationMin} min`}
-                          />
+                          ></button>
 
-                          {/* Hover Tooltip styled exactly like screenshot */}
                           {isHovered && (
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 px-2.5 py-1.5 rounded bg-zinc-900 dark:bg-zinc-950 text-white text-[11px] font-mono shadow-xl border border-white/10 whitespace-nowrap pointer-events-none">
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 px-2.5 py-1.5 rounded bg-popover text-popover-foreground text-[11px] font-mono shadow-xl border border-border whitespace-nowrap pointer-events-none">
                               <span>{ev.startTimeStr}–{ev.endTimeStr}</span>
                               <span className="mx-1.5 opacity-60">·</span>
-                              <span className="font-semibold text-white">{ev.category.name}</span>
+                              <span className="font-semibold">{ev.category.name}</span>
                               <span className="mx-1.5 opacity-60">·</span>
                               <span>{ev.durationMin} min</span>
-                              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-950" />
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-popover" />
                             </div>
                           )}
                         </div>
@@ -525,12 +495,11 @@ export function DowntimeShiftTimeline({
                     })}
                   </div>
                 </div>
-              ))}
-            </div>
+              ))
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 }
-
