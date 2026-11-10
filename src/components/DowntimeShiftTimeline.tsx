@@ -327,23 +327,37 @@ export function DowntimeShiftTimeline({
     <div
       className={`rounded-xl border border-border bg-card p-5 shadow-xs space-y-4 ${className}`}
     >
-      {/* 1. Header Row (Tanpa Legend Category Problem & Tanpa Pagi Active) */}
-      <div className="flex items-center gap-3 pb-3 border-b border-border">
-        <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
-          <Clock className="h-5 w-5" />
+      {/* 1. Header Row (Sejajar dengan Title & Total Downtime) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+            <Clock className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wide">
+              Downtime Shift Timeline
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Click downtime block or log to complete the line-stop form
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wide">
-            Downtime Shift Timeline
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Click downtime block or log to complete the line-stop form
-          </p>
+
+        {/* Right: Active Shift Total Downtime (Sejajar dengan Title, tanpa events) */}
+        <div className="flex items-center gap-2 font-mono text-xs shrink-0 self-start sm:self-center">
+          <div className="px-3.5 py-1.5 rounded-lg border border-border bg-muted/40 flex items-center gap-2">
+            <span className="text-muted-foreground text-[10px] font-medium uppercase">
+              Total Downtime:
+            </span>
+            <span className="font-bold text-rose-600 dark:text-rose-500 text-sm">
+              {currentTotalMinutes}m
+            </span>
+          </div>
         </div>
       </div>
 
       {/* 2. Control Bar Row: Switch Toggle Shift Pagi / Malam */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-0.5">
+      <div className="flex items-center justify-between gap-3 pt-0.5">
         {/* Switch Toggle (Shift Pagi <-> Shift Malam) */}
         <div className="inline-flex items-center gap-3 px-3.5 py-1.5 rounded-xl border border-border bg-muted/30 shadow-2xs">
           <button
@@ -388,21 +402,6 @@ export function DowntimeShiftTimeline({
             <span>Shift Malam</span>
             <span className="text-[10px] text-muted-foreground font-normal hidden sm:inline">(22:00–06:00)</span>
           </button>
-        </div>
-
-        {/* Right: Active Shift Total Downtime & Events */}
-        <div className="flex items-center gap-2 font-mono text-xs">
-          <div className="px-3.5 py-1.5 rounded-lg border border-border bg-muted/40 flex items-center gap-2">
-            <span className="text-muted-foreground text-[10px] font-medium uppercase">
-              Total Downtime:
-            </span>
-            <span className="font-bold text-rose-600 dark:text-rose-500 text-sm">
-              {currentTotalMinutes}m
-            </span>
-            <span className="text-[10px] text-muted-foreground">
-              ({currentTotalEvents} events)
-            </span>
-          </div>
         </div>
       </div>
 

@@ -250,6 +250,19 @@ function DashboardPage() {
     });
   }, [appState.stations, filteredStops, nowMs, selectedAreaId, selectedStationId]);
 
+  const stopFrequencyMax = useMemo(() => {
+    const maxVal = Math.max(...stationFrequencyData.map((d) => d.count), 0);
+    return maxVal > 25 ? Math.ceil(maxVal / 5) * 5 : 25;
+  }, [stationFrequencyData]);
+
+  const stopFrequencyTicks = useMemo(() => {
+    const ticks = [5, 10, 15, 20, 25];
+    for (let t = 30; t <= stopFrequencyMax; t += 5) {
+      ticks.push(t);
+    }
+    return ticks;
+  }, [stopFrequencyMax]);
+
   // Pareto Downtime by Category
   const paretoData = useMemo(() => {
     const raw = downtimeByCategory(filteredStops, appState.categories, nowMs);
@@ -459,7 +472,7 @@ function DashboardPage() {
 
   // Target OEE/Availability per Area: Oven CED 90%, Topcoat 86%, lainnya tidak ada target
   const areaOeeTarget = useMemo<number | null>(() => {
-    const targetArea = selectedArea 
+    const targetArea = selectedArea
       ?? (selectedStation ? appState.areas.find((a) => a.id === selectedStation.areaId) : null);
 
     if (!targetArea) return null;
@@ -641,8 +654,7 @@ function DashboardPage() {
           <div className="flex items-center justify-between text-muted-foreground mb-1">
             <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">{t("dash.oee")}</span>
             <span
-              className={`h-2 w-2 rounded-full ${
-                areaOeeTarget != null
+              className={`h-2 w-2 rounded-full ${areaOeeTarget != null
                   ? oeeSummary.availability >= areaOeeTarget / 100
                     ? "bg-emerald-500"
                     : "bg-red-500"
@@ -651,7 +663,7 @@ function DashboardPage() {
                     : oeeSummary.availability >= 0.7
                       ? "bg-amber-400"
                       : "bg-red-500"
-              }`}
+                }`}
             />
           </div>
           <div className="mt-2 flex items-baseline">
@@ -705,10 +717,17 @@ function DashboardPage() {
 
           <div className="h-64 sm:h-72 w-full pt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stationFrequencyData} margin={{ top: 10, right: 10, left: -10, bottom: 20 }}>
+              <BarChart data={stationFrequencyData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} opacity={0.6} />
                 <XAxis dataKey="name" stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
-                <YAxis stroke={chartAxisStroke} fontSize={11} fontFamily="monospace" />
+                <YAxis
+                  stroke={chartAxisStroke}
+                  fontSize={11}
+                  fontFamily="monospace"
+                  domain={[0, stopFrequencyMax]}
+                  ticks={stopFrequencyTicks}
+                  allowDecimals={false}
+                />
                 <Tooltip
                   contentStyle={chartTooltipStyle}
                   formatter={(val, _, item) => [`${val} Occurrences (${item.payload.durationMin} m)`, item.payload.fullName]}
@@ -741,8 +760,8 @@ function DashboardPage() {
                 </h3>
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${speedByDayData.latestSpeed > speedByDayData.threshold
-                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                      : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse"
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                    : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse"
                     }`}
                 >
                   <span

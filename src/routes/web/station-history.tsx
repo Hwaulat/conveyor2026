@@ -227,8 +227,8 @@ export function StationHistoryPage() {
                 }}
                 datalist={[
                   { value: "all", label: "All Shifts" },
-                  { value: "shift-pagi", label: "Shift Pagi (07:00 - 16:20)" },
-                  { value: "shift-malam", label: "Shift Malam (22:00 - 06:00)" },
+                  { value: "shift-pagi", label: "Morning" },
+                  { value: "shift-malam", label: "Night" },
                 ]}
                 placeholder="All Shifts"
               />

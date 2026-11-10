@@ -19,9 +19,9 @@ export interface ShiftDefinition {
 
 export const SHIFT_PAGI: ShiftDefinition = {
   id: "shift-pagi",
-  name: "Shift Pagi (07:00 - 16:20)",
-  shortName: "Shift Pagi",
-  code: "PAGI",
+  name: "Shift Pagi (Morning)",
+  shortName: "Morning",
+  code: "MORNING",
   timeRange: "07:00 — 16:20",
   startHour: 7,
   startMinute: 0,
@@ -33,9 +33,9 @@ export const SHIFT_PAGI: ShiftDefinition = {
 
 export const SHIFT_MALAM: ShiftDefinition = {
   id: "shift-malam",
-  name: "Shift Malam (22:00 - 06:00)",
-  shortName: "Shift Malam",
-  code: "MALAM",
+  name: "Shift Malam (Night)",
+  shortName: "Night",
+  code: "NIGHT",
   timeRange: "22:00 — 06:00",
   startHour: 22,
   startMinute: 0,
@@ -48,23 +48,24 @@ export const SHIFT_MALAM: ShiftDefinition = {
 export const SHIFT_OTHER: ShiftDefinition = {
   id: "other",
   name: "Overtime / Off Shift",
-  shortName: "Off Shift",
-  code: "OFF",
+  shortName: "Morning",
+  code: "MORNING",
   timeRange: "Non-Shift",
   startHour: 0,
   startMinute: 0,
   endHour: 0,
   endMinute: 0,
-  badgeClass: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
-  dotClass: "bg-slate-400",
+  badgeClass: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
+  dotClass: "bg-sky-500",
 };
 
 export const FACTORY_SHIFTS: ShiftDefinition[] = [SHIFT_PAGI, SHIFT_MALAM];
 
 /**
  * Determine the active shift for any timestamp in plant time zone (Asia/Jakarta, WIB, UTC+7).
- * Shift Pagi: 07:00 - 16:20 WIB (420 min to 980 min)
- * Shift Malam: 22:00 - 06:00 WIB (>= 1320 min or <= 360 min)
+ * Strictly maps into ONLY 2 operational shifts:
+ * - Morning: Day operational hours (including Shift Pagi & OT, 06:00 - 20:00)
+ * - Night: Night operational hours (Shift Malam, 20:00 - 06:00)
  *
  * Uses deterministic UTC+7 arithmetic — 100% resilient across SSR, Node, and browser environments.
  */
@@ -77,26 +78,13 @@ export function getShiftForTimestamp(ms?: number | null): ShiftDefinition {
     const m = wibDate.getUTCMinutes();
     const totalMin = h * 60 + m;
 
-    // 07:00 (420) to 16:20 (980)
-    if (totalMin >= 420 && totalMin <= 980) {
+    // Day/Morning operational window: 06:00 (360) to 20:00 (1200) -> Morning (Shift Pagi & OT)
+    if (totalMin >= 360 && totalMin < 1200) {
       return SHIFT_PAGI;
     }
 
-    // 22:00 (1320) to 06:00 (360)
-    if (totalMin >= 1320 || totalMin <= 360) {
-      return SHIFT_MALAM;
-    }
-
-    // Overtime after Shift Pagi (up to 18:30)
-    if (totalMin > 980 && totalMin < 1110) {
-      return {
-        ...SHIFT_PAGI,
-        name: "Shift Pagi (OT)",
-        shortName: "Shift Pagi (OT)",
-      };
-    }
-
-    return SHIFT_OTHER;
+    // Night operational window: 20:00 to 06:00 -> Night (Shift Malam)
+    return SHIFT_MALAM;
   } catch {
     return SHIFT_PAGI;
   }
@@ -104,6 +92,7 @@ export function getShiftForTimestamp(ms?: number | null): ShiftDefinition {
 
 /**
  * Resolve shift for a LineStop (checks stop.shiftId first, then falls back to stop.startMs)
+ * Always resolves strictly to either Morning or Night.
  */
 export function getShiftForStop(
   stop?: { shiftId?: string | undefined; startMs?: number | undefined } | null
@@ -112,7 +101,7 @@ export function getShiftForStop(
     if (!stop || typeof stop !== "object") {
       return SHIFT_PAGI;
     }
-    if (stop.shiftId === "shift-pagi" || stop.shiftId === "shift-1") {
+    if (stop.shiftId === "shift-pagi" || stop.shiftId === "shift-1" || stop.shiftId === "shift-2") {
       return SHIFT_PAGI;
     }
     if (stop.shiftId === "shift-malam" || stop.shiftId === "shift-3") {
