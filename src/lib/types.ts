@@ -3,9 +3,9 @@
 
 export type Role = "admin" | "manager" | "supervisor" | "operator" | "viewer";
 
-export type Area = { id: string; name: string; code?: string | undefined; note?: string | undefined };
+export type Area = { id: string; name: string; code?: string | undefined; note?: string | undefined; countingOee?: boolean | undefined };
 
-export type Conveyor = { id: string; areaId: string; name: string; active?: boolean | undefined };
+export type Conveyor = { id: string; areaId: string; name: string; active?: boolean | undefined; countingOee?: boolean | undefined };
 
 export type Station = {
   id: string;
@@ -18,6 +18,7 @@ export type Station = {
   runningThreshold: number; // speeds <= this count as stopped
   nominalSpeed?: number | undefined;
   active?: boolean | undefined;
+  countingOee?: boolean | undefined;
 };
 
 export type Category = {

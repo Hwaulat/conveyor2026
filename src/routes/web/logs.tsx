@@ -1044,7 +1044,6 @@ function LogHistoryPage() {
           <div className="space-y-3">
             {stationSummary.map((item) => {
               const isExpanded = expandedStationId === item.station.id;
-              const stationArea = appState.areas.find((a) => a.id === item.station.areaId);
 
               return (
                 <div
@@ -1061,16 +1060,9 @@ function LogHistoryPage() {
                       ) : (
                         <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                       )}
-                      <div>
-                        <h4 className="font-display text-sm font-bold text-foreground">
-                          {item.station.name}
-                        </h4>
-                        {stationArea && (
-                          <p className="text-xs text-muted-foreground font-sans mt-0.5">
-                            {stationArea.name}
-                          </p>
-                        )}
-                      </div>
+                      <h4 className="font-display text-sm font-bold text-foreground">
+                        {item.station.name}
+                      </h4>
                     </div>
 
                     <div className="flex items-center gap-5 sm:gap-7 font-mono text-xs">

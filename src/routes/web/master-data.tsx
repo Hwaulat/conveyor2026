@@ -7,6 +7,7 @@ import {
   Trash2,
   X,
   Check,
+  Minus,
   Building2,
   Workflow,
   Gauge,
@@ -89,6 +90,7 @@ function MasterDataPage() {
   // Modal: Batch Add Stations under Area & Conveyor
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [areaInput, setAreaInput] = useState("Sanding Area");
+  const [countingOee, setCountingOee] = useState(false);
   const [conveyorInput, setConveyorInput] = useState("");
   const [stationRows, setStationRows] = useState<StationDraftRow[]>([
     { id: "row-1", code: "", name: "" },
@@ -99,6 +101,7 @@ function MasterDataPage() {
   const [editConveyorModalOpen, setEditConveyorModalOpen] = useState(false);
   const [editConveyorTarget, setEditConveyorTarget] = useState<ConveyorMasterRow | null>(null);
   const [editAreaInput, setEditAreaInput] = useState("");
+  const [editCountingOee, setEditCountingOee] = useState(false);
   const [editConveyorInput, setEditConveyorInput] = useState("");
   const [editStationRows, setEditStationRows] = useState<StationDraftRow[]>([]);
 
@@ -180,6 +183,10 @@ function MasterDataPage() {
     const defaultCv = appState.conveyors[0]?.name ?? "Conveyor CV-01";
     setAreaInput(defaultArea);
     setConveyorInput(defaultCv);
+    const existingArea = appState.areas.find(
+      (a) => a.name.toLowerCase() === defaultArea.toLowerCase()
+    );
+    setCountingOee(existingArea?.countingOee ?? false);
 
     const nextSeq = appState.stations.length + 1;
     const nextCode1 = `ST-${String(nextSeq).padStart(2, "0")}`;
@@ -231,8 +238,8 @@ function MasterDataPage() {
       return;
     }
 
-    const area = store.ensureArea(areaInput);
-    const conveyor = store.ensureConveyor(conveyorInput, area.id);
+    const area = store.ensureArea(areaInput, countingOee);
+    const conveyor = store.ensureConveyor(conveyorInput, area.id, countingOee);
 
     const stationsToAdd = validRows.map((r, idx) => ({
       code: r.code.trim().toUpperCase() || `ST-${appState.stations.length + idx + 1}`,
@@ -243,6 +250,7 @@ function MasterDataPage() {
       speedUnit: "m/min",
       runningThreshold: 0.1,
       active: true,
+      countingOee,
     }));
 
     store.addStationsBatch(stationsToAdd);
@@ -255,6 +263,9 @@ function MasterDataPage() {
     setEditConveyorTarget(row);
     setEditAreaInput(row.areaName);
     setEditConveyorInput(row.conveyorName);
+    const areaObj = appState.areas.find((a) => a.id === row.areaId);
+    setEditCountingOee(areaObj?.countingOee ?? row.stations.some((s) => s.countingOee));
+
     const mappedRows: StationDraftRow[] =
       row.stations.length > 0
         ? row.stations.map((st) => ({
@@ -307,13 +318,14 @@ function MasterDataPage() {
       return;
     }
 
-    const area = store.ensureArea(editAreaInput);
+    const area = store.ensureArea(editAreaInput, editCountingOee);
     store.updateConveyor(editConveyorTarget.conveyorId, {
       name: editConveyorInput.trim(),
       areaId: area.id,
+      countingOee: editCountingOee,
     });
 
-    store.syncConveyorStations(editConveyorTarget.conveyorId, area.id, validRows);
+    store.syncConveyorStations(editConveyorTarget.conveyorId, area.id, validRows, editCountingOee);
 
     toast.success(`Successfully updated station and conveyor line data for ${editConveyorInput.trim()}`);
     setEditConveyorModalOpen(false);
@@ -540,6 +552,12 @@ function MasterDataPage() {
                         <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                       </span>
                     </th>
+                    <th className="py-3 px-4 text-center w-20 whitespace-nowrap">
+                      <span className="inline-flex items-center justify-center gap-1">
+                        OEE
+                        <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                      </span>
+                    </th>
                     <th className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1">
                         CONVEYOR NAME
@@ -557,7 +575,7 @@ function MasterDataPage() {
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                   {paginatedConveyorRows.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-12 text-center text-muted-foreground font-mono">
+                      <td colSpan={5} className="py-12 text-center text-muted-foreground font-mono">
                         <Layers className="h-8 w-8 mx-auto mb-2 opacity-30" />
                         <p className="font-medium text-sm">No station or conveyor data found</p>
                         <p className="text-xs mt-1">Try adjusting your search keywords or area filter.</p>
@@ -574,6 +592,12 @@ function MasterDataPage() {
                                 `${st.code || `ST-${String(st.sequence).padStart(2, "0")}`} - ${st.name}`,
                             )
                             .join(", ");
+
+                      const isOee = !!(
+                        appState.areas.find((a) => a.id === row.areaId)?.countingOee ||
+                        appState.conveyors.find((c) => c.id === row.conveyorId)?.countingOee ||
+                        row.stations.some((s) => s.countingOee)
+                      );
 
                       return (
                         <tr
@@ -608,6 +632,17 @@ function MasterDataPage() {
                           {/* Nama Area */}
                           <td className="py-3.5 px-4 text-foreground font-semibold whitespace-nowrap">
                             {row.areaName}
+                          </td>
+
+                          {/* OEE Status Column (Right beside Area Name) */}
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center">
+                              {isOee ? (
+                                <Check className="h-4 w-4 text-emerald-500 stroke-[2.5]" />
+                              ) : (
+                                <Minus className="h-4 w-4 text-slate-400 dark:text-zinc-500 stroke-[2.5]" />
+                              )}
+                            </div>
                           </td>
 
                           {/* Nama Konveyor (Icon removed per user request) */}
@@ -829,27 +864,60 @@ function MasterDataPage() {
             </div>
 
             <div className="space-y-4 text-xs font-mono">
-              {/* Field 1: Area Name */}
-              <div>
-                <label className="block text-foreground font-semibold mb-1">
-                  1. Area Name:
-                </label>
-                <input
-                  type="text"
-                  list="area-suggestions"
-                  placeholder="Example: Main Assembly Line"
-                  value={areaInput}
-                  onChange={(e) => setAreaInput(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
-                />
-                <datalist id="area-suggestions">
-                  {appState.areas.map((a) => (
-                    <option key={a.id} value={a.name} />
-                  ))}
-                </datalist>
-                <span className="text-[10px] text-muted-foreground mt-1 block">
-                  Type a new area name or select from existing areas.
-                </span>
+              {/* Field 1: Area Name & Counting OEE Checkbox */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
+                <div className="sm:col-span-8">
+                  <label className="block text-foreground font-semibold mb-1">
+                    1. Area Name:
+                  </label>
+                  <input
+                    type="text"
+                    list="area-suggestions"
+                    placeholder="Example: Main Assembly Line"
+                    value={areaInput}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAreaInput(val);
+                      const found = appState.areas.find(
+                        (a) => a.name.toLowerCase() === val.trim().toLowerCase()
+                      );
+                      if (found && found.countingOee !== undefined) {
+                        setCountingOee(!!found.countingOee);
+                      }
+                    }}
+                    className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
+                  />
+                  <datalist id="area-suggestions">
+                    {appState.areas.map((a) => (
+                      <option key={a.id} value={a.name} />
+                    ))}
+                  </datalist>
+                  <span className="text-[10px] text-muted-foreground mt-1 block">
+                    Type a new area name or select from existing areas.
+                  </span>
+                </div>
+
+                <div className="sm:col-span-4">
+                  <label className="block text-foreground font-semibold mb-1">
+                    Counting OEE:
+                  </label>
+                  <div className="h-[42px] flex items-center px-3 rounded-lg border border-border bg-background hover:bg-muted/30 transition-colors">
+                    <label className="flex items-center gap-2 cursor-pointer select-none w-full">
+                      <input
+                        type="checkbox"
+                        checked={countingOee}
+                        onChange={(e) => setCountingOee(e.target.checked)}
+                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary accent-[#ff5a1f] cursor-pointer"
+                      />
+                      <span className="text-xs font-semibold text-foreground">
+                        Counting OEE
+                      </span>
+                    </label>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground mt-1 block">
+                    Include in OEE calculation
+                  </span>
+                </div>
               </div>
 
               {/* Field 2: Conveyor Name */}
@@ -987,27 +1055,60 @@ function MasterDataPage() {
             </div>
 
             <div className="space-y-4 text-xs font-mono">
-              {/* Field 1: Area Name */}
-              <div>
-                <label className="block text-foreground font-semibold mb-1">
-                  1. Area Name:
-                </label>
-                <input
-                  type="text"
-                  list="edit-area-suggestions"
-                  placeholder="Example: Main Assembly Line"
-                  value={editAreaInput}
-                  onChange={(e) => setEditAreaInput(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
-                />
-                <datalist id="edit-area-suggestions">
-                  {appState.areas.map((a) => (
-                    <option key={a.id} value={a.name} />
-                  ))}
-                </datalist>
-                <span className="text-[10px] text-muted-foreground mt-1 block">
-                  Type a new area name or select from existing areas.
-                </span>
+              {/* Field 1: Area Name & Counting OEE Checkbox */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
+                <div className="sm:col-span-8">
+                  <label className="block text-foreground font-semibold mb-1">
+                    1. Area Name:
+                  </label>
+                  <input
+                    type="text"
+                    list="edit-area-suggestions"
+                    placeholder="Example: Main Assembly Line"
+                    value={editAreaInput}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditAreaInput(val);
+                      const found = appState.areas.find(
+                        (a) => a.name.toLowerCase() === val.trim().toLowerCase()
+                      );
+                      if (found && found.countingOee !== undefined) {
+                        setEditCountingOee(!!found.countingOee);
+                      }
+                    }}
+                    className="w-full rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
+                  />
+                  <datalist id="edit-area-suggestions">
+                    {appState.areas.map((a) => (
+                      <option key={a.id} value={a.name} />
+                    ))}
+                  </datalist>
+                  <span className="text-[10px] text-muted-foreground mt-1 block">
+                    Type a new area name or select from existing areas.
+                  </span>
+                </div>
+
+                <div className="sm:col-span-4">
+                  <label className="block text-foreground font-semibold mb-1">
+                    Counting OEE:
+                  </label>
+                  <div className="h-[42px] flex items-center px-3 rounded-lg border border-border bg-background hover:bg-muted/30 transition-colors">
+                    <label className="flex items-center gap-2 cursor-pointer select-none w-full">
+                      <input
+                        type="checkbox"
+                        checked={editCountingOee}
+                        onChange={(e) => setEditCountingOee(e.target.checked)}
+                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary accent-[#ff5a1f] cursor-pointer"
+                      />
+                      <span className="text-xs font-semibold text-foreground">
+                        Counting OEE
+                      </span>
+                    </label>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground mt-1 block">
+                    Include in OEE calculation
+                  </span>
+                </div>
               </div>
 
               {/* Field 2: Conveyor Name */}

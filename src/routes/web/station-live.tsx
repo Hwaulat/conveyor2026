@@ -363,10 +363,10 @@ function StationLivePage() {
             <div
               key={acc.id}
               className={`rounded-2xl border-2 transition-all shadow-xs overflow-hidden ${
-                lineStopped > 0
+                isPanelOff
+                  ? "border-slate-300 dark:border-slate-800 bg-slate-200/50 dark:bg-slate-950/70 opacity-80"
+                  : lineStopped > 0
                   ? "border-red-600 dark:border-red-500 bg-red-500/5 dark:bg-red-950/25 ring-2 ring-red-500/30 shadow-md shadow-red-500/10"
-                  : isPanelOff
-                  ? "border-slate-400/80 dark:border-slate-800 bg-slate-200/60 dark:bg-slate-950/90"
                   : "border-slate-300 dark:border-slate-700 bg-card"
               }`}
             >
@@ -375,10 +375,10 @@ function StationLivePage() {
                 type="button"
                 onClick={() => toggleAccordion(acc.id)}
                 className={`w-full px-4 py-3 flex items-center justify-between gap-3 text-xs font-mono transition-colors cursor-pointer select-none text-left ${
-                  lineStopped > 0
+                  isPanelOff
+                    ? "bg-slate-200/80 dark:bg-slate-900/80 hover:bg-slate-200 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400"
+                    : lineStopped > 0
                     ? "bg-red-600 dark:bg-red-600 hover:bg-red-700 dark:hover:bg-red-700 text-white"
-                    : isPanelOff
-                    ? "bg-slate-300/85 dark:bg-slate-900/95 hover:bg-slate-350 dark:hover:bg-slate-900 text-slate-800 dark:text-slate-300"
                     : "bg-slate-200/90 dark:bg-slate-800/90 hover:bg-slate-300/80 dark:hover:bg-slate-700/80 text-foreground"
                 }`}
                 aria-expanded={isOpen}
@@ -387,10 +387,10 @@ function StationLivePage() {
                 <div className="flex items-center gap-2.5">
                   <span
                     className={`p-1 rounded-md border shadow-2xs ${
-                      lineStopped > 0
+                      isPanelOff
+                        ? "bg-slate-200 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-400"
+                        : lineStopped > 0
                         ? "bg-white/20 border-white/30 text-white"
-                        : isPanelOff
-                        ? "bg-slate-200 dark:bg-slate-950 border-slate-400/80 dark:border-slate-800 text-muted-foreground"
                         : "bg-background/90 border-border text-foreground"
                     }`}
                   >
@@ -403,10 +403,10 @@ function StationLivePage() {
 
                   <span
                     className={`font-bold text-sm tracking-tight font-display ${
-                      lineStopped > 0
+                      isPanelOff
+                        ? "text-slate-500 dark:text-slate-400"
+                        : lineStopped > 0
                         ? "text-white"
-                        : isPanelOff
-                        ? "text-slate-800 dark:text-slate-300"
                         : "text-foreground"
                     }`}
                   >
@@ -415,7 +415,11 @@ function StationLivePage() {
 
                   <span
                     className={`text-[11px] ${
-                      lineStopped > 0 ? "text-red-100" : "text-muted-foreground"
+                      isPanelOff
+                        ? "text-slate-400 dark:text-slate-500"
+                        : lineStopped > 0
+                        ? "text-red-100"
+                        : "text-muted-foreground"
                     }`}
                   >
                     ({stationsInLine.length} Stations)
@@ -439,22 +443,20 @@ function StationLivePage() {
                       }
                     }}
                     className={`px-2.5 py-1 rounded-lg font-mono text-[11px] font-bold flex items-center gap-1.5 border transition-all cursor-pointer select-none shadow-2xs ${
-                      lineStopped > 0
-                        ? isPanelOff
-                          ? "bg-slate-900 text-slate-100 border-slate-700 shadow-sm hover:bg-slate-800"
-                          : "bg-white text-slate-800 border-white/90 shadow-sm hover:bg-white/90"
-                        : isPanelOff
-                        ? "bg-slate-700 text-slate-100 dark:bg-slate-800 dark:text-slate-200 border-slate-600 dark:border-slate-700 hover:bg-slate-600"
+                      isPanelOff
+                        ? "bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-400/60 dark:border-slate-700 hover:bg-slate-300/80"
+                        : lineStopped > 0
+                        ? "bg-white text-slate-800 border-white/90 shadow-sm hover:bg-white/90"
                         : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25"
                     }`}
                     title={`Klik untuk ubah status Panel ${acc.name} (Sekarang: ${panelStatus})`}
                   >
                     <span
                       className={`text-[10px] font-medium ${
-                        lineStopped > 0
-                          ? isPanelOff
-                            ? "text-slate-400"
-                            : "text-slate-600"
+                        isPanelOff
+                          ? "text-slate-500 dark:text-slate-400"
+                          : lineStopped > 0
+                          ? "text-slate-600"
                           : "opacity-85"
                       }`}
                     >
@@ -463,18 +465,16 @@ function StationLivePage() {
                     <span
                       className={`inline-block w-2 h-2 rounded-full ${
                         isPanelOff
-                          ? "bg-slate-400"
-                          : lineStopped > 0
-                          ? "bg-emerald-500 shadow-xs shadow-emerald-500/50"
+                          ? "bg-slate-400 dark:bg-slate-500"
                           : "bg-emerald-500 shadow-xs shadow-emerald-500/50"
                       }`}
                     />
                     <span
                       className={`font-black ${
-                        lineStopped > 0
-                          ? isPanelOff
-                            ? "text-amber-400"
-                            : "text-emerald-700"
+                        isPanelOff
+                          ? "text-slate-700 dark:text-slate-200"
+                          : lineStopped > 0
+                          ? "text-emerald-700"
                           : ""
                       }`}
                     >
@@ -485,23 +485,29 @@ function StationLivePage() {
                   {/* Running Count */}
                   <span
                     className={`px-2.5 py-1 rounded-full font-bold text-[11px] border flex items-center gap-1.5 shadow-2xs ${
-                      lineStopped > 0
+                      isPanelOff
+                        ? "bg-slate-200/80 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-800 font-medium"
+                        : lineStopped > 0
                         ? "bg-white text-emerald-700 border-white/90 shadow-sm"
                         : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                     }`}
                   >
                     <span
                       className={`inline-block w-1.5 h-1.5 rounded-full ${
-                        lineStopped > 0 ? "bg-emerald-600" : "bg-emerald-400"
+                        isPanelOff
+                          ? "bg-slate-400"
+                          : lineStopped > 0
+                          ? "bg-emerald-600"
+                          : "bg-emerald-400"
                       }`}
                     />
-                    <span className={lineStopped > 0 ? "font-black" : ""}>
+                    <span className={!isPanelOff && lineStopped > 0 ? "font-black" : ""}>
                       {lineRunning} Running
                     </span>
                   </span>
 
                   {/* Stopped Count */}
-                  {lineStopped > 0 && (
+                  {!isPanelOff && lineStopped > 0 && (
                     <span className="px-2.5 py-1 rounded-full bg-white text-red-600 font-extrabold text-[11px] shadow-sm animate-pulse flex items-center gap-1 border border-white/90">
                       <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
                       {lineStopped} Stopped
@@ -514,19 +520,19 @@ function StationLivePage() {
               {isOpen && (
                 <div
                   className={`border-t ${
-                    lineStopped > 0
-                      ? "border-red-500/40"
-                      : isPanelOff
+                    isPanelOff
                       ? "border-slate-300 dark:border-slate-800"
+                      : lineStopped > 0
+                      ? "border-red-500/40"
                       : "border-slate-300 dark:border-slate-700/80"
                   }`}
                 >
                   <div
                     className={`relative p-3.5 sm:p-4 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:16px_16px] ${
-                      lineStopped > 0
+                      isPanelOff
+                        ? "bg-slate-200/50 dark:bg-slate-950/70 opacity-60 grayscale-[60%]"
+                        : lineStopped > 0
                         ? "bg-red-500/5 dark:bg-red-950/25"
-                        : isPanelOff
-                        ? "bg-slate-200/50 dark:bg-slate-950/70"
                         : ""
                     }`}
                   >

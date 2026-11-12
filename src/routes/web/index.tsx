@@ -680,15 +680,15 @@ function DashboardPage() {
         </div>
       </div>
 
-      {/* Row 1: Downtime Shift Timeline & Stop Frequency per Station (Sejajar di bawah Card Summary) */}
+      {/* Row 1: Downtime Shift Timeline & Stop Frequency by Station (Sejajar di bawah Card Summary) */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-        {/* Downtime Shift Timeline (Switch Toggle Shift Pagi & Shift Malam) */}
+        {/* Downtime Shift Timeline (Switch Toggle Morning & Night) */}
         <DowntimeShiftTimeline
           selectedAreaId={selectedAreaId}
           selectedStationId={selectedStationId}
         />
 
-        {/* Stop Frequency per Station */}
+        {/* Stop Frequency by Station */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-border">
             <div className="flex items-center gap-3">
@@ -697,7 +697,7 @@ function DashboardPage() {
               </div>
               <div>
                 <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wide">
-                  {t("dash.frequency")} per Station
+                  {t("dash.frequency")}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {selectedArea ? `Stop occurrences for stations in ${selectedArea.name}` : "Stop occurrence frequency per station"}

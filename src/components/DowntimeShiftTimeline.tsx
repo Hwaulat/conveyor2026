@@ -356,9 +356,9 @@ export function DowntimeShiftTimeline({
         </div>
       </div>
 
-      {/* 2. Control Bar Row: Switch Toggle Shift Pagi / Malam */}
+      {/* 2. Control Bar Row: Switch Toggle Morning / Night */}
       <div className="flex items-center justify-between gap-3 pt-0.5">
-        {/* Switch Toggle (Shift Pagi <-> Shift Malam) */}
+        {/* Switch Toggle (Morning <-> Night) */}
         <div className="inline-flex items-center gap-3 px-3.5 py-1.5 rounded-xl border border-border bg-muted/30 shadow-2xs">
           <button
             type="button"
@@ -374,14 +374,14 @@ export function DowntimeShiftTimeline({
                 activeShift === "pagi" ? "bg-sky-500 ring-2 ring-sky-500/20" : "bg-muted-foreground/30"
               }`}
             />
-            <span>Shift Pagi</span>
+            <span>Morning</span>
             <span className="text-[10px] text-muted-foreground font-normal hidden sm:inline">(07:00–16:20)</span>
           </button>
 
           <Switch
             checked={activeShift === "malam"}
             onCheckedChange={(checked) => setActiveShift(checked ? "malam" : "pagi")}
-            aria-label="Toggle Shift Pagi / Malam"
+            aria-label="Toggle Morning / Night"
             className="cursor-pointer data-[state=checked]:bg-indigo-600 data-[state=unchecked]:bg-sky-500"
           />
 
@@ -399,7 +399,7 @@ export function DowntimeShiftTimeline({
                 activeShift === "malam" ? "bg-indigo-500 ring-2 ring-indigo-500/20" : "bg-muted-foreground/30"
               }`}
             />
-            <span>Shift Malam</span>
+            <span>Night</span>
             <span className="text-[10px] text-muted-foreground font-normal hidden sm:inline">(22:00–06:00)</span>
           </button>
         </div>
@@ -435,7 +435,7 @@ export function DowntimeShiftTimeline({
           <div className="space-y-1.5">
             {currentStations.length === 0 ? (
               <div className="p-6 text-center text-xs font-mono text-muted-foreground rounded border border-dashed border-border">
-                No station line-stops in this area during {activeShift === "pagi" ? "Shift Pagi" : "Shift Malam"}
+                No station line-stops in this area during {activeShift === "pagi" ? "Morning" : "Night"}
               </div>
             ) : (
               currentStations.map((station) => (

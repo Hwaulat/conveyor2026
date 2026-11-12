@@ -34,7 +34,7 @@ export interface AppState {
   simulating: boolean;
 }
 
-const STORAGE_KEY = "krm_conveyor_state_v14";
+const STORAGE_KEY = "krm_conveyor_state_v16";
 
 // Default Seed Data based on PRD & PT. Krama Yudha Ratu Motor Indonesia Factory Model
 export function createSeedData(): AppState {
@@ -46,27 +46,27 @@ export function createSeedData(): AppState {
   const nineAmToday = Date.parse(`${todayStr}T09:00:00+07:00`) || (now - 25 * minMs);
 
   const areas: Area[] = [
-    { id: "area-pted", code: "PTED", name: "PTED -(Motrain Station)", note: "Motrain Pre-treatment & Electro-Deposition" },
-    { id: "area-oven-ced", code: "PC-14", name: "PC-14 (Oven CED)", note: "Oven Cathodic Electro-Deposition" },
-    { id: "area-mezzanine", code: "PC-15", name: "PC-15 (Mezzanine)", note: "Mezzanine Conveyor Line" },
-    { id: "area-sanding", code: "PC-13", name: "PC-13 (Sanding)", note: "Sanding Area" },
-    { id: "area-sealing", code: "PC-10", name: "PC-10 (Sealing)", note: "Body Sealing Line" },
-    { id: "area-cooling-tunnel", code: "PC-11", name: "PC-11 (Cooling Both)", note: "Cooling Both Section" },
-    { id: "area-topcoat", code: "PC-12", name: "PC-12 (Topcoat 1 Both)", note: "Topcoat Paint Booth" },
-    { id: "area-topcoat-branch-a", code: "PC-12A", name: "PC-12A (Topcoat Branch A)", note: "Topcoat Branch A" },
-    { id: "area-topcoat-branch-b", code: "PC-12B", name: "PC-12B (Topcoat Branch B)", note: "Topcoat Branch B" },
+    { id: "area-pted", code: "PTED", name: "PTED -(Motrain Station)", note: "Motrain Pre-treatment & Electro-Deposition", countingOee: true },
+    { id: "area-oven-ced", code: "PC-14", name: "PC-14 (Oven CED)", note: "Oven Cathodic Electro-Deposition", countingOee: true },
+    { id: "area-mezzanine", code: "PC-15", name: "PC-15 (Mezzanine)", note: "Mezzanine Conveyor Line", countingOee: false },
+    { id: "area-sanding", code: "PC-13", name: "PC-13 (Sanding)", note: "Sanding Area", countingOee: true },
+    { id: "area-sealing", code: "PC-10", name: "PC-10 (Sealing)", note: "Body Sealing Line", countingOee: true },
+    { id: "area-cooling-tunnel", code: "PC-11", name: "PC-11 (Cooling Both)", note: "Cooling Both Section", countingOee: false },
+    { id: "area-topcoat", code: "PC-12", name: "PC-12 (Topcoat 1 Both)", note: "Topcoat Paint Booth", countingOee: true },
+    { id: "area-topcoat-branch-a", code: "PC-12A", name: "PC-12A (Topcoat Branch A)", note: "Topcoat Branch A", countingOee: false },
+    { id: "area-topcoat-branch-b", code: "PC-12B", name: "PC-12B (Topcoat Branch B)", note: "Topcoat Branch B", countingOee: false },
   ];
 
   const conveyors: Conveyor[] = [
-    { id: "cv-pted-1", areaId: "area-pted", name: "Conveyor PTED Motrain Station" },
-    { id: "cv-oven-1", areaId: "area-oven-ced", name: "Conveyor PC-14 Oven CED" },
-    { id: "cv-mez-1", areaId: "area-mezzanine", name: "Conveyor PC-15 Mezzanine" },
-    { id: "cv-sand-1", areaId: "area-sanding", name: "Conveyor PC-13 Sanding" },
-    { id: "cv-seal-1", areaId: "area-sealing", name: "Conveyor PC-10 Sealing Line" },
-    { id: "cv-cool-1", areaId: "area-cooling-tunnel", name: "Conveyor PC-11 Cooling Both" },
-    { id: "cv-tc-1", areaId: "area-topcoat", name: "Conveyor PC-12 Topcoat 1 Both" },
-    { id: "cv-tu-1", areaId: "area-topcoat-branch-a", name: "Conveyor PC-12A Topcoat Branch A" },
-    { id: "cv-tu-2", areaId: "area-topcoat-branch-b", name: "Conveyor PC-12B Topcoat Branch B" },
+    { id: "cv-pted-1", areaId: "area-pted", name: "Conveyor PTED Motrain Station", countingOee: true },
+    { id: "cv-oven-1", areaId: "area-oven-ced", name: "Conveyor PC-14 Oven CED", countingOee: true },
+    { id: "cv-mez-1", areaId: "area-mezzanine", name: "Conveyor PC-15 Mezzanine", countingOee: false },
+    { id: "cv-sand-1", areaId: "area-sanding", name: "Conveyor PC-13 Sanding", countingOee: true },
+    { id: "cv-seal-1", areaId: "area-sealing", name: "Conveyor PC-10 Sealing Line", countingOee: true },
+    { id: "cv-cool-1", areaId: "area-cooling-tunnel", name: "Conveyor PC-11 Cooling Both", countingOee: false },
+    { id: "cv-tc-1", areaId: "area-topcoat", name: "Conveyor PC-12 Topcoat 1 Both", countingOee: true },
+    { id: "cv-tu-1", areaId: "area-topcoat-branch-a", name: "Conveyor PC-12A Topcoat Branch A", countingOee: false },
+    { id: "cv-tu-2", areaId: "area-topcoat-branch-b", name: "Conveyor PC-12B Topcoat Branch B", countingOee: false },
   ];
 
   const stations: Station[] = [
@@ -877,13 +877,24 @@ export const store = {
   },
 
   // Area & Conveyor Helpers
-  ensureArea: (name: string): Area => {
+  ensureArea: (name: string, countingOee?: boolean): Area => {
     const trimmed = name.trim();
     const existing = currentState.areas.find((a) => a.name.toLowerCase() === trimmed.toLowerCase());
-    if (existing) return existing;
+    if (existing) {
+      if (countingOee !== undefined && existing.countingOee !== countingOee) {
+        currentState = {
+          ...currentState,
+          areas: currentState.areas.map((a) => (a.id === existing.id ? { ...a, countingOee } : a)),
+        };
+        emitChange();
+        return { ...existing, countingOee };
+      }
+      return existing;
+    }
     const newArea: Area = {
       id: `area-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       name: trimmed,
+      ...(countingOee !== undefined ? { countingOee } : {}),
     };
     currentState = {
       ...currentState,
@@ -893,16 +904,27 @@ export const store = {
     return newArea;
   },
 
-  ensureConveyor: (name: string, areaId: string): Conveyor => {
+  ensureConveyor: (name: string, areaId: string, countingOee?: boolean): Conveyor => {
     const trimmed = name.trim();
     const existing = currentState.conveyors.find(
       (c) => c.name.toLowerCase() === trimmed.toLowerCase() && c.areaId === areaId,
     );
-    if (existing) return existing;
+    if (existing) {
+      if (countingOee !== undefined && existing.countingOee !== countingOee) {
+        currentState = {
+          ...currentState,
+          conveyors: currentState.conveyors.map((c) => (c.id === existing.id ? { ...c, countingOee } : c)),
+        };
+        emitChange();
+        return { ...existing, countingOee };
+      }
+      return existing;
+    }
     const newConveyor: Conveyor = {
       id: `cv-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       areaId,
       name: trimmed,
+      ...(countingOee !== undefined ? { countingOee } : {}),
     };
     currentState = {
       ...currentState,
@@ -951,7 +973,8 @@ export const store = {
   syncConveyorStations: (
     conveyorId: string,
     areaId: string,
-    drafts: Array<{ id?: string; code: string; name: string }>
+    drafts: Array<{ id?: string; code: string; name: string }>,
+    countingOee?: boolean,
   ) => {
     const now = Date.now();
     const existingStationMap = new Map(currentState.stations.map((s) => [s.id, s]));
@@ -975,6 +998,7 @@ export const store = {
           areaId,
           conveyorId,
           sequence: idx + 1,
+          ...(countingOee !== undefined ? { countingOee } : {}),
         });
       } else {
         const newId = `st-${now + idx}-${Math.floor(Math.random() * 1000)}`;
@@ -988,6 +1012,7 @@ export const store = {
           speedUnit: "m/min",
           runningThreshold: 0.1,
           active: true,
+          ...(countingOee !== undefined ? { countingOee } : {}),
         });
         newLive[newId] = {
           stationId: newId,

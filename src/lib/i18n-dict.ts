@@ -73,7 +73,7 @@ const id: Dict = {
   "dash.stationsStopped": "Stasiun sedang berhenti",
   "dash.mttrGraph": "Grafik MTTR",
   "dash.mtbfGraph": "Grafik MTBF",
-  "dash.frequency": "Frekuensi stop per stasiun",
+  "dash.frequency": "Stop frequency by station",
   "dash.pareto": "Downtime per kategori (Pareto)",
   "dash.avgByStation": "Rata-rata durasi stop per stasiun",
   "dash.oee": "OEE",
