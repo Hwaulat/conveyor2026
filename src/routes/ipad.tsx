@@ -13,7 +13,6 @@ import {
   Moon,
   Wrench,
   Plus,
-  CheckCircle2,
 } from "lucide-react";
 import { useTheme } from "../lib/theme";
 import { useAppStore, store } from "../lib/store";
@@ -580,7 +579,7 @@ export function IpadEFormPage() {
         <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] p-6 sm:p-8 shadow-xs w-full">
           <form onSubmit={handleSaveStop} className="space-y-6">
             {/* Station & Area Information (Work Area, Station Conveyor Line, Station Name, Operational Shift) */}
-            <div className="rounded-xl border border-red-500/30 bg-red-500/5 dark:bg-red-950/20 p-4 shadow-xs">
+            <div className="rounded-xl border border-border bg-muted/30 p-4 shadow-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* 1. Work Area */}
                 <div className="p-3 rounded-lg border border-border bg-card/80">
@@ -625,9 +624,11 @@ export function IpadEFormPage() {
                   <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-bold border ${currentShiftInfo.badgeClass}`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${currentShiftInfo.dotClass} animate-pulse`} />
-                      {currentShiftInfo.shortName}
+                      {currentShiftInfo.id === "shift-malam" ? "Shift Night" : "Shift Pagi"}
                     </span>
-                    <span className="text-[10px] font-mono text-muted-foreground">({currentShiftInfo.timeRange})</span>
+                    <span className="text-[10px] font-mono text-muted-foreground">
+                      ({currentShiftInfo.id === "shift-malam" ? "22:00 - 06:00" : "07:00 - 16:20"})
+                    </span>
                   </div>
                 </div>
               </div>
@@ -640,7 +641,12 @@ export function IpadEFormPage() {
                   1. Incident Timing & Shift:
                 </label>
                 <span className="text-[11px] font-mono font-semibold text-muted-foreground">
-                  Detected: <strong className="text-foreground">{currentShiftInfo.shortName}</strong>
+                  detected :{" "}
+                  <strong className="text-foreground">
+                    {currentShiftInfo.id === "shift-malam"
+                      ? "shift night (22:00 - 06:00)"
+                      : "shift pagi (07:00 - 16:20)"}
+                  </strong>
                 </span>
               </div>
 
@@ -652,9 +658,13 @@ export function IpadEFormPage() {
                   <input
                     type="datetime-local"
                     value={startTimeVal}
-                    onChange={(e) => setStartTimeVal(e.target.value)}
-                    className="w-full h-12 rounded-xl border border-input bg-background px-3 font-mono text-sm text-foreground focus:outline-none focus:border-primary shadow-2xs"
+                    disabled
+                    readOnly
+                    className="w-full h-12 rounded-xl border border-input bg-muted/60 text-muted-foreground px-3 font-mono text-sm shadow-2xs cursor-not-allowed select-none opacity-80"
                   />
+                  <span className="text-[10px] text-muted-foreground font-mono mt-1 block">
+                    ● Terdeteksi otomatis dari sensor telemetry conveyor (Disabled)
+                  </span>
                 </div>
 
                 <div>
@@ -671,56 +681,6 @@ export function IpadEFormPage() {
                   <span className="text-[10px] text-muted-foreground font-mono mt-1 block">
                     {endTimeVal.trim() ? "● Status: CLOSED (Resolved)" : "○ Status: OPEN (Ongoing stop)"}
                   </span>
-                </div>
-              </div>
-
-              {/* Shift Selector Buttons */}
-              <div>
-                <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">
-                  Select Shift (Shift Pagi / Shift Malam):
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedShiftId("shift-pagi")}
-                    className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                      selectedShiftId === "shift-pagi"
-                        ? "border-sky-500 bg-sky-500/10 text-sky-800 dark:text-sky-200 font-bold ring-1 ring-sky-500/40"
-                        : "border-border bg-card text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-sky-500" />
-                      <div>
-                        <span className="text-xs font-bold block text-foreground">Shift Pagi</span>
-                        <span className="text-[10px] font-mono text-muted-foreground block">07:00 — 16:20 WIB (Day Shift)</span>
-                      </div>
-                    </div>
-                    {selectedShiftId === "shift-pagi" && (
-                      <CheckCircle2 className="h-4 w-4 text-sky-500 shrink-0" />
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedShiftId("shift-malam")}
-                    className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                      selectedShiftId === "shift-malam"
-                        ? "border-indigo-500 bg-indigo-500/10 text-indigo-800 dark:text-indigo-200 font-bold ring-1 ring-indigo-500/40"
-                        : "border-border bg-card text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-                      <div>
-                        <span className="text-xs font-bold block text-foreground">Shift Malam</span>
-                        <span className="text-[10px] font-mono text-muted-foreground block">22:00 — 06:00 WIB (Night Shift)</span>
-                      </div>
-                    </div>
-                    {selectedShiftId === "shift-malam" && (
-                      <CheckCircle2 className="h-4 w-4 text-indigo-500 shrink-0" />
-                    )}
-                  </button>
                 </div>
               </div>
             </div>

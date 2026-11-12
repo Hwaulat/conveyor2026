@@ -34,7 +34,7 @@ export interface AppState {
   simulating: boolean;
 }
 
-const STORAGE_KEY = "krm_conveyor_state_v13";
+const STORAGE_KEY = "krm_conveyor_state_v14";
 
 // Default Seed Data based on PRD & PT. Krama Yudha Ratu Motor Indonesia Factory Model
 export function createSeedData(): AppState {
@@ -46,64 +46,81 @@ export function createSeedData(): AppState {
   const nineAmToday = Date.parse(`${todayStr}T09:00:00+07:00`) || (now - 25 * minMs);
 
   const areas: Area[] = [
-    { id: "area-sanding", code: "SANDING", name: "Sanding Area", note: "Sanding Area" },
-    { id: "area-sealing", code: "SEALING", name: "Sealing Area", note: "Body Sealing Line" },
-    { id: "area-topcoat", code: "TOPCOAT", name: "Topcoat Area", note: "Topcoat Paint Booth" },
-    { id: "area-touch-up", code: "TOUCH-UP", name: "Touch Up Area", note: "Final Touch Up & Finish" },
-    { id: "area-drop-ced", code: "DROP-CED", name: "Drop Cabin CED", note: "Drop Cabin Cathodic Electro-Deposition" },
-    { id: "area-cooling-tunnel", code: "COOLING-TUNNEL", name: "Cooling Tunnel", note: "Cooling Tunnel Section" },
-    { id: "area-oven-ced", code: "OVEN-CED", name: "Oven CED", note: "Oven Cathodic Electro-Deposition" },
-    { id: "area-mezzanine", code: "MEZZANINE", name: "Mezzanine", note: "Mezzanine Conveyor Line" },
+    { id: "area-pted", code: "PTED", name: "PTED -(Motrain Station)", note: "Motrain Pre-treatment & Electro-Deposition" },
+    { id: "area-oven-ced", code: "PC-14", name: "PC-14 (Oven CED)", note: "Oven Cathodic Electro-Deposition" },
+    { id: "area-mezzanine", code: "PC-15", name: "PC-15 (Mezzanine)", note: "Mezzanine Conveyor Line" },
+    { id: "area-sanding", code: "PC-13", name: "PC-13 (Sanding)", note: "Sanding Area" },
+    { id: "area-sealing", code: "PC-10", name: "PC-10 (Sealing)", note: "Body Sealing Line" },
+    { id: "area-cooling-tunnel", code: "PC-11", name: "PC-11 (Cooling Both)", note: "Cooling Both Section" },
+    { id: "area-topcoat", code: "PC-12", name: "PC-12 (Topcoat 1 Both)", note: "Topcoat Paint Booth" },
+    { id: "area-topcoat-branch-a", code: "PC-12A", name: "PC-12A (Topcoat Branch A)", note: "Topcoat Branch A" },
+    { id: "area-topcoat-branch-b", code: "PC-12B", name: "PC-12B (Topcoat Branch B)", note: "Topcoat Branch B" },
   ];
 
   const conveyors: Conveyor[] = [
-    { id: "cv-sand-1", areaId: "area-sanding", name: "Conveyor Sanding Line" },
-    { id: "cv-seal-1", areaId: "area-sealing", name: "Conveyor Sealing Line" },
-    { id: "cv-tc-1", areaId: "area-topcoat", name: "Conveyor Topcoat Booth" },
-    { id: "cv-tu-1", areaId: "area-touch-up", name: "Conveyor Touch Up Line" },
-    { id: "cv-drop-1", areaId: "area-drop-ced", name: "Conveyor Drop Cabin CED" },
-    { id: "cv-cool-1", areaId: "area-cooling-tunnel", name: "Conveyor Cooling Tunnel" },
-    { id: "cv-oven-1", areaId: "area-oven-ced", name: "Conveyor Oven CED" },
-    { id: "cv-mez-1", areaId: "area-mezzanine", name: "Conveyor Mezzanine Transfer" },
+    { id: "cv-pted-1", areaId: "area-pted", name: "Conveyor PTED Motrain Station" },
+    { id: "cv-oven-1", areaId: "area-oven-ced", name: "Conveyor PC-14 Oven CED" },
+    { id: "cv-mez-1", areaId: "area-mezzanine", name: "Conveyor PC-15 Mezzanine" },
+    { id: "cv-sand-1", areaId: "area-sanding", name: "Conveyor PC-13 Sanding" },
+    { id: "cv-seal-1", areaId: "area-sealing", name: "Conveyor PC-10 Sealing Line" },
+    { id: "cv-cool-1", areaId: "area-cooling-tunnel", name: "Conveyor PC-11 Cooling Both" },
+    { id: "cv-tc-1", areaId: "area-topcoat", name: "Conveyor PC-12 Topcoat 1 Both" },
+    { id: "cv-tu-1", areaId: "area-topcoat-branch-a", name: "Conveyor PC-12A Topcoat Branch A" },
+    { id: "cv-tu-2", areaId: "area-topcoat-branch-b", name: "Conveyor PC-12B Topcoat Branch B" },
   ];
 
   const stations: Station[] = [
-    // 1. Sanding Area
-    { id: "st-sand-1", code: "SAND-01", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Sanding Outer", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-sand-2", code: "SAND-02", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Sanding Roof", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    // 1. PTED Motrain (6 stations)
+    { id: "st-pted-1", code: "PTED-01", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Motrain Entry", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pted-2", code: "PTED-02", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Flood Station", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pted-3", code: "PTED-03", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Pre-Degreasing", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pted-4", code: "PTED-04", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Degreasing", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pted-5", code: "PTED-05", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Phosphate", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pted-6", code: "PTED-06", areaId: "area-pted", conveyorId: "cv-pted-1", name: "CED Dip", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 2. Sealing Area
-    { id: "st-seal-1", code: "SEAL-01", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Underseal", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-seal-2", code: "SEAL-02", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Undercoat", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-seal-3", code: "SEAL-03", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Transfer Cabin Sealing", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-seal-4", code: "SEAL-04", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Roof Sealing", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-seal-5", code: "SEAL-05", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Finishing Sealing", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-seal-6", code: "SEAL-06", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Quality Gate Sealing", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
+    // 2. PC-14 Oven CED (5 stations)
+    { id: "st-pc14-1", code: "PC14-01", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Oven Entry", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc14-2", code: "PC14-02", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Heat-Up Zone", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc14-3", code: "PC14-03", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Holding Zone", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc14-4", code: "PC14-04", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Cooling Zone", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc14-5", code: "PC14-05", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Oven Exit", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 3. Topcoat Area
-    { id: "st-tc-1", code: "TC-01", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Transfer Cabin Touch Up", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-tc-2", code: "TC-02", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Airblow", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-tc-3", code: "TC-03", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Station 4", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-tc-4", code: "TC-04", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Station 3", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-tc-5", code: "TC-05", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Setting Room", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-tc-6", code: "TC-06", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Finishing", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-tc-7", code: "TC-07", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "ASM", sequence: 7, speedUnit: "m/min", runningThreshold: 0.1 },
+    // 3. PC-15 Mezzanine (5 stations)
+    { id: "st-pc15-1", code: "PC15-01", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Mezzanine Entry", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc15-2", code: "PC15-02", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Buffer A", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc15-3", code: "PC15-03", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Buffer B", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc15-4", code: "PC15-04", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Buffer C", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc15-5", code: "PC15-05", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Mezzanine Discharge", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 4. Touch Up Area
-    { id: "st-tu-1", code: "TU-01", areaId: "area-touch-up", conveyorId: "cv-tu-1", name: "Panel Conveyor", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-tu-2", code: "TU-02", areaId: "area-touch-up", conveyorId: "cv-tu-1", name: "Repair", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    // 4. PC-13 Sanding Area (5 stations)
+    { id: "st-sand-1", code: "PC13-01", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Sanding Outer", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-sand-2", code: "PC13-02", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Sanding Roof", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-seal-1", code: "PC13-03", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Underseal", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-seal-2", code: "PC13-04", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Undercoat", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-seal-3", code: "PC13-05", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Transfer Cabin Sealing", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 5. Drop Cabin CED
-    { id: "st-drop-1", code: "DROP-01", areaId: "area-drop-ced", conveyorId: "cv-drop-1", name: "Drop Cabin CED", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    // 5. PC-10 Sealing Area (3 stations)
+    { id: "st-seal-4", code: "PC10-01", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Roof Sealing", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-seal-5", code: "PC10-02", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Finishing Sealing", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-seal-6", code: "PC10-03", areaId: "area-sealing", conveyorId: "cv-seal-1", name: "Quality Gate Sealing", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 6. Cooling Tunnel
-    { id: "st-cool-1", code: "COOL-01", areaId: "area-cooling-tunnel", conveyorId: "cv-cool-1", name: "Tunnel Cooling Fan", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    // 6. PC-11 Cooling Both (2 stations)
+    { id: "st-cool-1", code: "PC11-01", areaId: "area-cooling-tunnel", conveyorId: "cv-cool-1", name: "Cooling Both", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-1", code: "PC11-02", areaId: "area-cooling-tunnel", conveyorId: "cv-cool-1", name: "Transfer Cabin Touch Up", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 7. Oven CED Area
-    { id: "st-oven-1", code: "OVEN-01", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Oven CED", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    // 7. PC-12 Topcoat 1 Both (6 stations)
+    { id: "st-tc-2", code: "PC12-01", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Airblow", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-4", code: "PC12-02", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Topcoat Station 3", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-3", code: "PC12-03", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Topcoat Station 4", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-7", code: "PC12-04", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "ASM", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-6", code: "PC12-05", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Finishing", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-tc-5", code: "PC12-06", areaId: "area-topcoat", conveyorId: "cv-tc-1", name: "Setting Room", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 8. Mezzanine Area
-    { id: "st-mez-1", code: "MEZ-01", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Mezzanine", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    // 8. PC-12A Topcoat Branch A (1 station)
+    { id: "st-tu-1", code: "PC12A-01", areaId: "area-topcoat-branch-a", conveyorId: "cv-tu-1", name: "Panel Conveyor Touch Up", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+
+    // 9. PC-12B Topcoat Branch B (1 station)
+    { id: "st-tu-2", code: "PC12B-01", areaId: "area-topcoat-branch-b", conveyorId: "cv-tu-2", name: "Repair Touch Up", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
   ];
 
   const categories: Category[] = [
@@ -218,10 +235,10 @@ export function createSeedData(): AppState {
 
   // Seed stops across the last 7 days + open line-stops right now across active areas
   const stops: LineStop[] = [
-    // 1. Single active open stop in Sealing Area: Transfer Cabin Sealing (st-seal-3) - Pending E-Form
+    // 1. Single active open stop in Sanding Area (PC-13): Transfer Cabin Sealing (st-seal-3) - Pending E-Form
     {
       id: "stop-live-seal",
-      areaId: "area-sealing",
+      areaId: "area-sanding",
       stationId: "st-seal-3",
       startMs: nineAmToday,
       endMs: null,
@@ -233,11 +250,11 @@ export function createSeedData(): AppState {
       lastSpeed: 12.5,
       totalRunMs: 14_400_000,
     },
-    // 2. Active open stop in Oven CED: Oven CED (st-oven-1) - Pending E-Form
+    // 2. Active open stop in Oven CED: Holding Zone (st-pc14-3) - Pending E-Form
     {
       id: "stop-live-oven",
       areaId: "area-oven-ced",
-      stationId: "st-oven-1",
+      stationId: "st-pc14-3",
       startMs: now - 35 * minMs,
       endMs: null,
       categoryId: "", // Kosong (belum diisi form)
@@ -248,11 +265,11 @@ export function createSeedData(): AppState {
       lastSpeed: 0.95,
       totalRunMs: 12_800_000,
     },
-    // 3. Active open stop in Mezzanine: Mezzanine (st-mez-1) - Pending E-Form
+    // 3. Active open stop in Mezzanine: Buffer A (st-pc15-2) - Pending E-Form
     {
       id: "stop-live-mez",
       areaId: "area-mezzanine",
-      stationId: "st-mez-1",
+      stationId: "st-pc15-2",
       startMs: now - 22 * minMs,
       endMs: null,
       categoryId: "", // Kosong (belum diisi form)
@@ -266,7 +283,7 @@ export function createSeedData(): AppState {
     // Historical completed stop earlier today on Transfer Cabin Sealing (st-seal-3) - E-form already filled
     {
       id: "stop-today-seal-early",
-      areaId: "area-sealing",
+      areaId: "area-sanding",
       stationId: "st-seal-3",
       startMs: nineAmToday - 3 * hourMs, // 06:00 WIB
       endMs: nineAmToday - 3 * hourMs + 16 * minMs, // 06:16 WIB
@@ -282,7 +299,7 @@ export function createSeedData(): AppState {
     // Historical completed stop yesterday on Transfer Cabin Sealing (st-seal-3) - E-form already filled
     {
       id: "stop-yest-seal-3",
-      areaId: "area-sealing",
+      areaId: "area-sanding",
       stationId: "st-seal-3",
       startMs: now - 1 * dayMs - 4 * hourMs,
       endMs: now - 1 * dayMs - 4 * hourMs + 24 * minMs,
@@ -483,9 +500,9 @@ export function createSeedData(): AppState {
   // Initial station live telemetry for all stations (Sealing, Oven CED, and Mezzanine stopped)
   const stationLive: Record<string, StationLive> = {};
   const stoppedConfigs: Record<string, number> = {
-    "st-seal-3": now - nineAmToday,
-    "st-oven-1": 35 * minMs,
-    "st-mez-1": 22 * minMs,
+    "st-seal-3": now - nineAmToday, // Transfer Cabin Sealing stopped
+    "st-pc14-3": 35 * minMs, // Holding Zone stopped
+    "st-pc15-2": 22 * minMs, // Buffer A stopped
   };
 
   for (const st of stations) {
@@ -575,11 +592,10 @@ let currentState: AppState = (() => {
         }));
 
         if (
-          !safeState.areas.some((a) => a.id === "area-sanding" || a.code === "SANDING") ||
-          safeState.areas.some((a) => a.id === "area-pted" || a.code === "PTED") ||
-          !safeState.stations.some((s) => s.id === "st-sand-1") ||
-          !safeState.stations.some((s) => s.id === "st-oven-1") ||
-          !safeState.stations.some((s) => s.id === "st-mez-1")
+          !safeState.areas.some((a) => a.id === "area-pted" || a.code === "PTED") ||
+          !safeState.stations.some((s) => s.id === "st-pted-1") ||
+          !safeState.stations.some((s) => s.id === "st-pc14-1") ||
+          !safeState.stations.some((s) => s.id === "st-pc15-1")
         ) {
           safeState.areas = seed.areas;
           safeState.conveyors = seed.conveyors;
@@ -600,9 +616,9 @@ let currentState: AppState = (() => {
         }
 
         const hasStoppedStation = Object.values(safeState.stationLive || {}).some((s) => s?.state === "stopped");
-        const hasOvenStopped = safeState.stationLive["st-oven-1"]?.state === "stopped";
-        const hasMezStopped = safeState.stationLive["st-mez-1"]?.state === "stopped";
-        if (!hasStoppedStation || !hasOvenStopped || !hasMezStopped) {
+        const hasPC14Stopped = safeState.stationLive["st-pc14-3"]?.state === "stopped";
+        const hasMezStopped = safeState.stationLive["st-pc15-2"]?.state === "stopped";
+        if (!hasStoppedStation || !hasPC14Stopped || !hasMezStopped) {
           safeState.stationLive = seed.stationLive;
           safeState.stops = seed.stops;
         }

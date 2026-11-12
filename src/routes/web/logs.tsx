@@ -189,7 +189,9 @@ function StationOccurrenceTable({ stops, station, categories, nowMs }: StationOc
   }, [stops, selectedCategory, selectedShift, selectedStatus, searchQuery, categories, nowMs]);
 
   const paginated = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const safePage = Math.min(Math.max(1, currentPage), totalPages);
+    const start = (safePage - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
   }, [filtered, currentPage, pageSize]);
 
@@ -406,20 +408,18 @@ function StationOccurrenceTable({ stops, station, categories, nowMs }: StationOc
         </table>
       </div>
 
-      {/* Pagination if more than pageSize */}
-      {filtered.length > pageSize && (
-        <TablePagination
-          page={currentPage}
-          pageSize={pageSize}
-          totalItems={filtered.length}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={(newSize) => {
-            setPageSize(newSize);
-            setCurrentPage(1);
-          }}
-          pageSizeOptions={[5, 10, 20]}
-        />
-      )}
+      {/* Table Pagination Bar */}
+      <TablePagination
+        page={currentPage}
+        pageSize={pageSize}
+        totalItems={filtered.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(newSize) => {
+          setPageSize(newSize);
+          setCurrentPage(1);
+        }}
+        pageSizeOptions={[5, 10, 20, 50]}
+      />
     </div>
   );
 }
@@ -1062,19 +1062,14 @@ function LogHistoryPage() {
                         <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                       )}
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-display text-sm font-bold text-foreground">
-                            {item.station.name}
-                          </h4>
-                          {item.station.code && (
-                            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-semibold border border-border">
-                              {item.station.code}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground font-sans mt-0.5">
-                          {stationArea ? `${stationArea.name} • ` : ""}Sequence #{item.station.sequence} • Threshold: {item.station.runningThreshold} {item.station.speedUnit}
-                        </p>
+                        <h4 className="font-display text-sm font-bold text-foreground">
+                          {item.station.name}
+                        </h4>
+                        {stationArea && (
+                          <p className="text-xs text-muted-foreground font-sans mt-0.5">
+                            {stationArea.name}
+                          </p>
+                        )}
                       </div>
                     </div>
 
