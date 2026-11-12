@@ -1,8 +1,7 @@
-import { useState, useMemo } from "react";
-import { Clock } from "lucide-react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { Clock, Info } from "lucide-react";
 import { useAppStore } from "../lib/store";
 import { getShiftForTimestamp } from "../lib/shift";
-import { Switch } from "./ui/switch";
 
 export interface ShiftCategory {
   id: string;
@@ -77,6 +76,22 @@ export function DowntimeShiftTimeline({
   const [activeShift, setActiveShift] = useState<"pagi" | "malam">(() => {
     return currentShift?.id === "shift-malam" ? "malam" : "pagi";
   });
+  const [infoOpen, setInfoOpen] = useState(false);
+  const infoRef = useRef<HTMLDivElement>(null);
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    if (!infoOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (infoRef.current && !infoRef.current.contains(e.target as Node)) {
+        setInfoOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [infoOpen]);
 
   // Handler on clicking block -> opens E-Form
   const handleEventClick = (ev: TimelineEvent) => {
@@ -327,7 +342,7 @@ export function DowntimeShiftTimeline({
     <div
       className={`rounded-xl border border-border bg-card p-5 shadow-xs space-y-4 ${className}`}
     >
-      {/* 1. Header Row (Sejajar dengan Title & Total Downtime) */}
+      {/* 1. Header Row (Title di kiri, Toggle + Total Downtime + Info di kanan) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
@@ -343,8 +358,45 @@ export function DowntimeShiftTimeline({
           </div>
         </div>
 
-        {/* Right: Active Shift Total Downtime (Sejajar dengan Title, tanpa events) */}
-        <div className="flex items-center gap-2 font-mono text-xs shrink-0 self-start sm:self-center">
+        {/* Right: Button Toggle -> Total Downtime -> Info Icon with Tooltip */}
+        <div className="flex items-center gap-2 font-mono text-xs shrink-0 self-start sm:self-center flex-wrap sm:flex-nowrap">
+          {/* Button Toggle Morning / Night (samping kiri informasi total downtime) */}
+          <div className="inline-flex items-center p-0.5 rounded-lg border border-border bg-muted/40">
+            <button
+              type="button"
+              onClick={() => setActiveShift("pagi")}
+              className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 text-xs font-mono ${
+                activeShift === "pagi"
+                  ? "bg-card text-sky-600 dark:text-sky-400 font-bold shadow-2xs border border-border/80"
+                  : "text-muted-foreground hover:text-foreground font-medium"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  activeShift === "pagi" ? "bg-sky-500 ring-2 ring-sky-500/20" : "bg-muted-foreground/30"
+                }`}
+              />
+              <span>Morning</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveShift("malam")}
+              className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 text-xs font-mono ${
+                activeShift === "malam"
+                  ? "bg-card text-indigo-600 dark:text-indigo-400 font-bold shadow-2xs border border-border/80"
+                  : "text-muted-foreground hover:text-foreground font-medium"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  activeShift === "malam" ? "bg-indigo-500 ring-2 ring-indigo-500/20" : "bg-muted-foreground/30"
+                }`}
+              />
+              <span>Night</span>
+            </button>
+          </div>
+
+          {/* Active Shift Total Downtime */}
           <div className="px-3.5 py-1.5 rounded-lg border border-border bg-muted/40 flex items-center gap-2">
             <span className="text-muted-foreground text-[10px] font-medium uppercase">
               Total Downtime:
@@ -353,55 +405,54 @@ export function DowntimeShiftTimeline({
               {currentTotalMinutes}m
             </span>
           </div>
-        </div>
-      </div>
 
-      {/* 2. Control Bar Row: Switch Toggle Morning / Night */}
-      <div className="flex items-center justify-between gap-3 pt-0.5">
-        {/* Switch Toggle (Morning <-> Night) */}
-        <div className="inline-flex items-center gap-3 px-3.5 py-1.5 rounded-xl border border-border bg-muted/30 shadow-2xs">
-          <button
-            type="button"
-            onClick={() => setActiveShift("pagi")}
-            className={`text-xs font-mono font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeShift === "pagi"
-                ? "text-sky-600 dark:text-sky-400 font-bold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+          {/* Info Icon + Tooltips (samping kanan informasi total downtime) */}
+          <div
+            ref={infoRef}
+            className="relative inline-flex items-center"
+            onMouseEnter={() => setInfoOpen(true)}
+            onMouseLeave={() => setInfoOpen(false)}
           >
-            <span
-              className={`h-2 w-2 rounded-full transition-transform ${
-                activeShift === "pagi" ? "bg-sky-500 ring-2 ring-sky-500/20" : "bg-muted-foreground/30"
-              }`}
-            />
-            <span>Morning</span>
-            <span className="text-[10px] text-muted-foreground font-normal hidden sm:inline">(07:00–16:20)</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setInfoOpen((prev) => !prev)}
+              className="p-2 rounded-lg border border-border bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer flex items-center justify-center"
+              aria-label="Shift Hours Information"
+              title="Shift Hours Information"
+            >
+              <Info className="h-4 w-4" />
+            </button>
 
-          <Switch
-            checked={activeShift === "malam"}
-            onCheckedChange={(checked) => setActiveShift(checked ? "malam" : "pagi")}
-            aria-label="Toggle Morning / Night"
-            className="cursor-pointer data-[state=checked]:bg-indigo-600 data-[state=unchecked]:bg-sky-500"
-          />
-
-          <button
-            type="button"
-            onClick={() => setActiveShift("malam")}
-            className={`text-xs font-mono font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeShift === "malam"
-                ? "text-indigo-600 dark:text-indigo-400 font-bold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <span
-              className={`h-2 w-2 rounded-full transition-transform ${
-                activeShift === "malam" ? "bg-indigo-500 ring-2 ring-indigo-500/20" : "bg-muted-foreground/30"
-              }`}
-            />
-            <span>Night</span>
-            <span className="text-[10px] text-muted-foreground font-normal hidden sm:inline">(22:00–06:00)</span>
-          </button>
+            {infoOpen && (
+              <div
+                role="tooltip"
+                className="absolute top-full right-0 mt-2 z-50 w-60 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-xl text-xs animate-in fade-in-0 zoom-in-95 pointer-events-auto"
+              >
+                <div className="font-semibold text-foreground text-xs pb-1.5 mb-2 border-b border-border flex items-center justify-between">
+                  <span>Shift Operational Hours</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">WIB</span>
+                </div>
+                <div className="space-y-1.5 font-mono text-[11px]">
+                  <div className="flex items-center justify-between py-1.5 px-2 rounded-md bg-muted/50">
+                    <span className="flex items-center gap-1.5 font-medium text-sky-600 dark:text-sky-400">
+                      <span className="h-2 w-2 rounded-full bg-sky-500" />
+                      Morning
+                    </span>
+                    <span className="font-semibold text-foreground">07:00 – 16:20</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1.5 px-2 rounded-md bg-muted/50">
+                    <span className="flex items-center gap-1.5 font-medium text-indigo-600 dark:text-indigo-400">
+                      <span className="h-2 w-2 rounded-full bg-indigo-500" />
+                      Night
+                    </span>
+                    <span className="font-semibold text-foreground">22:00 – 06:00</span>
+                  </div>
+                </div>
+                {/* Arrow indicator */}
+                <div className="absolute -top-1.5 right-3.5 w-3 h-3 rotate-45 border-t border-l border-border bg-popover" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

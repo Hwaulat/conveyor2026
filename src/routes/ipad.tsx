@@ -496,7 +496,7 @@ export function IpadEFormPage() {
       forLinestopMaintenance: formType === "mtc",
     });
     setSelectedCategoryId(created.id);
-    toast.success(`New category saved: [${created.code || code}] ${created.name}`);
+    toast.success(`New category saved: ${created.name}`);
     setNewCatName("");
     setNewCatCode("");
     setNewCatModalOpen(false);
@@ -723,17 +723,6 @@ export function IpadEFormPage() {
                       }`}
                     >
                       <div className="flex items-center gap-2 truncate pr-1">
-                        {c.code && (
-                          <span
-                            className={`font-mono text-[10px] px-1.5 py-0.5 rounded font-bold uppercase shrink-0 ${
-                              isSelected
-                                ? "bg-white/20 text-white"
-                                : "bg-muted text-muted-foreground border border-border"
-                            }`}
-                          >
-                            {c.code}
-                          </span>
-                        )}
                         <span className="truncate font-semibold">{c.name}</span>
                       </div>
                       {c.countsAsBreakdown && (

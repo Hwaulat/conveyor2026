@@ -682,7 +682,7 @@ function DashboardPage() {
 
       {/* Row 1: Downtime Shift Timeline & Stop Frequency by Station (Sejajar di bawah Card Summary) */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-        {/* Downtime Shift Timeline (Switch Toggle Morning & Night) */}
+        {/* Downtime Shift Timeline (Button Toggle Morning & Night, Total Downtime, Shift Info Tooltip) */}
         <DowntimeShiftTimeline
           selectedAreaId={selectedAreaId}
           selectedStationId={selectedStationId}
@@ -754,23 +754,9 @@ function DashboardPage() {
               <Gauge className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wide">
-                  Speed Trend by Day
-                </h3>
-                <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${speedByDayData.latestSpeed > speedByDayData.threshold
-                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                    : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse"
-                    }`}
-                >
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${speedByDayData.latestSpeed > speedByDayData.threshold ? "bg-emerald-500" : "bg-rose-500"
-                      }`}
-                  />
-                  {speedByDayData.latestSpeed > speedByDayData.threshold ? "NORMAL SPEED" : "LINE-STOP / BELOW THRESHOLD"}
-                </span>
-              </div>
+              <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wide">
+                Speed Trend by Day
+              </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {selectedStation
                   ? `Daily average conveyor speed for ${selectedStation.name} (${selectedStation.code || selectedStation.id})`
