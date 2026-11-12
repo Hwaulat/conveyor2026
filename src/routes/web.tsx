@@ -125,8 +125,6 @@ export function WebLayout() {
       label: "Log History",
       to: "/web/logs",
       icon: History,
-      badge: `${appState.stops.length > 99 ? "99+" : appState.stops.length}`,
-      badgeVariant: "pill",
     },
   ];
 
@@ -207,7 +205,7 @@ export function WebLayout() {
             title="Conveyor System"
           >
             <img
-              src="/brand-orb.png"
+              src="/brand-c.svg"
               alt="Conveyor System"
               className="h-7 w-7 object-contain shrink-0 drop-shadow-[0_0_8px_rgba(31,90,166,0.6)]"
             />

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" fill="none">
+  <defs>
+    <!-- Background Gradient (Conveyor Blue to Cyan) -->
+    <linearGradient id="c_bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1e3a8a" />
+    </linearGradient>
+
+    <!-- Gloss Top Reflection -->
+    <linearGradient id="c_gloss" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0" />
+    </linearGradient>
+
+    <!-- Letter C Gradient (White to Soft Cyan) -->
+    <linearGradient id="c_letter" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e0f2fe" />
+    </linearGradient>
+
+    <!-- Drop Shadow Filter for Letter C -->
+    <filter id="c_shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-color="#0b1728" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Background Box -->
+  <rect x="1.5" y="1.5" width="37" height="37" rx="10" fill="url(#c_bg)" stroke="#38bdf8" stroke-width="1.5" stroke-opacity="0.65" />
+
+  <!-- Top Gloss Highlight -->
+  <path d="M 3 12 C 3 6.5 6.5 3 12 3 L 28 3 C 33.5 3 37 6.5 37 12 L 37 15.5 C 26 19.5 14 19.5 3 15.5 Z" fill="url(#c_gloss)" />
+
+  <!-- Bold Geometric Letter C Icon -->
+  <path d="M 28.8 12.2 A 11.8 11.8 0 1 0 28.8 27.8 L 24.6 24.1 A 6.4 6.4 0 1 1 24.6 15.9 Z" fill="url(#c_letter)" filter="url(#c_shadow)" />
+</svg>
+

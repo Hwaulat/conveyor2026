@@ -695,8 +695,8 @@ function LogHistoryPage() {
               setCurrentPage(1);
             }}
             items={[
-              { value: "list", label: "List View", badge: filteredStops.length },
-              { value: "summary", label: "Summary by Station", badge: stationSummary.length },
+              { value: "list", label: "List View" },
+              { value: "summary", label: "Summary by Station" },
             ]}
           />
 
