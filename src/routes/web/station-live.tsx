@@ -31,18 +31,18 @@ export const CONVEYOR_ACCORDIONS: ConveyorAccordion[] = [
     stationIds: ["st-pted-1", "st-pted-2", "st-pted-3", "st-pted-4", "st-pted-5", "st-pted-6"],
   },
   {
-    id: "acc-pc14",
-    name: "PC-14 (Oven CED)",
-    code: "PC-14",
-    conveyorName: "Conveyor PC-14 Oven CED",
-    stationIds: ["st-pc14-1", "st-pc14-2", "st-pc14-3", "st-pc14-4", "st-pc14-5"],
-  },
-  {
     id: "acc-pc15",
     name: "PC-15 (Mezzanine)",
     code: "PC-15",
     conveyorName: "Conveyor PC-15 Mezzanine",
-    stationIds: ["st-pc15-1", "st-pc15-2", "st-pc15-3", "st-pc15-4", "st-pc15-5"],
+    stationIds: [],
+  },
+  {
+    id: "acc-pc14",
+    name: "PC-14 (Oven CED)",
+    code: "PC-14",
+    conveyorName: "Conveyor PC-14 Oven CED",
+    stationIds: [],
   },
   {
     id: "acc-pc13",
@@ -91,8 +91,8 @@ export const CONVEYOR_ACCORDIONS: ConveyorAccordion[] = [
 const AREA_TO_LINE_MAP: Record<string, string> = {
   "area-pted": "acc-pted",
   "area-drop-ced": "acc-pted",
-  "area-oven-ced": "acc-pc14",
   "area-mezzanine": "acc-pc15",
+  "area-oven-ced": "acc-pc14",
   "area-sanding": "acc-pc13",
   "area-sealing": "acc-pc10",
   "area-cooling-tunnel": "acc-pc11",
@@ -173,8 +173,8 @@ function StationLivePage() {
   // Status Panel : ON / OFF state per accordion
   const [panelStatuses, setPanelStatuses] = useState<Record<string, "ON" | "OFF">>({
     "acc-pted": "ON",
-    "acc-pc14": "ON",
     "acc-pc15": "ON",
+    "acc-pc14": "ON",
     "acc-pc13": "ON",
     "acc-pc10": "ON",
     "acc-pc11": "ON",
@@ -193,7 +193,15 @@ function StationLivePage() {
     });
   };
 
-  const activeStations = appState.stations;
+  const accordionStationIds = useMemo(
+    () => new Set(CONVEYOR_ACCORDIONS.flatMap((a) => a.stationIds)),
+    [],
+  );
+
+  const activeStations = useMemo(
+    () => appState.stations.filter((s) => accordionStationIds.has(s.id)),
+    [appState.stations, accordionStationIds],
+  );
 
   const runningCount = activeStations.filter(
     (s) => appState.stationLive[s.id]?.state === "running",
@@ -348,6 +356,7 @@ function StationLivePage() {
           const stationsInLine = appState.stations
             .filter((s) => acc.stationIds.includes(s.id))
             .sort((a, b) => a.sequence - b.sequence);
+          const hasStations = stationsInLine.length > 0;
 
           const lineRunning = stationsInLine.filter(
             (s) => appState.stationLive[s.id]?.state === "running",
@@ -370,36 +379,51 @@ function StationLivePage() {
                   : "border-slate-300 dark:border-slate-700 bg-card"
               }`}
             >
-              {/* Accordion Trigger Header */}
-              <button
-                type="button"
-                onClick={() => toggleAccordion(acc.id)}
-                className={`w-full px-4 py-3 flex items-center justify-between gap-3 text-xs font-mono transition-colors cursor-pointer select-none text-left ${
+              {/* Accordion Trigger Header / Panel Header */}
+              <div
+                role={hasStations ? "button" : undefined}
+                tabIndex={hasStations ? 0 : undefined}
+                onClick={hasStations ? () => toggleAccordion(acc.id) : undefined}
+                onKeyDown={
+                  hasStations
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggleAccordion(acc.id);
+                        }
+                      }
+                    : undefined
+                }
+                className={`w-full px-4 py-3 flex items-center justify-between gap-3 text-xs font-mono transition-colors select-none text-left ${
+                  hasStations ? "cursor-pointer" : ""
+                } ${
                   isPanelOff
                     ? "bg-slate-200/80 dark:bg-slate-900/80 hover:bg-slate-200 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400"
                     : lineStopped > 0
                     ? "bg-red-600 dark:bg-red-600 hover:bg-red-700 dark:hover:bg-red-700 text-white"
                     : "bg-slate-200/90 dark:bg-slate-800/90 hover:bg-slate-300/80 dark:hover:bg-slate-700/80 text-foreground"
                 }`}
-                aria-expanded={isOpen}
-                title={`Click to ${isOpen ? "collapse" : "expand"} ${acc.name}`}
+                aria-expanded={hasStations ? isOpen : undefined}
+                title={hasStations ? `Click to ${isOpen ? "collapse" : "expand"} ${acc.name}` : acc.name}
               >
                 <div className="flex items-center gap-2.5">
-                  <span
-                    className={`p-1 rounded-md border shadow-2xs ${
-                      isPanelOff
-                        ? "bg-slate-200 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-400"
-                        : lineStopped > 0
-                        ? "bg-white/20 border-white/30 text-white"
-                        : "bg-background/90 border-border text-foreground"
-                    }`}
-                  >
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform duration-200 ${
-                        isOpen ? "rotate-180" : ""
+                  {hasStations && (
+                    <span
+                      className={`p-1 rounded-md border shadow-2xs ${
+                        isPanelOff
+                          ? "bg-slate-200 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-400"
+                          : lineStopped > 0
+                          ? "bg-white/20 border-white/30 text-white"
+                          : "bg-background/90 border-border text-foreground"
                       }`}
-                    />
-                  </span>
+                    >
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform duration-200 ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </span>
+                  )}
 
                   <span
                     className={`font-bold text-sm tracking-tight font-display ${
@@ -413,17 +437,19 @@ function StationLivePage() {
                     {acc.name}
                   </span>
 
-                  <span
-                    className={`text-[11px] ${
-                      isPanelOff
-                        ? "text-slate-400 dark:text-slate-500"
-                        : lineStopped > 0
-                        ? "text-red-100"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    ({stationsInLine.length} Stations)
-                  </span>
+                  {hasStations && (
+                    <span
+                      className={`text-[11px] ${
+                        isPanelOff
+                          ? "text-slate-400 dark:text-slate-500"
+                          : lineStopped > 0
+                          ? "text-red-100"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      ({stationsInLine.length} Stations)
+                    </span>
+                  )}
                 </div>
 
                 {/* Realtime Status Counter & Panel Status */}
@@ -482,42 +508,44 @@ function StationLivePage() {
                     </span>
                   </span>
 
-                  {/* Running Count */}
-                  <span
-                    className={`px-2.5 py-1 rounded-full font-bold text-[11px] border flex items-center gap-1.5 shadow-2xs ${
-                      isPanelOff
-                        ? "bg-slate-200/80 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-800 font-medium"
-                        : lineStopped > 0
-                        ? "bg-white text-emerald-700 border-white/90 shadow-sm"
-                        : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                    }`}
-                  >
+                  {/* Running Count (only if has stations) */}
+                  {hasStations && (
                     <span
-                      className={`inline-block w-1.5 h-1.5 rounded-full ${
+                      className={`px-2.5 py-1 rounded-full font-bold text-[11px] border flex items-center gap-1.5 shadow-2xs ${
                         isPanelOff
-                          ? "bg-slate-400"
+                          ? "bg-slate-200/80 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-800 font-medium"
                           : lineStopped > 0
-                          ? "bg-emerald-600"
-                          : "bg-emerald-400"
+                          ? "bg-white text-emerald-700 border-white/90 shadow-sm"
+                          : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                       }`}
-                    />
-                    <span className={!isPanelOff && lineStopped > 0 ? "font-black" : ""}>
-                      {lineRunning} Running
+                    >
+                      <span
+                        className={`inline-block w-1.5 h-1.5 rounded-full ${
+                          isPanelOff
+                            ? "bg-slate-400"
+                            : lineStopped > 0
+                            ? "bg-emerald-600"
+                            : "bg-emerald-400"
+                        }`}
+                      />
+                      <span className={!isPanelOff && lineStopped > 0 ? "font-black" : ""}>
+                        {lineRunning} Running
+                      </span>
                     </span>
-                  </span>
+                  )}
 
-                  {/* Stopped Count */}
-                  {!isPanelOff && lineStopped > 0 && (
+                  {/* Stopped Count (only if has stations) */}
+                  {hasStations && !isPanelOff && lineStopped > 0 && (
                     <span className="px-2.5 py-1 rounded-full bg-white text-red-600 font-extrabold text-[11px] shadow-sm animate-pulse flex items-center gap-1 border border-white/90">
                       <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
                       {lineStopped} Stopped
                     </span>
                   )}
                 </div>
-              </button>
+              </div>
 
-              {/* Accordion Content: Long Room Floor Plan with Stations */}
-              {isOpen && (
+              {/* Accordion Content: Long Room Floor Plan with Stations (Only if hasStations) */}
+              {hasStations && isOpen && (
                 <div
                   className={`border-t ${
                     isPanelOff

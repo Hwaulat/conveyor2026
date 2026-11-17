@@ -34,7 +34,7 @@ export interface AppState {
   simulating: boolean;
 }
 
-const STORAGE_KEY = "krm_conveyor_state_v16";
+const STORAGE_KEY = "krm_conveyor_state_v17";
 
 // Default Seed Data based on PRD & PT. Krama Yudha Ratu Motor Indonesia Factory Model
 export function createSeedData(): AppState {
@@ -47,8 +47,8 @@ export function createSeedData(): AppState {
 
   const areas: Area[] = [
     { id: "area-pted", code: "PTED", name: "PTED -(Motrain Station)", note: "Motrain Pre-treatment & Electro-Deposition", countingOee: true },
-    { id: "area-oven-ced", code: "PC-14", name: "PC-14 (Oven CED)", note: "Oven Cathodic Electro-Deposition", countingOee: true },
     { id: "area-mezzanine", code: "PC-15", name: "PC-15 (Mezzanine)", note: "Mezzanine Conveyor Line", countingOee: false },
+    { id: "area-oven-ced", code: "PC-14", name: "PC-14 (Oven CED)", note: "Oven Cathodic Electro-Deposition", countingOee: true },
     { id: "area-sanding", code: "PC-13", name: "PC-13 (Sanding)", note: "Sanding Area", countingOee: true },
     { id: "area-sealing", code: "PC-10", name: "PC-10 (Sealing)", note: "Body Sealing Line", countingOee: true },
     { id: "area-cooling-tunnel", code: "PC-11", name: "PC-11 (Cooling Both)", note: "Cooling Both Section", countingOee: false },
@@ -59,8 +59,8 @@ export function createSeedData(): AppState {
 
   const conveyors: Conveyor[] = [
     { id: "cv-pted-1", areaId: "area-pted", name: "Conveyor PTED Motrain Station", countingOee: true },
-    { id: "cv-oven-1", areaId: "area-oven-ced", name: "Conveyor PC-14 Oven CED", countingOee: true },
     { id: "cv-mez-1", areaId: "area-mezzanine", name: "Conveyor PC-15 Mezzanine", countingOee: false },
+    { id: "cv-oven-1", areaId: "area-oven-ced", name: "Conveyor PC-14 Oven CED", countingOee: true },
     { id: "cv-sand-1", areaId: "area-sanding", name: "Conveyor PC-13 Sanding", countingOee: true },
     { id: "cv-seal-1", areaId: "area-sealing", name: "Conveyor PC-10 Sealing Line", countingOee: true },
     { id: "cv-cool-1", areaId: "area-cooling-tunnel", name: "Conveyor PC-11 Cooling Both", countingOee: false },
@@ -71,12 +71,12 @@ export function createSeedData(): AppState {
 
   const stations: Station[] = [
     // 1. PTED Motrain (6 stations)
-    { id: "st-pted-1", code: "PTED-01", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Motrain Entry", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pted-2", code: "PTED-02", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Flood Station", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pted-3", code: "PTED-03", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Pre-Degreasing", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pted-4", code: "PTED-04", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Degreasing", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pted-5", code: "PTED-05", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Phosphate", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pted-6", code: "PTED-06", areaId: "area-pted", conveyorId: "cv-pted-1", name: "CED Dip", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pted-1", code: "PTED-01", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Degreasing", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pted-2", code: "PTED-02", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Phosphating", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pted-3", code: "PTED-03", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Water Rinse 5", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pted-4", code: "PTED-04", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Inside CED", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pted-5", code: "PTED-05", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Outside CED", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pted-6", code: "PTED-06", areaId: "area-pted", conveyorId: "cv-pted-1", name: "CED Danger Door", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
 
     // 2. PC-14 Oven CED (5 stations)
     { id: "st-pc14-1", code: "PC14-01", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Oven Entry", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
