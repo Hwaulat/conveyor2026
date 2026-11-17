@@ -59,6 +59,25 @@ const MALAM_TICKS = [
 const PAGI_SPAN_MIN = 16 * 60 + 20 - 420; // 560 min (07:00 - 16:20)
 const MALAM_SPAN_MIN = 8 * 60; // 480 min (22:00 - 06:00)
 
+// Urutan station area Sanding dari atas ke bawah: PC-15, PC-14, PC-13, PC-10, PC-11, PC-12
+export const SANDING_STATIONS = [
+  { id: "st-seal-2", code: "PC-15", name: "Undercoat" },
+  { id: "st-seal-3", code: "PC-14", name: "Transfer Cabin Sealing" },
+  { id: "st-sand-2", code: "PC-13", name: "Sanding Roof" },
+  { id: "st-sand-1", code: "PC-10", name: "Sanding Outer" },
+  { id: "st-tc-1", code: "PC-11", name: "Transfer Cabin Touch Up" },
+  { id: "st-seal-1", code: "PC-12", name: "Underseal" },
+];
+
+export const TIMELINE_STATION_CODE_MAP: Record<string, string> = {
+  "st-sand-1": "PC-10",
+  "st-sand-2": "PC-13",
+  "st-seal-1": "PC-12",
+  "st-seal-2": "PC-15",
+  "st-seal-3": "PC-14",
+  "st-tc-1": "PC-11",
+};
+
 interface DowntimeShiftTimelineProps {
   selectedAreaId?: string;
   selectedStationId?: string;
@@ -125,7 +144,7 @@ export function DowntimeShiftTimeline({
         stationCode: "PC-15",
         stationName: "Undercoat",
         stationId: "st-seal-2",
-        areaId: "area-sealing",
+        areaId: "area-sanding",
         startTimeStr: "08:30",
         endTimeStr: "08:45",
         startMinutes: 90,
@@ -138,7 +157,7 @@ export function DowntimeShiftTimeline({
         stationCode: "PC-12",
         stationName: "Underseal",
         stationId: "st-seal-1",
-        areaId: "area-sealing",
+        areaId: "area-sanding",
         startTimeStr: "11:30",
         endTimeStr: "11:45",
         startMinutes: 270,
@@ -151,7 +170,7 @@ export function DowntimeShiftTimeline({
         stationCode: "PC-14",
         stationName: "Transfer Cabin Sealing",
         stationId: "st-seal-3",
-        areaId: "area-sealing",
+        areaId: "area-sanding",
         startTimeStr: "14:10",
         endTimeStr: "14:22",
         startMinutes: 430,
@@ -176,40 +195,52 @@ export function DowntimeShiftTimeline({
     ];
 
     const filteredEvents = rawEvents.filter((ev) => {
-      const matchArea = selectedAreaId === "all" ? true : ev.areaId === selectedAreaId;
-      const matchStation = selectedStationId === "all" ? true : ev.stationId === selectedStationId;
+      const matchArea =
+        selectedAreaId === "all" ||
+        selectedAreaId === "area-sanding" ||
+        ev.areaId === selectedAreaId;
+      const matchStation =
+        selectedStationId === "all"
+          ? true
+          : ev.stationId === selectedStationId || ev.stationCode === selectedStationId;
       return matchArea && matchStation;
     });
 
-    if (selectedAreaId === "all") {
-      const laneCodes = ["PC-13", "PC-15", "PC-12", "PC-14"];
-      return laneCodes.map((code) => ({
-        code,
-        name: rawEvents.find((e) => e.stationCode === code)?.stationName || code,
-        events: filteredEvents.filter((e) => e.stationCode === code),
-      }));
+    const isSandingOrAll = selectedAreaId === "all" || selectedAreaId === "area-sanding";
+
+    if (isSandingOrAll) {
+      const targetStations =
+        selectedStationId === "all"
+          ? SANDING_STATIONS
+          : SANDING_STATIONS.filter(
+              (s) => s.id === selectedStationId || s.code === selectedStationId
+            );
+
+      if (targetStations.length > 0) {
+        return targetStations.map((st) => ({
+          code: st.code,
+          name: st.name,
+          events: filteredEvents.filter(
+            (e) => e.stationId === st.id || e.stationCode === st.code
+          ),
+        }));
+      }
     }
 
     const areaStations = appState.stations.filter((s) => s.areaId === selectedAreaId);
-    const targetStations = selectedStationId === "all"
-      ? areaStations
-      : areaStations.filter((s) => s.id === selectedStationId);
-
-    const STATION_CODE_MAP: Record<string, string> = {
-      "st-sand-1": "PC-10",
-      "st-sand-2": "PC-13",
-      "st-seal-1": "PC-12",
-      "st-seal-2": "PC-15",
-      "st-seal-3": "PC-14",
-      "st-tc-1": "PC-11",
-    };
+    const targetStations =
+      selectedStationId === "all"
+        ? areaStations
+        : areaStations.filter((s) => s.id === selectedStationId);
 
     return targetStations.map((st) => {
-      const displayCode = STATION_CODE_MAP[st.id] ?? st.code ?? st.id;
+      const displayCode = TIMELINE_STATION_CODE_MAP[st.id] ?? st.code ?? st.id;
       return {
         code: displayCode,
         name: st.name,
-        events: filteredEvents.filter((e) => e.stationId === st.id || e.stationCode === displayCode),
+        events: filteredEvents.filter(
+          (e) => e.stationId === st.id || e.stationCode === displayCode
+        ),
       };
     });
   }, [selectedAreaId, selectedStationId, appState.stations]);
@@ -222,7 +253,7 @@ export function DowntimeShiftTimeline({
         stationCode: "PC-11",
         stationName: "Transfer Cabin Touch Up",
         stationId: "st-tc-1",
-        areaId: "area-topcoat",
+        areaId: "area-sanding",
         startTimeStr: "23:20",
         endTimeStr: "23:28",
         startMinutes: 80,
@@ -235,7 +266,7 @@ export function DowntimeShiftTimeline({
         stationCode: "PC-12",
         stationName: "Underseal",
         stationId: "st-seal-1",
-        areaId: "area-sealing",
+        areaId: "area-sanding",
         startTimeStr: "00:40",
         endTimeStr: "00:52",
         startMinutes: 160,
@@ -261,7 +292,7 @@ export function DowntimeShiftTimeline({
         stationCode: "PC-14",
         stationName: "Transfer Cabin Sealing",
         stationId: "st-seal-3",
-        areaId: "area-sealing",
+        areaId: "area-sanding",
         startTimeStr: "05:15",
         endTimeStr: "05:21",
         startMinutes: 435,
@@ -272,40 +303,52 @@ export function DowntimeShiftTimeline({
     ];
 
     const filteredEvents = rawEvents.filter((ev) => {
-      const matchArea = selectedAreaId === "all" ? true : ev.areaId === selectedAreaId;
-      const matchStation = selectedStationId === "all" ? true : ev.stationId === selectedStationId;
+      const matchArea =
+        selectedAreaId === "all" ||
+        selectedAreaId === "area-sanding" ||
+        ev.areaId === selectedAreaId;
+      const matchStation =
+        selectedStationId === "all"
+          ? true
+          : ev.stationId === selectedStationId || ev.stationCode === selectedStationId;
       return matchArea && matchStation;
     });
 
-    if (selectedAreaId === "all") {
-      const laneCodes = ["PC-11", "PC-12", "PC-10", "PC-14"];
-      return laneCodes.map((code) => ({
-        code,
-        name: rawEvents.find((e) => e.stationCode === code)?.stationName || code,
-        events: filteredEvents.filter((e) => e.stationCode === code),
-      }));
+    const isSandingOrAll = selectedAreaId === "all" || selectedAreaId === "area-sanding";
+
+    if (isSandingOrAll) {
+      const targetStations =
+        selectedStationId === "all"
+          ? SANDING_STATIONS
+          : SANDING_STATIONS.filter(
+              (s) => s.id === selectedStationId || s.code === selectedStationId
+            );
+
+      if (targetStations.length > 0) {
+        return targetStations.map((st) => ({
+          code: st.code,
+          name: st.name,
+          events: filteredEvents.filter(
+            (e) => e.stationId === st.id || e.stationCode === st.code
+          ),
+        }));
+      }
     }
 
     const areaStations = appState.stations.filter((s) => s.areaId === selectedAreaId);
-    const targetStations = selectedStationId === "all"
-      ? areaStations
-      : areaStations.filter((s) => s.id === selectedStationId);
-
-    const STATION_CODE_MAP: Record<string, string> = {
-      "st-sand-1": "PC-10",
-      "st-sand-2": "PC-13",
-      "st-seal-1": "PC-12",
-      "st-seal-2": "PC-15",
-      "st-seal-3": "PC-14",
-      "st-tc-1": "PC-11",
-    };
+    const targetStations =
+      selectedStationId === "all"
+        ? areaStations
+        : areaStations.filter((s) => s.id === selectedStationId);
 
     return targetStations.map((st) => {
-      const displayCode = STATION_CODE_MAP[st.id] ?? st.code ?? st.id;
+      const displayCode = TIMELINE_STATION_CODE_MAP[st.id] ?? st.code ?? st.id;
       return {
         code: displayCode,
         name: st.name,
-        events: filteredEvents.filter((e) => e.stationId === st.id || e.stationCode === displayCode),
+        events: filteredEvents.filter(
+          (e) => e.stationId === st.id || e.stationCode === displayCode
+        ),
       };
     });
   }, [selectedAreaId, selectedStationId, appState.stations]);
