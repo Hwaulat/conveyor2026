@@ -75,7 +75,7 @@ export function downtimeByCategory(stops: LineStop[], categories: Category[], at
   return [...map.values()].sort((a, b) => b.durationMs - a.durationMs);
 }
 
-// ---- OEE (from Production records) ----
+// ---- OEE & Availability Rules ----
 
 export type OeeResult = {
   availability: number; // 0..1
@@ -83,6 +83,253 @@ export type OeeResult = {
   quality: number; // 0..1
   oee: number; // 0..1
 };
+
+/**
+ * Formula: Availability = MTBF / (MTBF + MTTR)
+ * OEE is calculated strictly as Availability per user specification.
+ */
+export function computeAvailabilityFromMtbfMttr(
+  mtbfMs: number | null,
+  mttrMs: number | null,
+  fallbackOperatingMs?: number,
+  fallbackPlannedMs?: number,
+): number {
+  if (mtbfMs !== null && mttrMs !== null) {
+    const total = mtbfMs + mttrMs;
+    if (total <= 0) return 0;
+    return clamp01(mtbfMs / total);
+  }
+  // When there are no breakdown stops (mttr is null)
+  if (mttrMs === null) {
+    if (fallbackPlannedMs && fallbackPlannedMs > 0 && fallbackOperatingMs !== undefined) {
+      return clamp01(fallbackOperatingMs / fallbackPlannedMs);
+    }
+    return 1; // 100% available
+  }
+  return 0;
+}
+
+/**
+ * Mitsubishi FUSO Working Hours Matrix Rules
+ */
+export interface MatrixShiftRow {
+  normal: number; // minutes
+  ot1: number;    // minutes
+  ot2: number;    // minutes
+  ot3: number;    // minutes
+}
+
+export interface MatrixDayRule {
+  id: "senin_kamis" | "jumat" | "sabtu" | "hari_pertama" | "tanggal_17";
+  name: string;
+  pagi: MatrixShiftRow;
+  malam: MatrixShiftRow;
+  fridayDeductionMin?: number; // e.g. 25
+  remarks?: string;
+}
+
+export type WorkingHoursMatrix = Record<
+  "senin_kamis" | "jumat" | "sabtu" | "hari_pertama" | "tanggal_17",
+  MatrixDayRule
+>;
+
+export const DEFAULT_WORKING_HOURS_MATRIX: WorkingHoursMatrix = {
+  senin_kamis: {
+    id: "senin_kamis",
+    name: "Senin - Kamis",
+    pagi: { normal: 485, ot1: 545, ot2: 605, ot3: 665 },
+    malam: { normal: 420, ot1: 480, ot2: 540, ot3: 600 },
+    remarks: "",
+  },
+  jumat: {
+    id: "jumat",
+    name: "Jumat",
+    pagi: { normal: 460, ot1: 520, ot2: 580, ot3: 640 },
+    malam: { normal: 420, ot1: 480, ot2: 540, ot3: 600 },
+    fridayDeductionMin: 25,
+    remarks: "",
+  },
+  sabtu: {
+    id: "sabtu",
+    name: "Sabtu",
+    pagi: { normal: 480, ot1: 540, ot2: 600, ot3: 660 },
+    malam: { normal: 480, ot1: 540, ot2: 600, ot3: 660 },
+    remarks: "",
+  },
+  hari_pertama: {
+    id: "hari_pertama",
+    name: "Hari jumat pertama masuk tiap bulan",
+    pagi: { normal: 455, ot1: 515, ot2: 575, ot3: 635 },
+    malam: { normal: 390, ot1: 450, ot2: 510, ot3: 570 },
+    fridayDeductionMin: 25,
+    remarks: "Kalau hari pertama masuk di hari jumat, maka -25 menit",
+  },
+  tanggal_17: {
+    id: "tanggal_17",
+    name: "Tanggal 17",
+    pagi: { normal: 455, ot1: 515, ot2: 575, ot3: 635 },
+    malam: { normal: 420, ot1: 480, ot2: 540, ot3: 600 },
+    remarks: "",
+  },
+};
+
+export const WORKING_HOURS_STORAGE_KEY = "krm_working_hours_matrix";
+
+export function getSavedWorkingHoursMatrix(): WorkingHoursMatrix {
+  if (typeof window === "undefined") return DEFAULT_WORKING_HOURS_MATRIX;
+  try {
+    const raw = localStorage.getItem(WORKING_HOURS_STORAGE_KEY);
+    if (!raw) return DEFAULT_WORKING_HOURS_MATRIX;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && parsed.senin_kamis) {
+      return {
+        senin_kamis: { ...DEFAULT_WORKING_HOURS_MATRIX.senin_kamis, ...parsed.senin_kamis },
+        jumat: { ...DEFAULT_WORKING_HOURS_MATRIX.jumat, ...parsed.jumat },
+        sabtu: { ...DEFAULT_WORKING_HOURS_MATRIX.sabtu, ...parsed.sabtu },
+        hari_pertama: {
+          ...DEFAULT_WORKING_HOURS_MATRIX.hari_pertama,
+          ...parsed.hari_pertama,
+          name: DEFAULT_WORKING_HOURS_MATRIX.hari_pertama.name,
+        },
+        tanggal_17: { ...DEFAULT_WORKING_HOURS_MATRIX.tanggal_17, ...parsed.tanggal_17 },
+      };
+    }
+  } catch {}
+  return DEFAULT_WORKING_HOURS_MATRIX;
+}
+
+export function saveWorkingHoursMatrix(matrix: WorkingHoursMatrix): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(WORKING_HOURS_STORAGE_KEY, JSON.stringify(matrix));
+    window.dispatchEvent(new Event("krm_working_hours_matrix_updated"));
+  } catch {}
+}
+
+export function getFusoMinutesFromMatrix(
+  ruleCode: "senin_kamis" | "jumat" | "sabtu" | "hari_pertama" | "tanggal_17",
+  shift: "pagi" | "malam",
+  otTier: "normal" | "ot-1" | "ot-2" | "ot-3" | "night-shift" | "ot-8" | "ot-9" | "ot-10" | "ot-11",
+  isFridayFirstDay?: boolean,
+  matrix?: WorkingHoursMatrix,
+): number {
+  const m = matrix ?? getSavedWorkingHoursMatrix();
+  const rule = m[ruleCode] ?? DEFAULT_WORKING_HOURS_MATRIX[ruleCode];
+  const shiftRow = shift === "pagi" ? rule.pagi : rule.malam;
+  let val: number;
+  if (otTier === "ot-1" || otTier === "ot-9") val = shiftRow.ot1;
+  else if (otTier === "ot-2" || otTier === "ot-10") val = shiftRow.ot2;
+  else if (otTier === "ot-3" || otTier === "ot-11") val = shiftRow.ot3;
+  else val = shiftRow.normal;
+
+  if (ruleCode === "hari_pertama" && isFridayFirstDay && shift === "pagi") {
+    const deduction = rule.fridayDeductionMin ?? 25;
+    val = Math.max(0, val - deduction);
+  }
+  return val;
+}
+
+export interface FusoWorkingRule {
+  ruleName: string;
+  ruleCode: "senin_kamis" | "jumat" | "sabtu" | "hari_pertama" | "tanggal_17";
+  shift: "pagi" | "malam";
+  baseMin: number;
+  isFridayDeductionApplied?: boolean;
+}
+
+export function getFusoWorkingRule(
+  dateStr: string,
+  shift: "pagi" | "malam",
+  dateAssignments?: Record<string, string>,
+  matrix?: WorkingHoursMatrix,
+): FusoWorkingRule {
+  const currentMatrix = matrix ?? getSavedWorkingHoursMatrix();
+  const d = new Date(`${dateStr}T00:00:00+07:00`);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const dayOfMonth = d.getDate();
+  const dayOfWeek = d.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+
+  // 1. Tanggal 17 (Upacara)
+  if (dayOfMonth === 17) {
+    const rule = currentMatrix.tanggal_17;
+    return {
+      ruleName: "Tanggal 17 (Upacara)",
+      ruleCode: "tanggal_17",
+      shift,
+      baseMin: shift === "pagi" ? rule.pagi.normal : rule.malam.normal,
+    };
+  }
+
+  // 2. Hari jumat pertama masuk tiap bulan
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  let firstWorkingFridayOfMonth = -1;
+  for (let day = 1; day <= daysInMonth; day++) {
+    const checkDateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const checkD = new Date(`${checkDateStr}T00:00:00+07:00`);
+    const dow = checkD.getDay();
+    const assigned = dateAssignments?.[checkDateStr];
+    const isHoliday = assigned ? assigned === "holiday" : dow === 0 || dow === 6;
+    if (dow === 5 && !isHoliday) {
+      firstWorkingFridayOfMonth = day;
+      break;
+    }
+  }
+
+  if (dayOfMonth === firstWorkingFridayOfMonth) {
+    const rule = currentMatrix.hari_pertama;
+    const deduction = rule.fridayDeductionMin ?? 25;
+    if (shift === "pagi") {
+      const base = Math.max(0, rule.pagi.normal - deduction);
+      return {
+        ruleName: `Hari Jumat Pertama Masuk Tiap Bulan (-${deduction}m)`,
+        ruleCode: "hari_pertama",
+        shift,
+        baseMin: base,
+        isFridayDeductionApplied: true,
+      };
+    } else {
+      return {
+        ruleName: "Hari Jumat Pertama Masuk Tiap Bulan",
+        ruleCode: "hari_pertama",
+        shift,
+        baseMin: rule.malam.normal,
+      };
+    }
+  }
+
+  // 3. Jumat (Break Jumatan)
+  if (dayOfWeek === 5) {
+    const rule = currentMatrix.jumat;
+    return {
+      ruleName: "Jumat (Break Jumatan)",
+      ruleCode: "jumat",
+      shift,
+      baseMin: shift === "pagi" ? rule.pagi.normal : rule.malam.normal,
+      isFridayDeductionApplied: shift === "pagi",
+    };
+  }
+
+  // 4. Sabtu (OT 8-11)
+  if (dayOfWeek === 6) {
+    const rule = currentMatrix.sabtu;
+    return {
+      ruleName: "Sabtu (OT 8-11)",
+      ruleCode: "sabtu",
+      shift,
+      baseMin: shift === "pagi" ? rule.pagi.normal : rule.malam.normal,
+    };
+  }
+
+  // 5. Senin - Kamis
+  const rule = currentMatrix.senin_kamis;
+  return {
+    ruleName: "Senin - Kamis",
+    ruleCode: "senin_kamis",
+    shift,
+    baseMin: shift === "pagi" ? rule.pagi.normal : rule.malam.normal,
+  };
+}
 
 /** OEE per PRD 2.4: Availability × Performance × Quality. */
 export function computeOee(record: ProductionRecord, downtimeMs: number): OeeResult {

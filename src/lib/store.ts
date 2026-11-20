@@ -34,7 +34,7 @@ export interface AppState {
   simulating: boolean;
 }
 
-const STORAGE_KEY = "krm_conveyor_state_v17";
+const STORAGE_KEY = "krm_conveyor_state_v20";
 
 // Default Seed Data based on PRD & PT. Krama Yudha Ratu Motor Indonesia Factory Model
 export function createSeedData(): AppState {
@@ -47,8 +47,8 @@ export function createSeedData(): AppState {
 
   const areas: Area[] = [
     { id: "area-pted", code: "PTED", name: "PTED -(Motrain Station)", note: "Motrain Pre-treatment & Electro-Deposition", countingOee: true },
-    { id: "area-mezzanine", code: "PC-15", name: "PC-15 (Mezzanine)", note: "Mezzanine Conveyor Line", countingOee: false },
-    { id: "area-oven-ced", code: "PC-14", name: "PC-14 (Oven CED)", note: "Oven Cathodic Electro-Deposition", countingOee: true },
+    { id: "area-oven-ced", code: "PC-15", name: "PC-15 (Oven CED)", note: "Oven Cathodic Electro-Deposition", countingOee: true },
+    { id: "area-mezzanine", code: "PC-14", name: "PC-14 (Mezzanine)", note: "Mezzanine Conveyor Line", countingOee: false },
     { id: "area-sanding", code: "PC-13", name: "PC-13 (Sanding)", note: "Sanding Area", countingOee: true },
     { id: "area-sealing", code: "PC-10", name: "PC-10 (Sealing)", note: "Body Sealing Line", countingOee: true },
     { id: "area-cooling-tunnel", code: "PC-11", name: "PC-11 (Cooling Both)", note: "Cooling Both Section", countingOee: false },
@@ -59,8 +59,8 @@ export function createSeedData(): AppState {
 
   const conveyors: Conveyor[] = [
     { id: "cv-pted-1", areaId: "area-pted", name: "Conveyor PTED Motrain Station", countingOee: true },
-    { id: "cv-mez-1", areaId: "area-mezzanine", name: "Conveyor PC-15 Mezzanine", countingOee: false },
-    { id: "cv-oven-1", areaId: "area-oven-ced", name: "Conveyor PC-14 Oven CED", countingOee: true },
+    { id: "cv-oven-1", areaId: "area-oven-ced", name: "Conveyor PC-15 Oven CED", countingOee: true },
+    { id: "cv-mez-1", areaId: "area-mezzanine", name: "Conveyor PC-14 Mezzanine", countingOee: false },
     { id: "cv-sand-1", areaId: "area-sanding", name: "Conveyor PC-13 Sanding", countingOee: true },
     { id: "cv-seal-1", areaId: "area-sealing", name: "Conveyor PC-10 Sealing Line", countingOee: true },
     { id: "cv-cool-1", areaId: "area-cooling-tunnel", name: "Conveyor PC-11 Cooling Both", countingOee: false },
@@ -78,19 +78,19 @@ export function createSeedData(): AppState {
     { id: "st-pted-5", code: "PTED-05", areaId: "area-pted", conveyorId: "cv-pted-1", name: "Outside CED", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
     { id: "st-pted-6", code: "PTED-06", areaId: "area-pted", conveyorId: "cv-pted-1", name: "CED Danger Door", sequence: 6, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 2. PC-14 Oven CED (5 stations)
-    { id: "st-pc14-1", code: "PC14-01", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Oven Entry", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pc14-2", code: "PC14-02", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Heat-Up Zone", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pc14-3", code: "PC14-03", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Holding Zone", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pc14-4", code: "PC14-04", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Cooling Zone", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pc14-5", code: "PC14-05", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Oven Exit", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
+    // 2. PC-15 Oven CED (5 stations)
+    { id: "st-pc14-1", code: "PC15-01", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Oven Entry", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc14-2", code: "PC15-02", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Heat-Up Zone", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc14-3", code: "PC15-03", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Holding Zone", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc14-4", code: "PC15-04", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Cooling Zone", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc14-5", code: "PC15-05", areaId: "area-oven-ced", conveyorId: "cv-oven-1", name: "Oven Exit", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
 
-    // 3. PC-15 Mezzanine (5 stations)
-    { id: "st-pc15-1", code: "PC15-01", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Mezzanine Entry", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pc15-2", code: "PC15-02", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Buffer A", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pc15-3", code: "PC15-03", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Buffer B", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pc15-4", code: "PC15-04", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Buffer C", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
-    { id: "st-pc15-5", code: "PC15-05", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Mezzanine Discharge", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
+    // 3. PC-14 Mezzanine (5 stations)
+    { id: "st-pc15-1", code: "PC14-01", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Mezzanine Entry", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc15-2", code: "PC14-02", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Buffer A", sequence: 2, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc15-3", code: "PC14-03", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Buffer B", sequence: 3, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc15-4", code: "PC14-04", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Buffer C", sequence: 4, speedUnit: "m/min", runningThreshold: 0.1 },
+    { id: "st-pc15-5", code: "PC14-05", areaId: "area-mezzanine", conveyorId: "cv-mez-1", name: "Mezzanine Discharge", sequence: 5, speedUnit: "m/min", runningThreshold: 0.1 },
 
     // 4. PC-13 Sanding Area (5 stations)
     { id: "st-sand-1", code: "PC13-01", areaId: "area-sanding", conveyorId: "cv-sand-1", name: "Sanding Outer", sequence: 1, speedUnit: "m/min", runningThreshold: 0.1 },
@@ -235,236 +235,380 @@ export function createSeedData(): AppState {
 
   // Seed stops across the last 7 days + open line-stops right now across active areas
   const stops: LineStop[] = [
-    // 1. Single active open stop in Sanding Area (PC-13): Transfer Cabin Sealing (st-seal-3) - Pending E-Form
+    // ==========================================
+    // 1. ACTIVE OPEN STOPS (Matches Activated Emergency Buttons on Map)
+    // ==========================================
+    // Button 6 (PB-06): PC-13 Sealing - Transfer Cabin Sealing (st-seal-3) [ACTIVATED]
     {
-      id: "stop-live-seal",
+      id: "stop-live-seal-3",
       areaId: "area-sanding",
       stationId: "st-seal-3",
-      startMs: nineAmToday,
+      startMs: now - 28 * minMs,
       endMs: null,
-      categoryId: "", // Kosong (belum diisi form)
-      reportedBy: "", // Kosong (belum diisi form)
+      categoryId: "cat-full-cabin",
+      reportedBy: "Rian Hidayat (EMP-215)",
       status: "open",
-      source: "plc",
-      note: "", // Kosong (belum diisi form)
-      lastSpeed: 12.5,
+      source: "form",
+      note: "Full cabin accumulation sensor active on transfer rail, waiting for line clearance",
+      lastSpeed: 0.0,
       totalRunMs: 14_400_000,
+      submittedAtMs: now - 26 * minMs,
     },
-    // 2. Active open stop in Oven CED: Holding Zone (st-pc14-3) - Pending E-Form
+    // Button 4 (PB-04): PC-13 Sealing - Underseal (st-seal-1) [ACTIVATED]
+    {
+      id: "stop-live-seal-1",
+      areaId: "area-sanding",
+      stationId: "st-seal-1",
+      startMs: now - 45 * minMs,
+      endMs: null,
+      categoryId: "cat-mtc-prob",
+      reportedBy: "Agus Pratama (EMP-108)",
+      status: "open",
+      source: "form",
+      note: "Underseal applicator nozzle pressure alarm, maintenance team inspecting",
+      lastSpeed: 0.0,
+      totalRunMs: 13_200_000,
+      submittedAtMs: now - 42 * minMs,
+    },
+    // Button 11 (PB-11): TOPCOAT Entry - Airblow (st-tc-2) [ACTIVATED]
+    {
+      id: "stop-live-tc-2",
+      areaId: "area-topcoat",
+      stationId: "st-tc-2",
+      startMs: now - 16 * minMs,
+      endMs: null,
+      categoryId: "cat-incident",
+      reportedBy: "Dewi Lestari (EMP-304)",
+      status: "open",
+      source: "form",
+      note: "Airblow entrance curtain sensor tripped by swinging hanger",
+      lastSpeed: 0.0,
+      totalRunMs: 16_800_000,
+      submittedAtMs: now - 14 * minMs,
+    },
+    // Button 18 (PB-18): TOUCH UP Infeed - Repair Touch Up (st-tu-2) [ACTIVATED]
+    {
+      id: "stop-live-tu-2",
+      areaId: "area-topcoat-branch-b",
+      stationId: "st-tu-2",
+      startMs: now - 52 * minMs,
+      endMs: null,
+      categoryId: "cat-2",
+      reportedBy: "Budi Santoso (EMP-001)",
+      status: "open",
+      source: "form",
+      note: "Touch-up infeed drive belt misalignment, realignment in progress",
+      lastSpeed: 0.0,
+      totalRunMs: 11_500_000,
+      submittedAtMs: now - 49 * minMs,
+    },
+    // Additional Active open stop in Oven CED: Holding Zone (st-pc14-3)
     {
       id: "stop-live-oven",
       areaId: "area-oven-ced",
       stationId: "st-pc14-3",
       startMs: now - 35 * minMs,
       endMs: null,
-      categoryId: "", // Kosong (belum diisi form)
-      reportedBy: "", // Kosong (belum diisi form)
+      categoryId: "",
+      reportedBy: "",
       status: "open",
       source: "plc",
-      note: "", // Kosong (belum diisi form)
-      lastSpeed: 0.95,
+      note: "",
+      lastSpeed: 0.0,
       totalRunMs: 12_800_000,
     },
-    // 3. Active open stop in Mezzanine: Buffer A (st-pc15-2) - Pending E-Form
+    // Additional Active open stop in Mezzanine: Buffer A (st-pc15-2)
     {
       id: "stop-live-mez",
       areaId: "area-mezzanine",
       stationId: "st-pc15-2",
       startMs: now - 22 * minMs,
       endMs: null,
-      categoryId: "", // Kosong (belum diisi form)
-      reportedBy: "", // Kosong (belum diisi form)
+      categoryId: "",
+      reportedBy: "",
       status: "open",
       source: "plc",
-      note: "", // Kosong (belum diisi form)
-      lastSpeed: 1.10,
+      note: "",
+      lastSpeed: 0.0,
       totalRunMs: 11_200_000,
     },
-    // Historical completed stop earlier today on Transfer Cabin Sealing (st-seal-3) - E-form already filled
+
+    // ==========================================
+    // 2. HISTORICAL DETAILS FOR Transfer Cabin Sealing (st-seal-3) — 11+ Records
+    // ==========================================
     {
-      id: "stop-today-seal-early",
+      id: "stop-seal-02",
       areaId: "area-sanding",
       stationId: "st-seal-3",
-      startMs: nineAmToday - 3 * hourMs, // 06:00 WIB
-      endMs: nineAmToday - 3 * hourMs + 16 * minMs, // 06:16 WIB
+      startMs: now - 2 * hourMs - 45 * minMs,
+      endMs: now - 2 * hourMs - 23 * minMs,
       categoryId: "cat-full-cabin",
       reportedBy: "Rian Hidayat (EMP-215)",
       status: "closed",
       source: "form",
-      note: "Full cabin accumulation sensor triggered, clearance verified",
+      note: "Full cabin accumulation sensor triggered on transfer rail, cleared safely",
       lastSpeed: 12.5,
-      totalRunMs: 7_200_000,
-      submittedAtMs: nineAmToday - 3 * hourMs + 18 * minMs,
+      totalRunMs: 12_100_000,
+      submittedAtMs: now - 2 * hourMs - 20 * minMs,
     },
-    // Historical completed stop yesterday on Transfer Cabin Sealing (st-seal-3) - E-form already filled
     {
-      id: "stop-yest-seal-3",
+      id: "stop-seal-03",
       areaId: "area-sanding",
       stationId: "st-seal-3",
-      startMs: now - 1 * dayMs - 4 * hourMs,
-      endMs: now - 1 * dayMs - 4 * hourMs + 24 * minMs,
+      startMs: now - 5 * hourMs - 10 * minMs,
+      endMs: now - 4 * hourMs - 55 * minMs,
       categoryId: "cat-mtc-prob",
       reportedBy: "Agus Pratama (EMP-108)",
       status: "closed",
       source: "form",
-      note: "Transfer carriage pneumatic cylinder seal adjustment and test run",
+      note: "Pneumatic cylinder limit switch alignment verified and re-secured",
       lastSpeed: 12.8,
-      totalRunMs: 19_800_000,
-      submittedAtMs: now - 1 * dayMs - 4 * hourMs + 26 * minMs,
+      totalRunMs: 9_400_000,
+      submittedAtMs: now - 4 * hourMs - 52 * minMs,
     },
-    // Completed stop earlier today on Sanding Roof (st-sand-2) - Closed
     {
-      id: "stop-today-sand",
+      id: "stop-seal-04",
       areaId: "area-sanding",
-      stationId: "st-sand-2",
-      startMs: now - 1 * hourMs - 20 * minMs,
-      endMs: now - 1 * hourMs,
-      categoryId: "cat-2", // Breakdown
-      reportedBy: "Rian Hidayat",
+      stationId: "st-seal-3",
+      startMs: now - 1 * dayMs - 3 * hourMs,
+      endMs: now - 1 * dayMs - 2 * hourMs - 28 * minMs,
+      categoryId: "cat-2",
+      reportedBy: "Budi Santoso (EMP-001)",
       status: "closed",
       source: "form",
-      note: "Sanding roller motor tension cleared",
+      note: "Transfer carriage motor drive chain tension adjustment and lubrication",
+      lastSpeed: 12.4,
+      totalRunMs: 22_500_000,
+      submittedAtMs: now - 1 * dayMs - 2 * hourMs - 25 * minMs,
     },
-    // Completed stop earlier today on Station 4 (st-tc-3) - Closed
     {
-      id: "stop-today-tc",
+      id: "stop-seal-05",
+      areaId: "area-sanding",
+      stationId: "st-seal-3",
+      startMs: now - 1 * dayMs - 7 * hourMs,
+      endMs: now - 1 * dayMs - 6 * hourMs - 42 * minMs,
+      categoryId: "cat-dock-pin",
+      reportedBy: "Rian Hidayat (EMP-215)",
+      status: "closed",
+      source: "form",
+      note: "Dock pin stuck on carriage entry guide, pneumatic valve lubricated",
+      lastSpeed: 12.6,
+      totalRunMs: 18_200_000,
+      submittedAtMs: now - 1 * dayMs - 6 * hourMs - 39 * minMs,
+    },
+    {
+      id: "stop-seal-06",
+      areaId: "area-sanding",
+      stationId: "st-seal-3",
+      startMs: now - 2 * dayMs - 2 * hourMs,
+      endMs: now - 2 * dayMs - 1 * hourMs - 46 * minMs,
+      categoryId: "cat-1",
+      reportedBy: "Dewi Lestari (EMP-304)",
+      status: "closed",
+      source: "form",
+      note: "Transfer timing synchronization check between PC-13 Sanding and PC-10 Sealing",
+      lastSpeed: 12.5,
+      totalRunMs: 26_100_000,
+      submittedAtMs: now - 2 * dayMs - 1 * hourMs - 44 * minMs,
+    },
+    {
+      id: "stop-seal-07",
+      areaId: "area-sanding",
+      stationId: "st-seal-3",
+      startMs: now - 2 * dayMs - 6 * hourMs - 15 * minMs,
+      endMs: now - 2 * dayMs - 5 * hourMs - 48 * minMs,
+      categoryId: "cat-mtc-prob",
+      reportedBy: "Agus Pratama (EMP-108)",
+      status: "closed",
+      source: "form",
+      note: "Safety light curtain optical sensor cleaned from overspray dust accumulation",
+      lastSpeed: 12.7,
+      totalRunMs: 20_800_000,
+      submittedAtMs: now - 2 * dayMs - 5 * hourMs - 45 * minMs,
+    },
+    {
+      id: "stop-seal-08",
+      areaId: "area-sanding",
+      stationId: "st-seal-3",
+      startMs: now - 3 * dayMs - 1 * hourMs - 30 * minMs,
+      endMs: now - 3 * dayMs - 1 * hourMs - 11 * minMs,
+      categoryId: "cat-full-cabin",
+      reportedBy: "Rian Hidayat (EMP-215)",
+      status: "closed",
+      source: "form",
+      note: "Buffer zone full cabin hold, operator verified clearance and resumed line",
+      lastSpeed: 12.3,
+      totalRunMs: 15_600_000,
+      submittedAtMs: now - 3 * dayMs - 1 * hourMs - 8 * minMs,
+    },
+    {
+      id: "stop-seal-09",
+      areaId: "area-sanding",
+      stationId: "st-seal-3",
+      startMs: now - 3 * dayMs - 5 * hourMs - 20 * minMs,
+      endMs: now - 3 * dayMs - 4 * hourMs - 55 * minMs,
+      categoryId: "cat-incident",
+      reportedBy: "Siti Rahma (EMP-042)",
+      status: "closed",
+      source: "form",
+      note: "Operator pulled emergency stop cord due to misaligned cabin skid on entry",
+      lastSpeed: 12.5,
+      totalRunMs: 11_200_000,
+      submittedAtMs: now - 3 * dayMs - 4 * hourMs - 52 * minMs,
+    },
+    {
+      id: "stop-seal-10",
+      areaId: "area-sanding",
+      stationId: "st-seal-3",
+      startMs: now - 4 * dayMs - 3 * hourMs,
+      endMs: now - 4 * dayMs - 2 * hourMs - 48 * minMs,
+      categoryId: "cat-3",
+      reportedBy: "Agus Pratama (EMP-108)",
+      status: "closed",
+      source: "form",
+      note: "Scheduled conveyor guide rail greasing and sensor reflector inspection",
+      lastSpeed: 12.9,
+      totalRunMs: 24_400_000,
+      submittedAtMs: now - 4 * dayMs - 2 * hourMs - 45 * minMs,
+    },
+    {
+      id: "stop-seal-11",
+      areaId: "area-sanding",
+      stationId: "st-seal-3",
+      startMs: now - 5 * dayMs - 4 * hourMs,
+      endMs: now - 5 * dayMs - 3 * hourMs - 22 * minMs,
+      categoryId: "cat-2",
+      reportedBy: "Budi Santoso (EMP-001)",
+      status: "closed",
+      source: "form",
+      note: "Carriage motor inverter overload trip reset and full cycle load test",
+      lastSpeed: 12.4,
+      totalRunMs: 19_500_000,
+      submittedAtMs: now - 5 * dayMs - 3 * hourMs - 20 * minMs,
+    },
+    {
+      id: "stop-seal-12",
+      areaId: "area-sanding",
+      stationId: "st-seal-3",
+      startMs: now - 6 * dayMs - 2 * hourMs - 10 * minMs,
+      endMs: now - 6 * dayMs - 1 * hourMs - 54 * minMs,
+      categoryId: "cat-4",
+      reportedBy: "Rian Hidayat (EMP-215)",
+      status: "closed",
+      source: "form",
+      note: "Workpiece cabin clamp fixture replacement due to worn retention spring",
+      lastSpeed: 12.6,
+      totalRunMs: 28_000_000,
+      submittedAtMs: now - 6 * dayMs - 1 * hourMs - 50 * minMs,
+    },
+
+    // ==========================================
+    // 3. HISTORICAL STOPS FOR OTHER STATIONS
+    // ==========================================
+    {
+      id: "stop-hist-seal-1",
+      areaId: "area-sanding",
+      stationId: "st-seal-1",
+      startMs: now - 1 * dayMs - 4 * hourMs,
+      endMs: now - 1 * dayMs - 3 * hourMs - 42 * minMs,
+      categoryId: "cat-mtc-prob",
+      reportedBy: "Agus Pratama (EMP-108)",
+      status: "closed",
+      source: "form",
+      note: "Underseal pump pressure calibration and filter cleaning",
+      lastSpeed: 13.0,
+      totalRunMs: 17_600_000,
+      submittedAtMs: now - 1 * dayMs - 3 * hourMs - 40 * minMs,
+    },
+    {
+      id: "stop-hist-tc-2",
       areaId: "area-topcoat",
-      stationId: "st-tc-3",
-      startMs: now - 2 * hourMs - 15 * minMs,
-      endMs: now - 2 * hourMs,
-      categoryId: "cat-incident", // Incident
-      reportedBy: "Dewi Lestari",
+      stationId: "st-tc-2",
+      startMs: now - 1 * dayMs - 6 * hourMs,
+      endMs: now - 1 * dayMs - 5 * hourMs - 48 * minMs,
+      categoryId: "cat-1",
+      reportedBy: "Dewi Lestari (EMP-304)",
       status: "closed",
       source: "form",
-      note: "Pressure drop alarm on booth applicator line normalized",
+      note: "Airblow pressure calibration and nozzle clearance check",
+      lastSpeed: 1.15,
+      totalRunMs: 21_300_000,
+      submittedAtMs: now - 1 * dayMs - 5 * hourMs - 45 * minMs,
     },
-    // Completed stop earlier today on Sanding Outer (st-sand-1)
     {
-      id: "stop-today-1",
+      id: "stop-hist-tu-2",
+      areaId: "area-topcoat-branch-b",
+      stationId: "st-tu-2",
+      startMs: now - 2 * dayMs - 5 * hourMs,
+      endMs: now - 2 * dayMs - 4 * hourMs - 25 * minMs,
+      categoryId: "cat-2",
+      reportedBy: "Budi Santoso (EMP-001)",
+      status: "closed",
+      source: "form",
+      note: "Conveyor chain drive alignment adjustment and tension re-calibration",
+      lastSpeed: 1.18,
+      totalRunMs: 14_900_000,
+      submittedAtMs: now - 2 * dayMs - 4 * hourMs - 20 * minMs,
+    },
+    {
+      id: "stop-hist-sand-1",
       areaId: "area-sanding",
       stationId: "st-sand-1",
-      startMs: now - 2 * hourMs,
-      endMs: now - 2 * hourMs + 18 * minMs,
-      categoryId: "cat-2", // Breakdown
-      reportedBy: "Agus Pratama",
+      startMs: now - 2 * dayMs - 3 * hourMs,
+      endMs: now - 2 * dayMs - 2 * hourMs - 42 * minMs,
+      categoryId: "cat-2",
+      reportedBy: "Agus Pratama (EMP-108)",
       status: "closed",
       source: "form",
       note: "Emergency stop pulled due to workpiece carrier misaligned",
+      lastSpeed: 12.8,
+      totalRunMs: 23_100_000,
+      submittedAtMs: now - 2 * dayMs - 2 * hourMs - 38 * minMs,
     },
-    // Unrecorded stop from PLC earlier today on Underseal (st-seal-1)
     {
-      id: "stop-today-plc-unrecorded",
-      areaId: "area-sealing",
-      stationId: "st-seal-1",
-      startMs: now - 3 * hourMs - 45 * minMs,
-      endMs: now - 3 * hourMs - 22 * minMs,
-      categoryId: "cat-2", // Breakdown
-      reportedBy: "System (PLC Detector)",
+      id: "stop-hist-sand-2",
+      areaId: "area-sanding",
+      stationId: "st-sand-2",
+      startMs: now - 3 * dayMs - 2 * hourMs,
+      endMs: now - 3 * dayMs - 1 * hourMs - 40 * minMs,
+      categoryId: "cat-2",
+      reportedBy: "Rian Hidayat (EMP-215)",
       status: "closed",
-      source: "plc",
-      note: "PLC zero-speed event detected without matching operator E-form entry",
+      source: "form",
+      note: "Sanding roller motor tension cleared and safety trip reset",
+      lastSpeed: 12.5,
+      totalRunMs: 16_700_000,
+      submittedAtMs: now - 3 * dayMs - 1 * hourMs - 36 * minMs,
     },
-    // Another stop earlier today on Airblow (st-tc-2)
     {
-      id: "stop-today-2",
+      id: "stop-hist-tc-3",
       areaId: "area-topcoat",
-      stationId: "st-tc-2",
-      startMs: now - 4 * hourMs,
-      endMs: now - 4 * hourMs + 12 * minMs,
-      categoryId: "cat-1", // Process
-      reportedBy: "Dewi Lestari",
+      stationId: "st-tc-3",
+      startMs: now - 3 * dayMs - 6 * hourMs,
+      endMs: now - 3 * dayMs - 5 * hourMs - 45 * minMs,
+      categoryId: "cat-incident",
+      reportedBy: "Dewi Lestari (EMP-304)",
       status: "closed",
       source: "form",
-      note: "Airblow pressure calibration and nozzle check",
-    },
-    // Yesterday stops
-    {
-      id: "stop-yest-1",
-      areaId: "area-touch-up",
-      stationId: "st-tu-1",
-      startMs: now - dayMs - 5 * hourMs,
-      endMs: now - dayMs - 5 * hourMs + 35 * minMs,
-      categoryId: "cat-2", // Breakdown
-      reportedBy: "Budi Santoso",
-      status: "closed",
-      source: "form",
-      note: "Conveyor chain drive alignment adjustment",
+      note: "Pressure drop alarm on booth applicator line normalized",
+      lastSpeed: 1.14,
+      totalRunMs: 25_200_000,
+      submittedAtMs: now - 3 * dayMs - 5 * hourMs - 40 * minMs,
     },
     {
-      id: "stop-yest-2",
-      areaId: "area-drop-ced",
-      stationId: "st-drop-1",
-      startMs: now - dayMs - 8 * hourMs,
-      endMs: now - dayMs - 8 * hourMs + 45 * minMs,
-      categoryId: "cat-3", // Maintenance
-      reportedBy: "Rian Hidayat",
-      status: "closed",
-      source: "form",
-      note: "Drop hoist limit switch inspection and clean",
-    },
-    // 2 days ago
-    {
-      id: "stop-d2-1",
-      areaId: "area-sealing",
-      stationId: "st-seal-3",
-      startMs: now - 2 * dayMs - 3 * hourMs,
-      endMs: now - 2 * dayMs - 3 * hourMs + 28 * minMs,
-      categoryId: "cat-2", // Breakdown
-      reportedBy: "Agus Pratama",
-      status: "closed",
-      source: "form",
-      note: "Transfer cabin sensor reflector cleaned",
-    },
-    {
-      id: "stop-d2-2",
-      areaId: "area-sealing",
-      stationId: "st-seal-4",
-      startMs: now - 2 * dayMs - 6 * hourMs,
-      endMs: now - 2 * dayMs - 6 * hourMs + 15 * minMs,
-      categoryId: "cat-4", // Part Issue
-      reportedBy: "Rian Hidayat",
-      status: "closed",
-      source: "form",
-      note: "Waiting for sealant drum canister replacement",
-    },
-    // 3 days ago
-    {
-      id: "stop-d3-1",
-      areaId: "area-topcoat",
-      stationId: "st-tc-4",
-      startMs: now - 3 * dayMs - 4 * hourMs,
-      endMs: now - 3 * dayMs - 4 * hourMs + 20 * minMs,
-      categoryId: "cat-3", // Maintenance
-      reportedBy: "Rian Hidayat",
-      status: "closed",
-      source: "form",
-      note: "Exhaust ventilation filter replacement",
-    },
-    // 4 days ago
-    {
-      id: "stop-d4-1",
+      id: "stop-hist-cool-1",
       areaId: "area-cooling-tunnel",
       stationId: "st-cool-1",
       startMs: now - 4 * dayMs - 7 * hourMs,
-      endMs: now - 4 * dayMs - 7 * hourMs + 22 * minMs,
-      categoryId: "cat-2", // Breakdown
-      reportedBy: "Agus Pratama",
+      endMs: now - 4 * dayMs - 6 * hourMs - 38 * minMs,
+      categoryId: "cat-2",
+      reportedBy: "Agus Pratama (EMP-108)",
       status: "closed",
       source: "form",
-      note: "Cooling fan vibration sensor alarm cleared",
-    },
-    // 5 days ago (another unrecorded PLC stop)
-    {
-      id: "stop-d5-plc",
-      areaId: "area-sanding",
-      stationId: "st-sand-1",
-      startMs: now - 5 * dayMs - 2 * hourMs,
-      endMs: now - 5 * dayMs - 2 * hourMs + 8 * minMs,
-      categoryId: "cat-2", // Breakdown
-      reportedBy: "System (PLC Detector)",
-      status: "closed",
-      source: "plc",
-      note: "Short conveyor line stall detected automatically",
+      note: "Cooling fan vibration sensor alarm cleared and bearing lubricated",
+      lastSpeed: 1.20,
+      totalRunMs: 29_000_000,
+      submittedAtMs: now - 4 * dayMs - 6 * hourMs - 35 * minMs,
     },
   ];
 
@@ -497,12 +641,15 @@ export function createSeedData(): AppState {
     });
   }
 
-  // Initial station live telemetry for all stations (Sealing, Oven CED, and Mezzanine stopped)
+  // Initial station live telemetry for all stations (Sealing, Topcoat, Touch Up, Oven CED, and Mezzanine stopped)
   const stationLive: Record<string, StationLive> = {};
   const stoppedConfigs: Record<string, number> = {
-    "st-seal-3": now - nineAmToday, // Transfer Cabin Sealing stopped
-    "st-pc14-3": 35 * minMs, // Holding Zone stopped
-    "st-pc15-2": 22 * minMs, // Buffer A stopped
+    "st-seal-3": 28 * minMs, // Button 6: Transfer Cabin Sealing (PC-13 Sealing)
+    "st-seal-1": 45 * minMs, // Button 4: Underseal (PC-13 Sealing)
+    "st-tc-2": 16 * minMs, // Button 11: Airblow (TOPCOAT Entry)
+    "st-tu-2": 52 * minMs, // Button 18: Repair Touch Up (TOUCH UP Infeed)
+    "st-pc14-3": 35 * minMs, // Holding Zone (Oven CED)
+    "st-pc15-2": 22 * minMs, // Buffer A (Mezzanine)
   };
 
   for (const st of stations) {
@@ -579,11 +726,14 @@ let currentState: AppState = (() => {
           shifts: Array.isArray(parsed.shifts) && parsed.shifts.length > 0 ? parsed.shifts : seed.shifts,
           users: Array.isArray(parsed.users) && parsed.users.length > 0 ? parsed.users : seed.users,
           devices: Array.isArray(parsed.devices) && parsed.devices.length > 0 ? parsed.devices : seed.devices,
-          stops: Array.isArray(parsed.stops) ? parsed.stops : seed.stops,
+          stops: Array.isArray(parsed.stops) && parsed.stops.length >= 10 ? parsed.stops : seed.stops,
           auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : seed.auditLogs,
           productionRecords: Array.isArray(parsed.productionRecords) ? parsed.productionRecords : seed.productionRecords,
           offlineQueue: Array.isArray(parsed.offlineQueue) ? parsed.offlineQueue : [],
-          stationLive: parsed.stationLive && typeof parsed.stationLive === "object" ? { ...seed.stationLive, ...parsed.stationLive } : seed.stationLive,
+          stationLive:
+            parsed.stationLive && typeof parsed.stationLive === "object" && Array.isArray(parsed.stops) && parsed.stops.length >= 10
+              ? { ...seed.stationLive, ...parsed.stationLive }
+              : seed.stationLive,
         };
 
         safeState.categories = safeState.categories.map((c: any) => ({

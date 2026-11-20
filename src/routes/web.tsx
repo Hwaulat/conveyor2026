@@ -22,6 +22,7 @@ import {
   Tablet,
   ExternalLink,
   Globe,
+  Clock,
 } from "lucide-react";
 import { useI18n } from "../lib/i18n";
 import { useTheme } from "../lib/theme";
@@ -72,18 +73,20 @@ export function WebLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [masterDataExpanded, setMasterDataExpanded] = useState(true);
-  const [activeSubItem, setActiveSubItem] = useState("stations");
+  const [activeSubItem, setActiveSubItem] = useState("working-hours");
 
   const currentView = useMemo(() => {
     const s = location.search as { view?: string };
+    if (s?.view === "working-hours") return "working-hours";
     if (s?.view === "categories") return "categories";
     if (s?.view === "stations") return "stations";
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search);
+      if (sp.get("view") === "working-hours") return "working-hours";
       if (sp.get("view") === "categories") return "categories";
       if (sp.get("view") === "stations") return "stations";
     }
-    return activeSubItem || "stations";
+    return activeSubItem || "working-hours";
   }, [location.search, activeSubItem]);
 
   // Live clock WIB ticking every second
@@ -129,11 +132,14 @@ export function WebLayout() {
   ];
 
   const reportDocs: NavItem[] = [
+    // Production OEE feature hidden for now per user request
+    /*
     {
       label: "Production OEE",
       to: "/web/production",
       icon: BarChart3,
     },
+    */
     {
       label: "Reports",
       to: "/web/reports",
@@ -144,9 +150,10 @@ export function WebLayout() {
   const masterDataSubItems: Array<{
     name: string;
     icon: typeof Workflow;
-    key: "stations" | "categories";
-    view: "stations" | "categories";
+    key: "working-hours" | "stations" | "categories";
+    view: "working-hours" | "stations" | "categories";
   }> = [
+    { name: "Working Hours", icon: Clock, key: "working-hours", view: "working-hours" },
     { name: "Stations & Area", icon: Workflow, key: "stations", view: "stations" },
     { name: "Category Problem", icon: SlidersHorizontal, key: "categories", view: "categories" },
   ];
@@ -205,7 +212,7 @@ export function WebLayout() {
             title="Conveyor System"
           >
             <img
-              src="/brand-c.svg"
+              src="/brand-orb.png"
               alt="Conveyor System"
               className="h-7 w-7 object-contain shrink-0 drop-shadow-[0_0_8px_rgba(31,90,166,0.6)]"
             />

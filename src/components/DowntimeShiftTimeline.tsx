@@ -41,23 +41,25 @@ interface StationLane {
 
 const PAGI_TICKS = [
   { label: "07:00", pct: 0 },
-  { label: "09:00", pct: 21.43 },
-  { label: "11:00", pct: 42.86 },
-  { label: "13:00", pct: 64.29 },
-  { label: "15:00", pct: 85.71 },
-  { label: "16:20", pct: 100 },
+  { label: "09:00", pct: 16.22 },
+  { label: "11:00", pct: 32.43 },
+  { label: "13:00", pct: 48.65 },
+  { label: "15:00", pct: 64.86 },
+  { label: "17:00", pct: 81.08 },
+  { label: "19:20", pct: 100 },
 ];
 
 const MALAM_TICKS = [
   { label: "22:00", pct: 0 },
-  { label: "00:00", pct: 25 },
-  { label: "02:00", pct: 50 },
-  { label: "04:00", pct: 75 },
-  { label: "06:00", pct: 100 },
+  { label: "00:00", pct: 18.18 },
+  { label: "02:00", pct: 36.36 },
+  { label: "04:00", pct: 54.55 },
+  { label: "06:00", pct: 72.73 },
+  { label: "09:00", pct: 100 },
 ];
 
-const PAGI_SPAN_MIN = 16 * 60 + 20 - 420; // 560 min (07:00 - 16:20)
-const MALAM_SPAN_MIN = 8 * 60; // 480 min (22:00 - 06:00)
+const PAGI_SPAN_MIN = 19 * 60 + 20 - 420; // 740 min (07:00 - 19:20)
+const MALAM_SPAN_MIN = 11 * 60; // 660 min (22:00 - 09:00)
 
 // Urutan station area Sanding dari atas ke bawah: PC-15, PC-14, PC-13, PC-10, PC-11, PC-12
 export const SANDING_STATIONS = [
@@ -123,7 +125,7 @@ export function DowntimeShiftTimeline({
     }
   };
 
-  // 1. Shift Pagi Data: 07:00 - 16:20 (5 events, 65m)
+  // 1. Shift Pagi Data: 07:00 - 19:20 (7 events, 90m)
   const pagiStations = useMemo<StationLane[]>(() => {
     const rawEvents: TimelineEvent[] = [
       {
@@ -185,12 +187,38 @@ export function DowntimeShiftTimeline({
         stationId: "st-sand-2",
         areaId: "area-sanding",
         startTimeStr: "16:10",
-        endTimeStr: "16:20",
+        endTimeStr: "16:22",
         startMinutes: 550,
+        durationMin: 12,
+        category: SHIFT_CATEGORIES[1]!,
+        note: "Clamp release sensor check",
+      },
+      {
+        id: "pagi-ev-6",
+        stationCode: "PC-10",
+        stationName: "Sanding Outer",
+        stationId: "st-sand-1",
+        areaId: "area-sanding",
+        startTimeStr: "17:40",
+        endTimeStr: "17:53",
+        startMinutes: 640,
+        durationMin: 13,
+        category: SHIFT_CATEGORIES[2]!,
+        note: "Overtime accumulation buffer hold",
+      },
+      {
+        id: "pagi-ev-7",
+        stationCode: "PC-13",
+        stationName: "Sanding Roof",
+        stationId: "st-sand-2",
+        areaId: "area-sanding",
+        startTimeStr: "19:05",
+        endTimeStr: "19:15",
+        startMinutes: 725,
         durationMin: 10,
         category: SHIFT_CATEGORIES[0]!,
         isOpen: true,
-        note: "Clamp release sensor check",
+        note: "End-of-shift clamp interlock release check",
       },
     ];
 
@@ -245,7 +273,7 @@ export function DowntimeShiftTimeline({
     });
   }, [selectedAreaId, selectedStationId, appState.stations]);
 
-  // 2. Shift Malam Data: 22:00 - 06:00 (4 events, 36m)
+  // 2. Shift Malam Data: 22:00 - 09:00 (6 events, 60m)
   const malamStations = useMemo<StationLane[]>(() => {
     const rawEvents: TimelineEvent[] = [
       {
@@ -299,6 +327,32 @@ export function DowntimeShiftTimeline({
         durationMin: 6,
         category: SHIFT_CATEGORIES[5]!,
         note: "Line handover cleaning procedure",
+      },
+      {
+        id: "malam-ev-5",
+        stationCode: "PC-11",
+        stationName: "Transfer Cabin Touch Up",
+        stationId: "st-tc-1",
+        areaId: "area-sanding",
+        startTimeStr: "07:15",
+        endTimeStr: "07:27",
+        startMinutes: 555,
+        durationMin: 12,
+        category: SHIFT_CATEGORIES[4]!,
+        note: "Extended night shift paint prep check",
+      },
+      {
+        id: "malam-ev-6",
+        stationCode: "PC-15",
+        stationName: "Undercoat",
+        stationId: "st-seal-2",
+        areaId: "area-sanding",
+        startTimeStr: "08:35",
+        endTimeStr: "08:47",
+        startMinutes: 635,
+        durationMin: 12,
+        category: SHIFT_CATEGORIES[1]!,
+        note: "Motor drive overheat inspection",
       },
     ];
 
@@ -481,14 +535,14 @@ export function DowntimeShiftTimeline({
                       <span className="h-2 w-2 rounded-full bg-sky-500" />
                       Morning
                     </span>
-                    <span className="font-semibold text-foreground">07:00 – 16:20</span>
+                    <span className="font-semibold text-foreground">07:00 – 19:20</span>
                   </div>
                   <div className="flex items-center justify-between py-1.5 px-2 rounded-md bg-muted/50">
                     <span className="flex items-center gap-1.5 font-medium text-indigo-600 dark:text-indigo-400">
                       <span className="h-2 w-2 rounded-full bg-indigo-500" />
                       Night
                     </span>
-                    <span className="font-semibold text-foreground">22:00 – 06:00</span>
+                    <span className="font-semibold text-foreground">22:00 – 09:00</span>
                   </div>
                 </div>
                 {/* Arrow indicator */}

@@ -13,7 +13,6 @@ import {
   fmtDateFullHuman,
   fmtDateTimeFull,
   fmtTime,
-  fmtTimeShort,
   fmtDuration,
 } from "../../lib/format";
 import { stopDurationMs } from "../../lib/calc";
@@ -245,7 +244,7 @@ export function StationHistoryPage() {
                   { value: "all", label: `All Categories (${appState.categories.length})` },
                   ...appState.categories.map((c) => ({
                     value: c.id,
-                    label: `${c.code ? c.code + " — " : ""}${c.name}`,
+                    label: c.name,
                   })),
                 ]}
                 placeholder="All Categories"
@@ -262,7 +261,13 @@ export function StationHistoryPage() {
                 <th className="py-3 px-4 whitespace-nowrap">ACTION</th>
                 <th className="py-3 px-4 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">
-                    STOPPED
+                    START LINESTOP
+                    <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
+                  </span>
+                </th>
+                <th className="py-3 px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1">
+                    FINISH LINESTOP
                     <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                   </span>
                 </th>
@@ -308,18 +313,6 @@ export function StationHistoryPage() {
                     <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
                   </span>
                 </th>
-                <th className="py-3 px-4 whitespace-nowrap">
-                  <span className="inline-flex items-center gap-1">
-                    START LINESTOP
-                    <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
-                  </span>
-                </th>
-                <th className="py-3 px-4 whitespace-nowrap">
-                  <span className="inline-flex items-center gap-1">
-                    FINISH LINESTOP
-                    <ArrowUpDown className="h-3 w-3 text-slate-400/80" />
-                  </span>
-                </th>
                 <th className="py-3 px-4 whitespace-nowrap min-w-[200px]">
                   <span className="inline-flex items-center gap-1">
                     REASONS
@@ -331,7 +324,7 @@ export function StationHistoryPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
               {paginatedStops.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="py-12 text-center text-muted-foreground font-mono">
+                  <td colSpan={11} className="py-12 text-center text-muted-foreground font-mono">
                     <Layers className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     <p className="font-medium text-sm">No line stop records found</p>
                     <p className="text-xs mt-1">Try adjusting your search keywords or station filter.</p>
@@ -401,13 +394,27 @@ export function StationHistoryPage() {
                         )}
                       </td>
 
-                      {/* 2. STOPPED: (04 November 2026 (10:00)) */}
+                      {/* 2. START LINESTOP */}
                       <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-slate-800 dark:text-zinc-200 font-medium">
                         {fmtDateFullHuman(stop.startMs)}{" "}
-                        <span className="text-slate-500 dark:text-zinc-400 font-normal">({fmtTimeShort(stop.startMs)})</span>
+                        <span className="text-slate-500 dark:text-zinc-400 font-normal">({fmtTime(stop.startMs)})</span>
                       </td>
 
-                      {/* 3. SHIFT */}
+                      {/* 3. FINISH LINESTOP */}
+                      <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs">
+                        {stop.endMs ? (
+                          <span className="text-slate-800 dark:text-zinc-200 font-medium">
+                            {fmtDateFullHuman(stop.endMs)}{" "}
+                            <span className="text-slate-500 dark:text-zinc-400 font-normal">({fmtTime(stop.endMs)})</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                            Ongoing
+                          </span>
+                        )}
+                      </td>
+
+                      {/* 5. SHIFT */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         {(() => {
                           const shiftInfo = getShiftForStop(stop);
@@ -420,7 +427,7 @@ export function StationHistoryPage() {
                         })()}
                       </td>
 
-                      {/* 3. STOP DURATION */}
+                      {/* 6. STOP DURATION */}
                       <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs">
                         {isOpen ? (
                           <span className="font-bold text-red-600 dark:text-red-400">
@@ -431,17 +438,17 @@ export function StationHistoryPage() {
                         )}
                       </td>
 
-                      {/* 4. LAST SPEED */}
+                      {/* 7. LAST SPEED */}
                       <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-slate-800 dark:text-zinc-200 font-medium">
                         {speedVal.toFixed(1)} {speedUnit}
                       </td>
 
-                      {/* 5. TOTAL RUN TIME */}
+                      {/* 8. TOTAL RUN TIME */}
                       <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-slate-500 dark:text-zinc-400 font-medium">
                         {fmtDuration(totalRunVal)}
                       </td>
 
-                      {/* 6. SUBMITTED DATE */}
+                      {/* 9. SUBMITTED DATE */}
                       <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs">
                         {isFormFilled && submittedAt ? (
                           <span className="text-slate-800 dark:text-zinc-200 font-medium">{fmtDateTimeFull(submittedAt)}</span>
@@ -452,7 +459,7 @@ export function StationHistoryPage() {
                         )}
                       </td>
 
-                      {/* 7. SUBMITTED BY */}
+                      {/* 10. SUBMITTED BY */}
                       <td className="py-3.5 px-4 whitespace-nowrap text-xs text-slate-700 dark:text-zinc-300">
                         {isFormFilled && stop.reportedBy ? (
                           <span className="font-medium text-slate-900 dark:text-white">{stop.reportedBy}</span>
@@ -461,35 +468,18 @@ export function StationHistoryPage() {
                         )}
                       </td>
 
-                      {/* 8. CATEGORY */}
+                      {/* 11. CATEGORY */}
                       <td className="py-3.5 px-4 whitespace-nowrap text-xs text-slate-700 dark:text-zinc-300">
                         {isFormFilled && (cat || stop.categoryId) ? (
-                          <span className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-slate-800 dark:text-zinc-200">
-                            {cat?.code && <span className="text-primary font-bold">{cat.code}</span>}
-                            <span>{cat?.name || stop.categoryId}</span>
+                          <span className="font-mono text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                            {cat?.name || stop.categoryId}
                           </span>
                         ) : (
                           <span className="text-slate-400 dark:text-zinc-500 font-mono text-[11px]">—</span>
                         )}
                       </td>
 
-                      {/* 9. START LINESTOP */}
-                      <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-slate-800 dark:text-zinc-200 font-medium">
-                        {fmtTime(stop.startMs)}
-                      </td>
-
-                      {/* 10. FINISH LINESTOP */}
-                      <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs">
-                        {stop.endMs ? (
-                          <span className="text-slate-800 dark:text-zinc-200 font-medium">{fmtTime(stop.endMs)}</span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                            Ongoing
-                          </span>
-                        )}
-                      </td>
-
-                      {/* 11. REASONS */}
+                      {/* 12. REASONS */}
                       <td className="py-3.5 px-4 text-xs text-slate-700 dark:text-zinc-300 max-w-[260px]">
                         {isFormFilled && stop.note ? (
                           <span className="truncate block" title={stop.note}>

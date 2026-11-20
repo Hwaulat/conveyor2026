@@ -39,10 +39,11 @@ import { Eye, ArrowUpDown } from "lucide-react";
 import { getShiftForStop, getShiftForTimestamp, SHIFT_PAGI, SHIFT_MALAM } from "../../lib/shift";
 
 export const Route = createFileRoute("/web/logs")({
-  validateSearch: (search: Record<string, unknown> = {}): { stationId?: string; areaId?: string } => {
-    const res: { stationId?: string; areaId?: string } = {};
+  validateSearch: (search: Record<string, unknown> = {}): { stationId?: string; areaId?: string; tab?: "list" | "summary" } => {
+    const res: { stationId?: string; areaId?: string; tab?: "list" | "summary" } = {};
     if (typeof search["stationId"] === "string" && search["stationId"]) res.stationId = search["stationId"];
     if (typeof search["areaId"] === "string" && search["areaId"]) res.areaId = search["areaId"];
+    if (search["tab"] === "summary" || search["tab"] === "list") res.tab = search["tab"];
     return res;
   },
   errorComponent: LogsErrorFallback,
@@ -429,24 +430,32 @@ function LogHistoryPage() {
   const appState = useAppStore();
   const nowMs = Date.now();
 
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-
   const location = useLocation();
   const search = useMemo(() => {
     const s = (location.search || {}) as Record<string, unknown>;
     let areaId = typeof s["areaId"] === "string" ? s["areaId"] : undefined;
     let stationId = typeof s["stationId"] === "string" ? s["stationId"] : undefined;
+    let tab = s["tab"] === "summary" || s["tab"] === "list" ? (s["tab"] as ViewMode) : undefined;
     if (typeof window !== "undefined") {
       try {
         const sp = new URLSearchParams(window.location.search);
         if (!areaId && sp.get("areaId")) areaId = sp.get("areaId") || undefined;
         if (!stationId && sp.get("stationId")) stationId = sp.get("stationId") || undefined;
+        if (!tab && (sp.get("tab") === "summary" || sp.get("tab") === "list")) tab = sp.get("tab") as ViewMode;
       } catch {
         // ignore
       }
     }
-    return { areaId, stationId };
+    return { areaId, stationId, tab };
   }, [location.search]);
+
+  const [viewMode, setViewMode] = useState<ViewMode>(() => search.tab || "list");
+
+  useEffect(() => {
+    if (search.tab) {
+      setViewMode(search.tab);
+    }
+  }, [search.tab]);
 
   const searchAreaId = useMemo(() => {
     if (search.areaId) return search.areaId;
@@ -478,6 +487,12 @@ function LogHistoryPage() {
   const [summaryAreaId, setSummaryAreaId] = useState<string>(() => {
     return searchAreaId || "area-sanding";
   });
+
+  useEffect(() => {
+    if (searchAreaId) {
+      setSummaryAreaId(searchAreaId);
+    }
+  }, [searchAreaId]);
   const [summaryStartDate, setSummaryStartDate] = useState<string>(() => getRunningMonthRange().start);
   const [summaryEndDate, setSummaryEndDate] = useState<string>(() => getRunningMonthRange().end);
 

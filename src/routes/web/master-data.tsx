@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import {
   Layers,
@@ -15,6 +15,16 @@ import {
   Tag,
   CheckCircle2,
   SlidersHorizontal,
+  Clock,
+  RotateCcw,
+  Save,
+  Calendar,
+  HelpCircle,
+  Info,
+  CalendarDays,
+  Sunrise,
+  Moon,
+  ArrowRight,
 } from "lucide-react";
 import { useI18n } from "../../lib/i18n";
 import { useAppStore, store } from "../../lib/store";
@@ -24,17 +34,25 @@ import { SelectInput } from "../../components/ui/select-input";
 import { Search } from "../../components/ui/search";
 import { TablePagination } from "../../components/TablePagination";
 import { Eye, ArrowUpDown } from "lucide-react";
+import {
+  DEFAULT_WORKING_HOURS_MATRIX,
+  getSavedWorkingHoursMatrix,
+  saveWorkingHoursMatrix,
+  type WorkingHoursMatrix,
+  type MatrixDayRule,
+} from "../../lib/calc";
 
 export const Route = createFileRoute("/web/master-data")({
-  validateSearch: (search: Record<string, unknown>): { view?: "stations" | "categories" } => {
-    return {
-      view: search["view"] === "categories" ? "categories" : "stations",
-    };
+  validateSearch: (search: Record<string, unknown>): { view?: "working-hours" | "stations" | "categories" } => {
+    const v = search["view"];
+    if (v === "stations") return { view: "stations" };
+    if (v === "categories") return { view: "categories" };
+    return { view: "working-hours" };
   },
   head: () => ({
     meta: [
       { title: "PT. Krama Yudha Ratu Motor Indonesia — Master Data Configuration" },
-      { name: "description", content: "Master Data configuration for Stations, Conveyors, and Stop Categories (MTTR & MTBF)." },
+      { name: "description", content: "Master Data configuration for Working Hours Matrix, Stations, Conveyors, and Stop Categories." },
     ],
   }),
   component: MasterDataPage,
@@ -55,12 +73,113 @@ interface ConveyorMasterRow {
   isActive: boolean;
 }
 
+function formatMinToHours(minutes: number): string {
+  if (minutes <= 0) return "0 m";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
 function MasterDataPage() {
   const { t } = useI18n();
   const appState = useAppStore();
 
   const search = Route.useSearch();
-  const activeView: "stations" | "categories" = search.view === "categories" ? "categories" : "stations";
+  const activeView: "working-hours" | "stations" | "categories" =
+    search.view === "categories"
+      ? "categories"
+      : search.view === "stations"
+      ? "stations"
+      : "working-hours";
+
+  // ==========================================
+  // WORKING HOURS MATRIX STATE & HANDLERS
+  // ==========================================
+  const [matrixDraft, setMatrixDraft] = useState<WorkingHoursMatrix>(() => getSavedWorkingHoursMatrix());
+  const [matrixDirty, setMatrixDirty] = useState(false);
+
+  const handleUpdateMatrixCell = (
+    ruleId: keyof WorkingHoursMatrix,
+    shift: "pagi" | "malam",
+    field: "normal" | "ot1" | "ot2" | "ot3",
+    value: number,
+  ) => {
+    setMatrixDraft((prev) => {
+      const next = { ...prev };
+      next[ruleId] = {
+        ...next[ruleId],
+        [shift]: {
+          ...next[ruleId][shift],
+          [field]: Math.max(0, isNaN(value) ? 0 : value),
+        },
+      };
+      return next;
+    });
+    setMatrixDirty(true);
+  };
+
+  const handleUpdateRemarks = (ruleId: keyof WorkingHoursMatrix, remarks: string) => {
+    setMatrixDraft((prev) => ({
+      ...prev,
+      [ruleId]: {
+        ...prev[ruleId],
+        remarks,
+      },
+    }));
+    setMatrixDirty(true);
+  };
+
+  const handleUpdateFridayDeduction = (ruleId: keyof WorkingHoursMatrix, deductionMin: number) => {
+    setMatrixDraft((prev) => ({
+      ...prev,
+      [ruleId]: {
+        ...prev[ruleId],
+        fridayDeductionMin: Math.max(0, isNaN(deductionMin) ? 0 : deductionMin),
+      },
+    }));
+    setMatrixDirty(true);
+  };
+
+  const handleAutoFillOt = (ruleId: keyof WorkingHoursMatrix, shift: "pagi" | "malam") => {
+    setMatrixDraft((prev) => {
+      const normal = prev[ruleId][shift].normal;
+      return {
+        ...prev,
+        [ruleId]: {
+          ...prev[ruleId],
+          [shift]: {
+            normal,
+            ot1: normal + 60,
+            ot2: normal + 120,
+            ot3: normal + 180,
+          },
+        },
+      };
+    });
+    setMatrixDirty(true);
+    toast.info(
+      `Overtime automatically calculated (+60m / step) for ${matrixDraft[ruleId].name} (${shift === "pagi" ? "Shift 1 Pagi" : "Shift 2 Malam"})`,
+    );
+  };
+
+  const [isEditingMatrix, setIsEditingMatrix] = useState(false);
+
+  const handleUpdateWorkingHours = () => {
+    saveWorkingHoursMatrix(matrixDraft);
+    setIsEditingMatrix(false);
+    setMatrixDirty(false);
+    toast.success("Working Hours Matrix updated successfully", {
+      description: "Working durations have been updated and synchronized across all modules.",
+    });
+  };
+
+  const handleCancelEditMatrix = () => {
+    setMatrixDraft(getSavedWorkingHoursMatrix());
+    setIsEditingMatrix(false);
+    setMatrixDirty(false);
+  };
 
   // ==========================================
   // STATION STATE & HANDLERS
@@ -502,15 +621,490 @@ function MasterDataPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground font-display">
-            {activeView === "categories" ? "Master Data — Category Problem" : "Master Data — Stations & Area"}
+            {activeView === "working-hours"
+              ? "Master Data — Working Hours Matrix"
+              : activeView === "categories"
+              ? "Master Data — Category Problem"
+              : "Master Data — Stations & Area"}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {activeView === "categories"
+            {activeView === "working-hours"
+              ? "Konfigurasi matrix jam kerja shift Pagi & Malam untuk seluruh aturan hari kerja PT. Krama Yudha Ratu Motor Indonesia."
+              : activeView === "categories"
               ? "Configuration of Problem Category Codes and E-Form Type Relations (Linestop & Linestop Maintenance)."
               : "Configuration of Factory Production Areas, Conveyor Lines, and Stations."}
           </p>
         </div>
+
+        {/* Global Action Buttons for Working Hours Matrix */}
+        {activeView === "working-hours" && (
+          <div className="flex items-center gap-2 shrink-0">
+            {isEditingMatrix ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancelEditMatrix}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-[#152a47] bg-white dark:bg-[#0b1320] text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors shadow-2xs cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span>Cancel</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpdateWorkingHours}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-[#ff5a1f] hover:bg-[#e04810] text-white shadow-xs transition-colors cursor-pointer"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  <span>Update Working Hours</span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsEditingMatrix(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-[#2563eb] hover:bg-[#1d4ed8] text-white shadow-xs transition-colors cursor-pointer"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                <span>Edit Working Hours</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* ======================================================== */}
+      {/* VIEW 0: MASTER DATA WORKING HOURS MATRIX                 */}
+      {/* ======================================================== */}
+      {activeView === "working-hours" && (
+        <div className="space-y-6">
+          {/* Main Matrix Table Card (Matches Mitsubishi FUSO Working Hours Matrix) */}
+          <div className="rounded-2xl border border-slate-200/80 dark:border-[#152a47] bg-white dark:bg-[#0b1320] overflow-hidden shadow-xs">
+            {/* Matrix Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-sans border-collapse">
+                <thead>
+                  {/* Top Tier Header */}
+                  <tr className="border-b border-slate-200 dark:border-[#152a47] bg-[#f8fafc] dark:bg-[#0f1724] text-slate-700 dark:text-zinc-200 font-bold uppercase tracking-wider text-[11px]">
+                    <th rowSpan={2} className="py-3 px-4 border-r border-slate-200 dark:border-[#152a47] text-center w-52 bg-slate-100/70 dark:bg-[#121c2d]">
+                      Jam Kerja
+                    </th>
+                    <th className="py-2.5 px-3 border-r border-slate-200 dark:border-[#152a47] text-center font-bold text-sky-600 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/20">
+                      Sabtu Only =&gt;
+                    </th>
+                    <th className="py-2.5 px-3 border-r border-slate-200 dark:border-[#152a47] text-center font-bold bg-slate-50 dark:bg-[#101b2b] text-slate-800 dark:text-zinc-200">
+                      OT 8
+                    </th>
+                    <th className="py-2.5 px-3 border-r border-slate-200 dark:border-[#152a47] text-center font-bold bg-slate-50 dark:bg-[#101b2b] text-slate-800 dark:text-zinc-200">
+                      OT 9
+                    </th>
+                    <th className="py-2.5 px-3 border-r border-slate-200 dark:border-[#152a47] text-center font-bold bg-slate-50 dark:bg-[#101b2b] text-slate-800 dark:text-zinc-200">
+                      OT 10
+                    </th>
+                    <th className="py-2.5 px-3 border-r border-slate-200 dark:border-[#152a47] text-center font-bold bg-slate-50 dark:bg-[#101b2b] text-slate-800 dark:text-zinc-200">
+                      OT 11
+                    </th>
+                    <th rowSpan={2} className="py-3 px-4 text-center min-w-[260px] bg-slate-100/70 dark:bg-[#121c2d]">
+                      Remarks
+                    </th>
+                  </tr>
+                  {/* Second Tier Header */}
+                  <tr className="border-b border-slate-200 dark:border-[#152a47] bg-[#f1f5f9] dark:bg-[#121c2d] text-slate-600 dark:text-zinc-300 font-semibold text-[11px]">
+                    <th className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center">
+                      Shift
+                    </th>
+                    <th className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center">
+                      Normal
+                    </th>
+                    <th className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center">
+                      OT1
+                    </th>
+                    <th className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center">
+                      OT2
+                    </th>
+                    <th className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center">
+                      OT3
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-200 dark:divide-[#152a47] font-sans">
+                  {(
+                    [
+                      { key: "senin_kamis", name: "Senin - Kamis" },
+                      { key: "jumat", name: "Jumat" },
+                      { key: "sabtu", name: "Sabtu" },
+                      { key: "hari_pertama", name: "Hari jumat pertama masuk tiap bulan" },
+                      { key: "tanggal_17", name: "Tanggal 17" },
+                    ] as const
+                  ).map((ruleDef) => {
+                    const ruleKey = ruleDef.key;
+                    const ruleData = matrixDraft[ruleKey];
+
+                    return [
+                      /* Row 1: Shift Pagi */
+                      <tr
+                        key={`${ruleKey}-pagi`}
+                        className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/30 transition-colors"
+                      >
+                        {/* Spanned Jam Kerja cell (Rule ID text removed) */}
+                        <td
+                          rowSpan={2}
+                          className="py-3 px-4 border-r border-slate-200 dark:border-[#152a47] align-middle bg-white dark:bg-[#0b1320]"
+                        >
+                          <span className="font-bold text-xs sm:text-sm text-foreground block">
+                            {ruleDef.name}
+                          </span>
+                        </td>
+
+                        {/* Shift Pagi label */}
+                        <td className="py-2.5 px-3 border-r border-slate-200 dark:border-[#152a47] text-center whitespace-nowrap bg-amber-50/30 dark:bg-amber-950/10">
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100/80 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800">
+                            <Sunrise className="h-3 w-3 text-amber-600" />
+                            <span>Pagi</span>
+                          </div>
+                        </td>
+
+                        {/* Normal Pagi */}
+                        <td className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center w-28">
+                          {isEditingMatrix ? (
+                            <>
+                              <input
+                                type="number"
+                                min={0}
+                                max={1440}
+                                value={ruleData.pagi.normal}
+                                onChange={(e) =>
+                                  handleUpdateMatrixCell(ruleKey, "pagi", "normal", parseInt(e.target.value) || 0)
+                                }
+                                className="w-20 text-center font-mono font-bold text-xs p-1.5 rounded border border-slate-200 dark:border-[#152a47] bg-slate-50/50 dark:bg-[#121c2d] focus:bg-white dark:focus:bg-[#0b1320] focus:ring-1 focus:ring-primary focus:outline-none"
+                              />
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.pagi.normal)}
+                              </span>
+                            </>
+                          ) : (
+                            <div className="py-1">
+                              <span className="font-mono font-bold text-xs text-foreground block">
+                                {ruleData.pagi.normal}
+                              </span>
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.pagi.normal)}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* OT1 Pagi */}
+                        <td className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center w-28">
+                          {isEditingMatrix ? (
+                            <>
+                              <input
+                                type="number"
+                                min={0}
+                                max={1440}
+                                value={ruleData.pagi.ot1}
+                                onChange={(e) =>
+                                  handleUpdateMatrixCell(ruleKey, "pagi", "ot1", parseInt(e.target.value) || 0)
+                                }
+                                className="w-20 text-center font-mono font-bold text-xs p-1.5 rounded border border-slate-200 dark:border-[#152a47] bg-slate-50/50 dark:bg-[#121c2d] focus:bg-white dark:focus:bg-[#0b1320] focus:ring-1 focus:ring-primary focus:outline-none"
+                              />
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.pagi.ot1)}
+                              </span>
+                            </>
+                          ) : (
+                            <div className="py-1">
+                              <span className="font-mono font-bold text-xs text-foreground block">
+                                {ruleData.pagi.ot1}
+                              </span>
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.pagi.ot1)}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* OT2 Pagi */}
+                        <td className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center w-28">
+                          {isEditingMatrix ? (
+                            <>
+                              <input
+                                type="number"
+                                min={0}
+                                max={1440}
+                                value={ruleData.pagi.ot2}
+                                onChange={(e) =>
+                                  handleUpdateMatrixCell(ruleKey, "pagi", "ot2", parseInt(e.target.value) || 0)
+                                }
+                                className="w-20 text-center font-mono font-bold text-xs p-1.5 rounded border border-slate-200 dark:border-[#152a47] bg-slate-50/50 dark:bg-[#121c2d] focus:bg-white dark:focus:bg-[#0b1320] focus:ring-1 focus:ring-primary focus:outline-none"
+                              />
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.pagi.ot2)}
+                              </span>
+                            </>
+                          ) : (
+                            <div className="py-1">
+                              <span className="font-mono font-bold text-xs text-foreground block">
+                                {ruleData.pagi.ot2}
+                              </span>
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.pagi.ot2)}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* OT3 Pagi */}
+                        <td className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center w-28">
+                          {isEditingMatrix ? (
+                            <>
+                              <input
+                                type="number"
+                                min={0}
+                                max={1440}
+                                value={ruleData.pagi.ot3}
+                                onChange={(e) =>
+                                  handleUpdateMatrixCell(ruleKey, "pagi", "ot3", parseInt(e.target.value) || 0)
+                                }
+                                className="w-20 text-center font-mono font-bold text-xs p-1.5 rounded border border-slate-200 dark:border-[#152a47] bg-slate-50/50 dark:bg-[#121c2d] focus:bg-white dark:focus:bg-[#0b1320] focus:ring-1 focus:ring-primary focus:outline-none"
+                              />
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.pagi.ot3)}
+                              </span>
+                            </>
+                          ) : (
+                            <div className="py-1">
+                              <span className="font-mono font-bold text-xs text-foreground block">
+                                {ruleData.pagi.ot3}
+                              </span>
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.pagi.ot3)}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Spanned Remarks Cell */}
+                        <td
+                          rowSpan={2}
+                          className="py-3 px-4 align-middle bg-slate-50/30 dark:bg-[#0b1320]"
+                        >
+                          <div className="space-y-2">
+                            {/* Deduction configuration ONLY for Hari Pertama Masuk */}
+                            {ruleKey === "hari_pertama" && (
+                              isEditingMatrix ? (
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300">
+                                  <Info className="h-4 w-4 shrink-0" />
+                                  <span className="text-[11px] font-medium leading-tight">
+                                    Kalau hari pertama masuk di hari jumat, maka -
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={120}
+                                    value={ruleData.fridayDeductionMin ?? 25}
+                                    onChange={(e) =>
+                                      handleUpdateFridayDeduction(ruleKey, parseInt(e.target.value) || 0)
+                                    }
+                                    className="w-14 text-center font-mono font-bold text-xs p-1 rounded bg-white dark:bg-[#121c2d] border border-amber-300 dark:border-amber-700 focus:outline-none"
+                                  />
+                                  <span className="text-[11px] font-bold">menit</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-medium">
+                                  <Info className="h-4 w-4 shrink-0" />
+                                  <span>Kalau hari pertama masuk di hari jumat, maka -{ruleData.fridayDeductionMin ?? 25} menit</span>
+                                </div>
+                              )
+                            )}
+
+                            {/* Remarks Input in Edit POV / Text in Read-Only POV */}
+                            {isEditingMatrix ? (
+                              <input
+                                type="text"
+                                value={ruleData.remarks || ""}
+                                placeholder="Tambah catatan/remarks..."
+                                onChange={(e) => handleUpdateRemarks(ruleKey, e.target.value)}
+                                className="w-full text-xs p-2 rounded-lg border border-slate-200 dark:border-[#152a47] bg-white dark:bg-[#121c2d] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            ) : (
+                              ruleData.remarks ? (
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                  {ruleData.remarks}
+                                </p>
+                              ) : (
+                                ruleKey !== "hari_pertama" && (
+                                  <span className="text-xs text-muted-foreground/40 italic">-</span>
+                                )
+                              )
+                            )}
+
+                            {/* Quick Auto-calc button (ONLY visible in Edit POV) */}
+                            {isEditingMatrix && (
+                              <div className="flex items-center gap-1.5 pt-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleAutoFillOt(ruleKey, "pagi")}
+                                  className="text-[10px] font-medium px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                                  title="Hitung otomatis OT1 (+60m), OT2 (+120m), OT3 (+180m) dari jam Normal Pagi"
+                                >
+                                  Auto OT Pagi (+60m)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAutoFillOt(ruleKey, "malam")}
+                                  className="text-[10px] font-medium px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                                  title="Hitung otomatis OT1 (+60m), OT2 (+120m), OT3 (+180m) dari jam Normal Malam"
+                                >
+                                  Auto OT Malam (+60m)
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>,
+
+                      /* Row 2: Shift Malam */
+                      <tr
+                        key={`${ruleKey}-malam`}
+                        className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/30 transition-colors"
+                      >
+                        {/* Shift Malam label */}
+                        <td className="py-2.5 px-3 border-r border-slate-200 dark:border-[#152a47] text-center whitespace-nowrap bg-indigo-50/30 dark:bg-indigo-950/10">
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100/80 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800">
+                            <Moon className="h-3 w-3 text-indigo-600" />
+                            <span>Malam</span>
+                          </div>
+                        </td>
+
+                        {/* Normal Malam */}
+                        <td className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center w-28">
+                          {isEditingMatrix ? (
+                            <>
+                              <input
+                                type="number"
+                                min={0}
+                                max={1440}
+                                value={ruleData.malam.normal}
+                                onChange={(e) =>
+                                  handleUpdateMatrixCell(ruleKey, "malam", "normal", parseInt(e.target.value) || 0)
+                                }
+                                className="w-20 text-center font-mono font-bold text-xs p-1.5 rounded border border-slate-200 dark:border-[#152a47] bg-slate-50/50 dark:bg-[#121c2d] focus:bg-white dark:focus:bg-[#0b1320] focus:ring-1 focus:ring-primary focus:outline-none"
+                              />
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.malam.normal)}
+                              </span>
+                            </>
+                          ) : (
+                            <div className="py-1">
+                              <span className="font-mono font-bold text-xs text-foreground block">
+                                {ruleData.malam.normal}
+                              </span>
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.malam.normal)}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* OT1 Malam */}
+                        <td className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center w-28">
+                          {isEditingMatrix ? (
+                            <>
+                              <input
+                                type="number"
+                                min={0}
+                                max={1440}
+                                value={ruleData.malam.ot1}
+                                onChange={(e) =>
+                                  handleUpdateMatrixCell(ruleKey, "malam", "ot1", parseInt(e.target.value) || 0)
+                                }
+                                className="w-20 text-center font-mono font-bold text-xs p-1.5 rounded border border-slate-200 dark:border-[#152a47] bg-slate-50/50 dark:bg-[#121c2d] focus:bg-white dark:focus:bg-[#0b1320] focus:ring-1 focus:ring-primary focus:outline-none"
+                              />
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.malam.ot1)}
+                              </span>
+                            </>
+                          ) : (
+                            <div className="py-1">
+                              <span className="font-mono font-bold text-xs text-foreground block">
+                                {ruleData.malam.ot1}
+                              </span>
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.malam.ot1)}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* OT2 Malam */}
+                        <td className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center w-28">
+                          {isEditingMatrix ? (
+                            <>
+                              <input
+                                type="number"
+                                min={0}
+                                max={1440}
+                                value={ruleData.malam.ot2}
+                                onChange={(e) =>
+                                  handleUpdateMatrixCell(ruleKey, "malam", "ot2", parseInt(e.target.value) || 0)
+                                }
+                                className="w-20 text-center font-mono font-bold text-xs p-1.5 rounded border border-slate-200 dark:border-[#152a47] bg-slate-50/50 dark:bg-[#121c2d] focus:bg-white dark:focus:bg-[#0b1320] focus:ring-1 focus:ring-primary focus:outline-none"
+                              />
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.malam.ot2)}
+                              </span>
+                            </>
+                          ) : (
+                            <div className="py-1">
+                              <span className="font-mono font-bold text-xs text-foreground block">
+                                {ruleData.malam.ot2}
+                              </span>
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.malam.ot2)}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* OT3 Malam */}
+                        <td className="py-2 px-3 border-r border-slate-200 dark:border-[#152a47] text-center w-28">
+                          {isEditingMatrix ? (
+                            <>
+                              <input
+                                type="number"
+                                min={0}
+                                max={1440}
+                                value={ruleData.malam.ot3}
+                                onChange={(e) =>
+                                  handleUpdateMatrixCell(ruleKey, "malam", "ot3", parseInt(e.target.value) || 0)
+                                }
+                                className="w-20 text-center font-mono font-bold text-xs p-1.5 rounded border border-slate-200 dark:border-[#152a47] bg-slate-50/50 dark:bg-[#121c2d] focus:bg-white dark:focus:bg-[#0b1320] focus:ring-1 focus:ring-primary focus:outline-none"
+                              />
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.malam.ot3)}
+                              </span>
+                            </>
+                          ) : (
+                            <div className="py-1">
+                              <span className="font-mono font-bold text-xs text-foreground block">
+                                {ruleData.malam.ot3}
+                              </span>
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {formatMinToHours(ruleData.malam.ot3)}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+                      </tr>,
+                    ];
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* VIEW 1: MASTER DATA STATIONS & AREA                      */}
