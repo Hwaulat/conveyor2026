@@ -220,6 +220,18 @@ function DashboardPage() {
     }
   }, [selectedAreaId, paretoStationId, speedStationId, top5MttrStationId, top5MtbfStationId, appState.stations]);
 
+  // Reset mttrCategoryFilter if the selected category is no longer an active breakdown category in Master Data
+  useEffect(() => {
+    if (mttrCategoryFilter !== "all") {
+      const match = appState.categories.some(
+        (c) => c.id === mttrCategoryFilter && Boolean(c.countsAsBreakdown) && c.active !== false,
+      );
+      if (!match) {
+        setMttrCategoryFilter("all");
+      }
+    }
+  }, [appState.categories, mttrCategoryFilter]);
+
   // Handle area change: resets station if current station does not belong to the newly selected area
   const handleAreaChange = (newAreaId: string) => {
     setSelectedAreaId(newAreaId);
@@ -384,14 +396,16 @@ function DashboardPage() {
     });
   }, [paretoStops, appState.categories, nowMs]);
 
-  // Category Options for MTTR & MTBF Trends by Category Breakdown
+  // Category Options for MTTR & MTBF Trends by Category Breakdown (sinkron dengan checkbox Breakdown di Master Data)
   const mttrCategoryOptions = useMemo(() => {
     const options = [{ value: "all", label: "All Breakdown Categories" }];
-    const cats = appState.categories.filter((c) => c.active !== false);
+    const cats = appState.categories.filter(
+      (c) => c.active !== false && Boolean(c.countsAsBreakdown),
+    );
     for (const cat of cats) {
       options.push({
         value: cat.id,
-        label: `${cat.name}${cat.countsAsBreakdown ? " (Breakdown)" : ""}`,
+        label: cat.name,
       });
     }
     return options;
@@ -518,7 +532,7 @@ function DashboardPage() {
     }>();
 
     for (const cat of appState.categories) {
-      if (cat.active !== false) {
+      if (cat.active !== false && Boolean(cat.countsAsBreakdown)) {
         catMap.set(cat.id, {
           id: cat.id,
           name: cat.name,
@@ -532,21 +546,15 @@ function DashboardPage() {
 
     for (const s of candidateStops) {
       const cat = appState.categories.find((c) => c.id === s.categoryId);
-      const entry = catMap.get(s.categoryId) ?? {
-        id: s.categoryId,
-        name: cat?.name ?? "Unknown",
-        code: cat?.code,
-        totalDurationMs: 0,
-        stopsCount: 0,
-        closedStopsCount: 0,
-      };
+      if (!cat?.countsAsBreakdown) continue;
+      const entry = catMap.get(s.categoryId);
+      if (!entry) continue;
       const dur = stopDurationMs(s, nowMs);
       entry.totalDurationMs += dur;
       entry.stopsCount += 1;
       if (s.status === "closed" || s.endMs) {
         entry.closedStopsCount += 1;
       }
-      catMap.set(s.categoryId, entry);
     }
 
     return Array.from(catMap.values())
@@ -580,7 +588,9 @@ function DashboardPage() {
     const totalPlannedMs = daysCount * 16 * 3_600_000;
     const opTime = operatingTimeMs(totalPlannedMs, candidateStops, appState.categories, nowMs);
 
-    const breakdownCategories = appState.categories.filter((c) => c.active !== false);
+    const breakdownCategories = appState.categories.filter(
+      (c) => c.active !== false && Boolean(c.countsAsBreakdown),
+    );
 
     const list = breakdownCategories.map((cat) => {
       const catStops = candidateStops.filter((s) => s.categoryId === cat.id);
@@ -1244,9 +1254,6 @@ function DashboardPage() {
                   <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wide">
                     OEE Availability
                   </h3>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    MTBF / (MTBF + MTTR)
-                  </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {selectedStation
